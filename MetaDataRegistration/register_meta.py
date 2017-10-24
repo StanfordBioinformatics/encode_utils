@@ -9,10 +9,10 @@
 import argparse
 import pdb
 
-import encode_utils import submit
+import encode_utils.utils
 
 
-def create_payloads(profile,infile,award=None,lab=None,):
+def create_payloads(profile,infile):
 	"""
 	Function : Given a tab-delimited input file containing records belonging to one of the profiles listed on the ENCODE Portal 
 						 (such as https://www.encodeproject.org/profiles/biosample.json), generates the payload that can be used to either 
@@ -21,20 +21,21 @@ def create_payloads(profile,infile,award=None,lab=None,):
 						 infile  - The tab-delimited input file with a field-header line as the first line. The field names must be exactly equal
 											 to the corresponding names in the profile given on the ENCODE Portal, with the exception that array fields must have
 											 the suffix '[]' to signify array values. Array values within subsequent lines only need be comma-delimited and should
-											 not themselves be wrapped in brackets.
-					 	 award   - Equal to the 'award' field common to all profiles. This is a convenience field and is not needed if the input 
-											 file provides this field.
-						 lab     - Equal to the 'lab' field common to all profiles. This is a convenience field and is not needed if the input 
-											 file provides this field.
+											 not themselves be wrapped in brackets. Furthermore, non-scematic fields are allowed as long as they begin with a '#'. 
+											 Such fields will be skipped. 
 	Yields  : dict. The payload that can be used to either register or patch the metadata for each row.
 	"""
 	field_index = {}
 	fh = open(infile,'r')
-	header = fh.readline().strip("\n").split("\t")
+	header_fields = fh.readline().strip("\n").split("\t")
 	count = -1
-	for i in header:
+	skip_field_indices = []
+	for field in header_fields:
 		count += 1
-		field_index[count] = i
+		if field.startswith("#"): #non-schema field
+			skip_field_indices.append(count)
+			continue
+		field_index[count] = field
 
 	for line in fh:
 		line = line.strip("\n").split("\t")
@@ -42,19 +43,27 @@ def create_payloads(profile,infile,award=None,lab=None,):
 			continue
 		payload = {}
 		payload["@id"] = "{}/".format(profile)
-		if award:
-			payload["award"] = award
-		if lab:
-			payload["lab"] = lab
+		if encode_utils.DCC_AWARD_ATTR not in header_fields:
+			if profile not in encode_utils.AWARDLESS_PROFILES:
+				payload[encode_utils.DCC_AWARD_ATTR] = encode_utils.AWARD
+		if encode_utils.DCC_LAB_ATTR not in header_fields:
+			if profile not in encode_utils.AWARDLESS_PROFILES:
+				payload[encode_utils.DCC_LAB_ATTR] = encode_utils.LAB
 		count = -1
 		for val in line:
 			count += 1
+			if count in skip_field_indices:
+				continue
 			val = val.strip()
 			if val:
 				field = field_index[count]
 				if field.endswith("[]"):
 					payload[field.rstrip("[]")] = val.split(",")
 				else:
+					try:
+						val = int(val)
+					except ValueError: #not an integer field
+						pass
 					payload[field] = val
 		yield payload
 	
@@ -64,21 +73,17 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description=description)
 	parser.add_argument("-p","--profile",required=True,help="The profile to submit to, i.e. put 'biosample' for https://www.encodeproject.org/profiles/biosample.json")
 	parser.add_argument("-m","--dcc-mode",required=True,help="The DCC environment to submit to (either 'dev' or 'prod').")
-	parser.add_argument("-i","--infile",help="The tab-delimited input file with a field-header line as the first line. The field names must be exactly equal to the corresponding names in the profile given on the ENCODE Portal, with the exception that array fields must have the suffix '[]' to signify array values. Array values within subsequent lines only need be comma-delimited and should not themselves be wrapped in brackets.")
-	parser.add_argument("-a","--award",help="Equal to the 'award' field common to all profiles. This is a convenience field and is not needed if the input file provides this field.")
-	parser.add_argument("-l","--lab",help="Equal to the 'lab' field common to all profiles. This is a convenience field and is not needed if the input file provides this field.")
+	parser.add_argument("-i","--infile",help="The tab-delimited input file with a field-header line as the first line. The field names must be exactly equal to the corresponding names in the profile given on the ENCODE Portal, with the exception that array fields must have the suffix '[]' to signify array values. Array values within subsequent lines only need be comma-delimited and should not themselves be wrapped in brackets. In addition, non-scematic fields starting with a '#' are allowed and will be skipped. Such fields may be useful to store additional metadata in the submission sheet, eventhough they can't be submitted.")
 	parser.add_argument("--patch",action="store_true",help="Presence of this option indicates to patch an existing DCC record rather than register a new one.")
 	args = parser.parse_args()
 	profile = args.profile
 	dcc_mode = args.dcc_mode
 
-	submit = encode.dcc_submit.submit.Submit(dnanexus_username="nathankw",dcc_username="nathankw",dcc_mode=dcc_mode)
+	conn = encode_utils.utils.Connection(dcc_username="nathankw",dcc_mode=dcc_mode)
 
 	infile = args.infile
-	award = args.award
-	lab = args.lab
 	patch = args.patch
-	gen = create_payloads(profile=profile,infile=infile,award=award,lab=lab)
+	gen = create_payloads(profile=profile,infile=infile)
 	for payload in gen:
 		#pdb.set_trace()
-		submit.postToDcc(payload=payload,patch=patch)
+		conn.postToDcc(payload=payload)

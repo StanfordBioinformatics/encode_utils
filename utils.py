@@ -54,7 +54,7 @@ def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
 		return popen
 
 
-class Submit():
+class Connection():
 
 	REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 	SYAPSE_ENTEX_BIOSAMPLE_KBCLASS_ID = "BiosampleENTex"
@@ -255,8 +255,6 @@ class Submit():
 		"""
 		Function : POST an object to the DCC.
 		Args     : payload - The data to submit.
-							 record_id - str. Must be set if 'patch' is True.
-							 patch - bool. True indicates to perform an HTTP PATCH operation rather than POST.
 							 indexing - bool. If set to True, means that the ENCODE Portal is indexing, thus newly POSTed objects may not 
                   show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
                   when appending "?datastore=database" to the URL. Setting this to True ultimately adds a 5 min. delay after POSTing an
@@ -268,21 +266,22 @@ class Submit():
 		self.logger.info("\nIN postToDcc().")
 		objectType = payload.pop("@id")
 		url = os.path.join(self.dcc_url,objectType)
-		self.logger.info("<<<<<<Attempting to POST {record_id} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(record_id=record_id,url=url,payload=payload))
+		alias = payload["aliases"][0]
+		self.logger.info("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(alias=alias,url=url,payload=payload))
 		response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json.dumps(payload), verify=False)
-		self.logger.debug("<<<<<<DCC {httpMethod} RESPONSE: ".format(httpMethod=httpMethod))
+		self.logger.debug("<<<<<<DCC POST RESPONSE: ")
 		self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
 		status_code = response.status_code
 		if response.ok:
-			self.writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
 			response_dcc_accession = ""
 			try:
 				response_dcc_accession = response.json()["@graph"][0]["accession"]
 			except KeyError:
 				pass #some objects don't have an accession, i.e. replicates.
+			self.writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
 			return response.json()
 		elif status_code == 409: #conflict
-			self.logger.info("Will not post {} to DCC because it already exists.".format(record_id))
+			self.logger.info("Will not post {} to DCC because it already exists.".format(alias))
 		else:
 			message = "Failed to POST {alias} to DCC".format(alias=alias)
 			self.logger.error(message)

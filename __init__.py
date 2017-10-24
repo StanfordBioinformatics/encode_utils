@@ -6,6 +6,18 @@ package_path = __path__[0]
 
 CONF_DATA_FILE = os.path.join(package_path,"conf_data.json")
 
+#Define constants for a few attributes that are common to all ENCODE profiles:
+DCC_AWARD_ATTR = "award"
+DCC_LAB_ATTR = "lab"
+AWARDLESS_PROFILES = ["replicate"] #these profiles don't have the 'award' and 'lab' attributes.
+
+
+#custom variables
+DCC_ALIAS_PREFIX = "michael-snyder:"
 DCC_API_KEYS_FILE = os.path.join(package_path,"dcc_submitters.json")
+
+LAB = "michael-snyder" #Snyder
+DCC_ALIAS_PREFIX = LAB + ":" 
+AWARD = "U54HG006996" #for Snyder
 
 del package_path
