@@ -75,9 +75,11 @@ if __name__ == "__main__":
 	parser.add_argument("-m","--dcc-mode",required=True,help="The DCC environment to submit to (either 'dev' or 'prod').")
 	parser.add_argument("-i","--infile",help="The tab-delimited input file with a field-header line as the first line. The field names must be exactly equal to the corresponding names in the profile given on the ENCODE Portal, with the exception that array fields must have the suffix '[]' to signify array values. Array values within subsequent lines only need be comma-delimited and should not themselves be wrapped in brackets. In addition, non-scematic fields starting with a '#' are allowed and will be skipped. Such fields may be useful to store additional metadata in the submission sheet, eventhough they can't be submitted.")
 	parser.add_argument("--patch",action="store_true",help="Presence of this option indicates to patch an existing DCC record rather than register a new one.")
+	parser.add_argument("-e","--error-if-not-found", action="store_true",help="If trying to PATCH a record and the record cannot be found on the ENCODE Portal, the default behavior is to then attempt a POST. Specifying this option causes an Exception to be raised.")
 	args = parser.parse_args()
 	profile = args.profile
 	dcc_mode = args.dcc_mode
+	error_if_not_found = args.error_if_not_found
 
 	conn = encode_utils.utils.Connection(dcc_username="nathankw",dcc_mode=dcc_mode)
 
@@ -86,4 +88,7 @@ if __name__ == "__main__":
 	gen = create_payloads(profile=profile,infile=infile)
 	for payload in gen:
 		#pdb.set_trace()
-		conn.postToDcc(payload=payload)
+		if not patch:
+			conn.postToDcc(payload=payload)
+		else:
+			conn.patchToDcc(payload=payload,error_if_not_found=error_if_not_found)

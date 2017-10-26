@@ -210,11 +210,36 @@ class Connection():
 			#if response not okay and status_code equal to something other than 404
 			response.raise_for_status()
 
-	def patchToDcc(self,payload,record_id,indexing=False):
+
+	def getRecordId(self,rec_json):
+		"""
+		Function : Given the JSON serialization of a DCC record, extracts an ID from it. The ID will be the value of the 'id' key if that is present in 
+							 rec_json, otherwise it will be the value of the first alias in the 'aliases' key. If there isn't an alias present, an IndexError 
+							 will be raised.
+		Args     : rec_json - The JSON serialization of the record in question.
+		Returns  : str. 
+		Raises   : IndexError if a record ID can't be found (since the last attempt to find an identifier works by subsetting the first element in the 'aliases' key).
+		"""
+
+		#The '@id' key has a value in the format /profile/id, where profile is something like 'documents', 'libraries', 'antibodies', ...
+		# This key also stores a record ID at the end when addressing a particular record belonging to a particular profile.
+		if "@id" in rec_json:
+			id_tokens = rec_json["@id"].strip("/").split()
+			if len(id_tokens) > 1: #Then there is a record ID stored here
+				return id_tokens[-1]
+		else:
+			return rec_json["aliases"][0]
+
+	def patchToDcc(self,payload,record_id=None,error_if_not_found=False,extend_array_values=True,indexing=False):
 		"""
 		Function : PATCH an object to the DCC. If the object doesn't exist, then this method will call self.postToDcc().
 		Args     : payload - dict. containing the attribute key and value pairs to patch.
-							 record_id - str. Identifier of the DCC record to patch. 
+							 record_id - str. Identifier of the DCC record to patch. If not specified, will first check if it is set in the payload's 
+													 'id' attribute, and if not there, the 'aliases' attribute.
+							 error_if_not_found - bool. If set to True, then an Exception will be raised if the record to Patch is not found on the ENCODE Portal. 
+									If False and the record isn't found, then a POST will be attempted by calling self.PostToDcc().
+							 extend_array_values - bool. Only affects keys with array values. True (default) means to extend the corresponding value on the Portal with what's specified
+									in the payload. False means to replace the value on the Portal with what's in the payload. 
 							 indexing - bool. If set to True, means that the ENCODE Portal is indexing, thus newly POSTed objects may not 
                   show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
                   when appending "?datastore=database" to the URL. Setting this to True ultimately adds a 5 min. delay after POSTing an
@@ -223,19 +248,32 @@ class Connection():
 									"waiting" and the results property will indicate the last object that was indexed."
 		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
 		"""
+		json_payload = json.dumps(payload) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN patchToDcc()")
-		objectType = payload.pop("@id")
+		objectType = json_payload.pop("@id") #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
+		if not record_id:
+			record_id = self.getRecordId(json_payload)
+				
 		self.logger.info("Will check if {} exists in DCC with a GET request.".format(record_id))
 		get_response_json = self.getDccRecord(ignore404=True,identifier=record_id)
 		if not get_response_json:
+			if error_if_not_found:
+				raise Exception("Can't patch record '{}' since it was not found on the ENCODE Portal.".format(record_id))
 			#then need to do a POST
-			payload["@id"] = objectType
-			response = self.postToDcc(payload=payload)
-			return response
+			else:
+				json_payload["@id"] = objectType
+				response = self.postToDcc(payload=json_payload)
+				return response
+		if extend_array_values:
+			for key in json_payload:
+				if type(json_payload[key]) is list:
+					new_val = json_payload[key].extend(get_response_json[key])
+					unique_new_val = list(set(new_val))
+					json_payload[key] = unique_new_val
 
 		url = os.path.join(self.dcc_url,record_id)
-		self.logger.info("<<<<<<Attempting to PATCH {record_id} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(record_id=record_id,url=url,payload=payload))
-		response = requests.patch(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json.dumps(payload), verify=False)
+		self.logger.info("<<<<<<Attempting to PATCH {record_id} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(record_id=record_id,url=url,payload=json_payload))
+		response = requests.patch(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json_payload, verify=False)
 
 		self.logger.debug("<<<<<<DCC PATCH RESPONSE: ")
 		self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
@@ -263,12 +301,13 @@ class Connection():
 									"waiting" and the results property will indicate the last object that was indexed."
 		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
 		"""
+		json_payload = json.dumps(payload) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN postToDcc().")
-		objectType = payload.pop("@id")
+		objectType = json_payload.pop("@id")
 		url = os.path.join(self.dcc_url,objectType)
-		alias = payload["aliases"][0]
-		self.logger.info("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(alias=alias,url=url,payload=payload))
-		response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json.dumps(payload), verify=False)
+		alias = json_payload["aliases"][0]
+		self.logger.info("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(alias=alias,url=url,payload=json_payload))
+		response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json_payload, verify=False)
 		self.logger.debug("<<<<<<DCC POST RESPONSE: ")
 		self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
 		status_code = response.status_code
@@ -312,7 +351,7 @@ class Connection():
 				return rep_alias
 		return ""
 		
-	def get_file_rep_dico(self,dcc_exp_id):
+	def get__file_rep_dico(self,dcc_exp_id):
 		"""
 		Function : Given a DCC experiment ID, finds the original FASTQ files that were submitted and creates
 							 a dictionary with keys being the biological_replicate_number. For example, If there are three replicates on the
@@ -549,9 +588,5 @@ if __name__ == "__main__":
 	parser.add_argument('--dcc-mode',default="prod",choices=Submit.DCC_MODES.keys(),help="Determines which DCC URL to connect to. Default=%(default)s.")
 	parser.add_argument('-p','--patch',action="store_true",help="Indicates to perform an HTTP PATCH operation rather than POST.")
 	parser.add_argument('-c','--continue-on',action="store_true",help="Continue past error conditions.")
-
-	args = parser.parse_args()
-	patch = args.patch
-	dcc_user_name = args.dcc_user_name
-	dcc_mode = args.dcc_mode
-	continueOn = args.continue_on
+	parser.add_argument("-e","--error-if-not-found", action="store_true",help="If trying to PATCH a record and the record cannot be found on the ENCODE Portal, the default behavior is to then attempt a POST. Specifying this option causes an Exception to be raised.")
+	parser.add_argument("--extend-array-values",action="store_true",help="Only affects keys with array values when performing a PATCH operation. True (default) means to extend the corresponding value on the Portal with what's specified in the payload. False means to replace the value on the Portal with what's in the payload.")
