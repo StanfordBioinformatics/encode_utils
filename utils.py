@@ -301,13 +301,13 @@ class Connection():
 									"waiting" and the results property will indicate the last object that was indexed."
 		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
 		"""
-		json_payload = json.dumps(payload) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
+		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN postToDcc().")
 		objectType = json_payload.pop("@id")
 		url = os.path.join(self.dcc_url,objectType)
 		alias = json_payload["aliases"][0]
 		self.logger.info("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(alias=alias,url=url,payload=json_payload))
-		response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json_payload, verify=False)
+		response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json.dumps(json_payload), verify=False)
 		self.logger.debug("<<<<<<DCC POST RESPONSE: ")
 		self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
 		status_code = response.status_code
@@ -575,18 +575,3 @@ class Connection():
 			if "@graph" in response:
 				response = response["@graph"][0]
 			self.writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response["uuid"])
-
-if __name__ == "__main__":
-	syapseConfFile = syapse_scgpm.syapse_conf_file
-	syapseConnConfFh = open(syapseConfFile,'r')
-	SCC = json.load(syapseConnConfFh) #syapse connection conf
-
-	from argparse import ArgumentParser
-	parser = ArgumentParser()
-	parser.add_argument('-u','--dcc-user-name',default="nathankw",help="The username for logging into the prod or dev encode website. This username will determine which API key to use when posting to DCC by looking in the file called dcc_submitters.json in the same directory as this script. If your username is not in that file, you'll need to add it. Default is %(default)s.")
-	parser.add_argument('--syapse-mode',default=SCC["modes"]["prod"],choices=SCC["modes"].keys(),help="Determines which Syapse LIMS host URL to connect to. Default is %(default)s.")
-	parser.add_argument('--dcc-mode',default="prod",choices=Submit.DCC_MODES.keys(),help="Determines which DCC URL to connect to. Default=%(default)s.")
-	parser.add_argument('-p','--patch',action="store_true",help="Indicates to perform an HTTP PATCH operation rather than POST.")
-	parser.add_argument('-c','--continue-on',action="store_true",help="Continue past error conditions.")
-	parser.add_argument("-e","--error-if-not-found", action="store_true",help="If trying to PATCH a record and the record cannot be found on the ENCODE Portal, the default behavior is to then attempt a POST. Specifying this option causes an Exception to be raised.")
-	parser.add_argument("--extend-array-values",action="store_true",help="Only affects keys with array values when performing a PATCH operation. True (default) means to extend the corresponding value on the Portal with what's specified in the payload. False means to replace the value on the Portal with what's in the payload.")

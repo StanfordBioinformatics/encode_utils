@@ -58,7 +58,7 @@ def create_payloads(profile,infile):
 			if val:
 				field = field_index[count]
 				if field.endswith("[]"):
-					payload[field.rstrip("[]")] = val.split(",")
+					payload[field.rstrip("[]")] = [x.strip() for x in val.split(",")]
 				else:
 					try:
 						val = int(val)
