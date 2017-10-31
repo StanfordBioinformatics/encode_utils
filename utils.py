@@ -1,4 +1,7 @@
-
+###
+#Nathaniel Watson
+#nathankw@stanford.edu
+###
 # -*- coding: utf-8 -*-
 import datetime
 import time
@@ -23,16 +26,17 @@ import pdb
 def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
 	"""
 	Function : Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes stdout and stderr. Stderr is always
-						 piped, but stdout can be turned off.
-             If the argument checkRetcode is True, which it is by defualt, then for any non-zero return code, an Exception is
-						 raised that will print out the the command, stdout, stderr, and the returncode when not caught. Otherwise, the Popen instance will be
-						 returned, in which case the caller must 
-					   call the instance's communicate() method (and not it's wait() method!!) in order to get the return code to see if the command was a success. communicate() will return 
-						 a tuple containing (stdout, stderr). But at that point, you can then check the return code with Popen instance's 'returncode' attribute.
+						 piped; stdout if off by default. If the argument 'checkRetcode' is True, which it is by defualt, then for any non-zero
+						 return code, an Exception is raised that will print out the the command, stdout, stderr, and the returncode.
+						 Otherwise, the Popen instance will be returned, in which case the caller must call the instance's communicate() method 
+						 (and not it's wait() method!!) in order to get the return code to see if the command was successful. communicate() will 
+						 return a tuple containing (stdout, stderr), after that you can then check the return code with Popen instance's 'returncode' 
+						 attribute.
 	Args     : cmd   - str. The command line for the subprocess wrapped in the subprocess.Popen instance. If given, will be printed to stdout when there is an error in the subprocess.
 						 pipeStdout - bool. True means to pipe stdout of the subprocess.
-						 checkRetcode - bool. See documentation in the description above for specifics.
-	Returns  : A two-item tuple containing stdout and stderr, respectively.
+						 checkRetcode - bool. Default is True. See documentation in the description above for specifics.
+	Returns  : A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the command has a 0 exit status. If
+						 'checkRetCode' is False, then a subprocess.Popen() instance is returned. 
 	"""
 	stdout = None
 	if pipeStdout:
@@ -57,9 +61,6 @@ def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
 class Connection():
 
 	REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
-	SYAPSE_ENTEX_BIOSAMPLE_KBCLASS_ID = "BiosampleENTex"
-	SYAPSE_ATACSEQ_KBCLASS_ID = "AtacSeq"
-	SYAPSE_LIBRARY_KBCLASS_ID = "Library"
 	
 	DCC_PROD_MODE = "prod"
 	DCC_DEV_MODE = "dev"
@@ -70,9 +71,13 @@ class Connection():
 
 	DCC_ALIAS_PREFIX = en.DCC_ALIAS_PREFIX
 	
-	AWARD_AND_LAB = {"award": en.AWARD,"lab": DCC_ALIAS_PREFIX.rstrip(":")}
+	AWARD_AND_LAB = {"award": en.AWARD,"lab": en.LAB} 
 
 	def __init__(self,dcc_username,dcc_mode):
+		"""
+		Opens up two log files in append mode in the calling directory named ${dcc_mode}_error.txt and ${dcc_mode}_posted.txt.
+		Parses the API keys from the config file pointed to by en.DCC_API_KEYS_FILE (in __init__.py). 
+		"""
 
 		f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
 		#create logger
@@ -107,41 +112,6 @@ class Connection():
 		self.dcc_url = self._setDccUrl()
 		self.api_key,self.secret_key = self._setApiKeys()
 		self.auth = (self.api_key,self.secret_key)
-		#self.sconn.kb.getProperty("submittedToDcc"): [u'Internal Hold', u'Send to DCC', u'Registered with DCC', u'DCC Hold"]
-		self.sendToDcc = {
-			"SEND": "Send to DCC",
-			"INTERNAL_HOLD": "Internal Hold",
-			"REGISTERED": "Registered with DCC",
-			"HOLD": "DCC Hold"
-		}	
-		
-	def writeAliasAndDccAccessionToLog(self,alias,dcc_id=None):
-		txt = alias
-		if dcc_id:
-			txt += " -> {dcc_id}".format(dcc_id=dcc_id)
-		self.post_logger.info(txt)
-
-	def stripDccAlias(self,name):
-		"""
-		Function : Strips off the value of self.DCC_ALIAS_PREFIX if present.
-		Returns  : str.
-		"""
-		return name.split(":",1)[-1]
-
-	def getAliases(self,dcc_id):
-		"""
-		Function : Given the ENCODE ID for an object, returns the aliases for that object. For any alias that is prefixed by
-							 self.DCC_ALIAS_PREFIX, that prefix will be removed.
-		Args     : dcc_id - The ENCODE ID for a given object, i.e ENCSR999EHG.
-		Returns  : list.
-		"""
-		record = self.getDccRecord(ignore404=False,dcc_id=dcc_id)
-		aliases = record["aliases"]
-		for index in range(len(aliases)):
-			alias = aliases[index]
-			if alias.startswith(self.DCC_ALIAS_PREFIX):
-				aliases[index] =  self.stripDccAlias(alias)
-		return aliases
 
 	def _setDccUrl(self):
 		return self.DCC_MODES[self.dcc_mode]
@@ -157,6 +127,35 @@ class Connection():
 		api_key = conf[self.dcc_username]["api_key"]
 		secret_key = conf[self.dcc_username]["secret_key"]
 		return api_key,secret_key
+		
+	def _writeAliasAndDccAccessionToLog(self,alias,dcc_id=None):
+		txt = alias
+		if dcc_id:
+			txt += " -> {dcc_id}".format(dcc_id=dcc_id)
+		self.post_logger.info(txt)
+
+	def stripDccAliasPrefix(self,alias):
+		"""
+		Function : Splits 'alias' on ':' to strip off any alias prefix. Aliases must have a lab-specific prefix. The ':' is the 
+							 seperator between prefix and the rest of the alias, and can't appear elsewhere in the alias. 
+		Returns  : str.
+		"""
+		return name.split(":")[-1]
+
+	def getAliases(self,dcc_id,strip_alias_prefix=False):
+		"""
+		Function : Given the ENCODE ID for an object, returns the aliases for that object. 
+		Args     : dcc_id - The ENCODE ID for a given object, i.e ENCSR999EHG.
+							 strip_alias_prefix - bool. True means to remove the alias prefix if all return aliases. 
+		Returns  : list.
+		"""
+		record = self.getDccRecord(ignore404=False,dcc_id=dcc_id)
+		aliases = record["aliases"]
+		for index in range(len(aliases)):
+			alias = aliases[index]
+			if strip_alias_prefix:
+				aliases[index] =  self.stripDccAliasPrefix(alias)
+		return aliases
 
 	def searchDcc(self,searchString):
 		"""
@@ -317,7 +316,7 @@ class Connection():
 				response_dcc_accession = response.json()["@graph"][0]["accession"]
 			except KeyError:
 				pass #some objects don't have an accession, i.e. replicates.
-			self.writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
+			self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
 			return response.json()
 		elif status_code == 409: #conflict
 			self.logger.info("Will not post {} to DCC because it already exists.".format(alias))
@@ -444,7 +443,7 @@ class Connection():
 			response_json = response_json["@graph"][0]	
 		response_dcc_accession = response_json["accession"]
 		if not patch:
-			self.writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
+			self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
 		return response_json
 
 
@@ -574,4 +573,4 @@ class Connection():
 			response = self.postToDcc(payload=payload,patch=patch)	
 			if "@graph" in response:
 				response = response["@graph"][0]
-			self.writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response["uuid"])
+			self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response["uuid"])
