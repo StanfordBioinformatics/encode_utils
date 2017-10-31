@@ -149,7 +149,7 @@ class Connection():
 							 strip_alias_prefix - bool. True means to remove the alias prefix if all return aliases. 
 		Returns  : list.
 		"""
-		record = self.getDccRecord(ignore404=False,dcc_id=dcc_id)
+		record = self.getEncodeRecord(ignore404=False,dcc_id=dcc_id)
 		aliases = record["aliases"]
 		for index in range(len(aliases)):
 			alias = aliases[index]
@@ -157,34 +157,43 @@ class Connection():
 				aliases[index] =  self.stripDccAliasPrefix(alias)
 		return aliases
 
-	def searchDcc(self,searchString):
+	def searchEncode(self,search_args):
 		"""
-		Example : searchDcc(searchString="search/?type=experiment&searchTerm=ENCLB336TVW&format=json&frame=object&datastore=database") #This is L-519 as the library query
+		Function : Searches the ENCODE Portal using the provided query parameters in dictionary format. 
+							 The query parameters will be first URL encoded. 
+		Args     : search_args - dict. of key and value query parameters. 
+		Returns  : list of search results. 
+		Raises   : HTTPError if the status code is not in the set [200,404].
+		Example  : Given we have the following dictionary 'd' of key and value pairs:
+
+							{"type": "experiment",
+							 "searchTerm": "ENCLB336TVW",
+							 "format": "json",
+							 "frame": "object",
+							 "datastore": "database"}
+	
+							We can call the function as:
+
+								searchEncode(search_args=d)
+						
 		"""
-		url = os.path.join(self.dcc_url,searchString)
+		query = urllib.parse.urlencode(search_args)
+		url = os.path.join(self.dcc_url,"search/?",query)
 		self.logger.info("Searching DCC with query {url}.".format(url=url))
 		response = requests.get(url,auth=self.auth,headers=self.REQUEST_HEADERS_JSON,verify=False)
-		if response.status_code not in [200,404]: #if not ok and not found
+		if response.status_code not in [200,404]: #if not ok or not found
 			response.raise_for_status()
 		return response.json()["@graph"] #the @graph object is a list
 
-	def getJsonFromDccUrl(self,url):
-		response = requests.get(url=url,auth=self.auth,headers=self.REQUEST_HEADERS_JSON, verify=False)
-		if response.ok:
-			response = response.json()
-			if "@graph" in response:
-				response = response["@graph"]
-			return response
-
-		else:
-			response.raise_for_status()
-			
-
-	def getDccRecord(self,identifier,ignore404=True,frame=None):
+	def getEncodeRecord(self,identifier,ignore404=True,frame=None):
 		"""
 		Function : Looks up an object in ENCODE using a unique identifier, such as the object id, an alias, uuid, or accession. 
 		Args     : ignore404 - bool. True indicates to not raise an Exception if a 404 is returned. 
 						 : identifier - A unique identifier, such as the object id, an alias, uuid, or accession.
+		Returns  : The JSON response. 
+		Raises   : If the status code is 403 (forbidden), an Exception will be raised.
+							 A 404 (not found) status code will result in an Exception only if the 'ignore404' argument
+							 is set to False. 
 		"""
 		recordId = identifier
 		if recordId.endswith("/"):
@@ -198,13 +207,13 @@ class Connection():
 			#logger.info("<<<<<GET RESPONSE: ")
 			#self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
 			return response.json()
-		elif response.status_code == 403:
-			return
-		elif response.status_code == 404:
+		elif response.status_code == 403: #forbidden
+			raise Exception("Access to ENCODE entity {entity} is forbidden".format(entity=recordId))
+		elif response.status_code == 404: #not found
 			if ignore404:
 				return {}
 			else:
-				raise Exception("DCC entity {entity} not found".format(entity=recordId))
+				raise Exception("ENCODE entity {entity} not found".format(entity=recordId))
 		else:
 			#if response not okay and status_code equal to something other than 404
 			response.raise_for_status()
@@ -212,16 +221,17 @@ class Connection():
 
 	def getRecordId(self,rec_json):
 		"""
-		Function : Given the JSON serialization of a DCC record, extracts an ID from it. The ID will be the value of the 'id' key if that is present in 
-							 rec_json, otherwise it will be the value of the first alias in the 'aliases' key. If there isn't an alias present, an IndexError 
-							 will be raised.
+		Function : Given the JSON serialization of a DCC record, extracts an ID from it. The ID will be the value of 
+							 the 'id' key if that is present in rec_json, otherwise it will be the value of the first alias in 
+							 the 'aliases' key. If there isn't an alias present, an IndexError will be raised.
 		Args     : rec_json - The JSON serialization of the record in question.
 		Returns  : str. 
-		Raises   : IndexError if a record ID can't be found (since the last attempt to find an identifier works by subsetting the first element in the 'aliases' key).
+		Raises   : IndexError if a record ID can't be found (since the last attempt to find an identifier works by 
+							 subsetting the first element in the 'aliases' key).
 		"""
 
 		#The '@id' key has a value in the format /profile/id, where profile is something like 'documents', 'libraries', 'antibodies', ...
-		# This key also stores a record ID at the end when addressing a particular record belonging to a particular profile.
+		# This key also stores a record ID at the end when addressing a record belonging to a particular profile.
 		if "@id" in rec_json:
 			id_tokens = rec_json["@id"].strip("/").split()
 			if len(id_tokens) > 1: #Then there is a record ID stored here
@@ -229,9 +239,9 @@ class Connection():
 		else:
 			return rec_json["aliases"][0]
 
-	def patchToDcc(self,payload,record_id=None,error_if_not_found=False,extend_array_values=True,indexing=False):
+	def patch(self,payload,record_id=None,error_if_not_found=False,extend_array_values=True,indexing=False):
 		"""
-		Function : PATCH an object to the DCC. If the object doesn't exist, then this method will call self.postToDcc().
+		Function : PATCH an object to the DCC. If the object doesn't exist, then this method will call self.post().
 		Args     : payload - dict. containing the attribute key and value pairs to patch.
 							 record_id - str. Identifier of the DCC record to patch. If not specified, will first check if it is set in the payload's 
 													 'id' attribute, and if not there, the 'aliases' attribute.
@@ -242,26 +252,26 @@ class Connection():
 							 indexing - bool. If set to True, means that the ENCODE Portal is indexing, thus newly POSTed objects may not 
                   show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
                   when appending "?datastore=database" to the URL. Setting this to True ultimately adds a 5 min. delay after POSTing an
-                  object in the self.postToDcc() method. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
+                  object in the self.post() method. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
                   search like https://www.encodeproject.org/_indexer  If it's indexing it will say the status is "indexing", versus 
 									"waiting" and the results property will indicate the last object that was indexed."
 		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
 		"""
 		json_payload = json.dumps(payload) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
-		self.logger.info("\nIN patchToDcc()")
+		self.logger.info("\nIN patch()")
 		objectType = json_payload.pop("@id") #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
 		if not record_id:
 			record_id = self.getRecordId(json_payload)
 				
 		self.logger.info("Will check if {} exists in DCC with a GET request.".format(record_id))
-		get_response_json = self.getDccRecord(ignore404=True,identifier=record_id)
+		get_response_json = self.getEncodeRecord(ignore404=True,identifier=record_id)
 		if not get_response_json:
 			if error_if_not_found:
 				raise Exception("Can't patch record '{}' since it was not found on the ENCODE Portal.".format(record_id))
 			#then need to do a POST
 			else:
 				json_payload["@id"] = objectType
-				response = self.postToDcc(payload=json_payload)
+				response = self.post(payload=json_payload)
 				return response
 		if extend_array_values:
 			for key in json_payload:
@@ -288,20 +298,20 @@ class Connection():
 			#then an object was just POSTed, and since the ENCODE portal is indexing, add a 5 min. delay:
 			time.sleep(60 * 5)
 
-	def postToDcc(self,payload,indexing=False):
+	def post(self,payload,indexing=False):
 		"""
 		Function : POST an object to the DCC.
 		Args     : payload - The data to submit.
 							 indexing - bool. If set to True, means that the ENCODE Portal is indexing, thus newly POSTed objects may not 
                   show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
                   when appending "?datastore=database" to the URL. Setting this to True ultimately adds a 5 min. delay after POSTing an
-                  object in the self.postToDcc() method. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
+                  object in the self.post() method. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
                   search like https://www.encodeproject.org/_indexer  If it's indexing it will say the status is "indexing", versus 
 									"waiting" and the results property will indicate the last object that was indexed."
 		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
 		"""
 		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
-		self.logger.info("\nIN postToDcc().")
+		self.logger.info("\nIN post().")
 		objectType = json_payload.pop("@id")
 		url = os.path.join(self.dcc_url,objectType)
 		alias = json_payload["aliases"][0]
@@ -331,49 +341,76 @@ class Connection():
 
 	def doesReplicateExist(self,library_alias,biologicial_replicate_number,technical_replicate_number,replicates_json_from_dcc):
 		"""
-		Function :
+		Function : Checks if a replicate exists for a specified library alias with the given biological replicate
+							 number and technical replicate number. Note that this method only works on a library alias
+							 and not any other form of identifier. 
 		Args     : library_alias - str. Any of the associated library's aliases. i.e. michael-snyder:L-208.
-							 biologicial_replicate_number - int. The biological replicate number. In Syapse, see the "Replicate Number" attribute.
+							 biologicial_replicate_number - int. The biological replicate number. 
 							 technical_replicate_number - int. The technical replicate number. 
 							 replicates_json_from_dcc - dict. The value of the "replicates" key in the JSON of a DCC experiment.
 							
-		Returns  : str. The replicate alias if a such a replicate is already linked to the experiment in question, otherwise the empty string.
+		Returns  : False if the 'library_alias' doesn't exist in the nested library object of any of the replicates.
+						   If the 'library_alias' is present, then True if both 'biologicial_replicate_number' and 'technical_replicate_number'
+							 match for the given keys by the same name in the repliate, False otherwise. 
 		"""
 		biologicial_replicate_number = int(biologicial_replicate_number)
 		technical_replicate_number = int(technical_replicate_number)
 		for rep in replicates_json_from_dcc:
-			rep_alias = rep["aliases"][0]
-			rep_lib = rep["library"]
+			try:
+				rep_alias = rep["aliases"][0]
+			except IndexError: #replicate may not have any aliases
+				continue
+			rep_lib_aliases = rep_lib["library"]["aliases"]
+			if not rep_lib_aliases: #library may not have any aliases
+				continue
 			rep_bio_rep_number = rep["biological_replicate_number"]
 			rep_tech_rep_number = rep["technical_replicate_number"]
-			if (library_alias in rep["aliases"]) and (biologicial_replicate_number == rep_bio_rep_number) and (technical_replicate_number == rep_tech_rep_number):
+			if (library_alias in rep_lib_aliases) and (biologicial_replicate_number == rep_bio_rep_number) and (technical_replicate_number == rep_tech_rep_number):
 				return rep_alias
-		return ""
+		return False
 		
-	def get__file_rep_dico(self,dcc_exp_id):
+	def getFastqFileRepNumDico(self,dcc_exp_id):
 		"""
 		Function : Given a DCC experiment ID, finds the original FASTQ files that were submitted and creates
-							 a dictionary with keys being the biological_replicate_number. For example, If there are three replicates on the
-							 experiment, then there will be three entries in the dictionary. The value of each key is another dictonary 
-							 that contains a single key being the read number describing the reads in a given FASTQ file, and the value being 
-							 the FASTQ file JSON. The read number will be 1 for a FASTQ file containing forward reads, and 2 for reverse reads.
+							 a dictionary with keys being the biological_replicate_number. The value of each key is another
+							 dictionary having the technical_replicate_number as the single key. The value of this is another
+							 dictionary with keys being file read numbers, i.e. 1 for forward reads, 2 for reverse reads.
+							 The value for a give key of this most inner dictionary is the file JSON. 
 
-		Args : dcc_exp_id - list of DCC file IDs or aliases 
+		Args    : dcc_exp_id - list of DCC file IDs or aliases 
+		Returns : dict. 
 		"""
-		exp_json = self.getDccRecord(ignore404=False,dcc_id=dcc_exp_id)
+		exp_json = self.getEncodeRecord(ignore404=False,dcc_id=dcc_exp_id)
 		dcc_file_ids = exp_json["original_files"]
 		dico = {}
 		for i in dcc_file_ids:
-			file_json = self.getDccRecord(ignore404=False,dcc_id=i)
+			file_json = self.getEncodeRecord(ignore404=False,dcc_id=i)
+			if file_json["file_type"] != "fastq":
+				continue #this is not a file object for a FASTQ file.
 			brn = file_json["replicate"]["biological_replicate_number"]	#int
+			trn = file_json["replicate"]["technical_replicate_number"]	#int
 			read_num = file_json["paired_end"] #string
 			if brn not in dico:
 				dico[brn] = {}
-			dico[brn][read_num] = file_json
+			if trn not in dico[brn]:
+				dico[brn][trn] = {}
+			dico[brn][trn][read_num] = file_json
 		return dico
 
 
-	def getAwsUploadCredsFromResponseGraph(self,graph):
+	def _setAwsUploadCredsFromResponseGraph(self,upload_credentials):
+		"""
+		Function : After posting the metadata for a file object to ENCODE, the response will contain the key 
+							 'upload_credentials'. This method parses the document pointed to by this key, constructing
+							 a dictionary of keys that will be exported as environment variables that can be used by the
+							 aws CL agent. That is what self.postFileToDcc() does, indirectly. self.postFileToDcc() has
+							 an argument 'aws_creds' that expects a value generated from this method.
+							 This method is also called from self.regenerateAwsUploadCreds(), which produces a JSON document
+							 also containing the key 'upload_credentials'. 
+		Args     : dict.
+		"""
+		if "@graph" in response:
+			response = response["@graph"][0]
 		creds = graph["upload_credentials"]
 		aws_creds = {}
 		aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
@@ -386,7 +423,7 @@ class Connection():
 	def postFileMetaDataToDcc(self,payload,patch):
 		"""
 		Function : This is only to be used for DCC "/file/" type objects, because for these we don't have a Syapse record for them (the regular POST method called
-							 postToDcc() will try to retrive the corresponding Syapse object. Before attempting a POST, will check if the file exists by doing a get on payload["aliases"][0].
+							 post() will try to retrive the corresponding Syapse object. Before attempting a POST, will check if the file exists by doing a get on payload["aliases"][0].
 							 If the GET request succeeds, nothing will be POSTed.
 		Args     : payload - The data to submit.
 							 patch - bool. True indicates to perform an HTTP PATCH operation rather than POST.
@@ -399,12 +436,12 @@ class Connection():
 		alias = md5_alias
 		
 		#check if file already exists on DCC using md5sum. Useful if file exists already but under different alias.
-		exists_on_dcc = self.getDccRecord(ignore404=True,dcc_id=alias)
+		exists_on_dcc = self.getEncodeRecord(ignore404=True,dcc_id=alias)
 		if not exists_on_dcc:
 			#check with actual file alias in the payload. Useful if previously we only had part of the file by mistake (i.e incomplete downoad)
 			# hence the uploaded file on DCC would have a different md5sum.
 			alias = payload["aliases"][0]
-			exists_on_dcc = self.getDccRecord(ignore404=True,dcc_id=alias)
+			exists_on_dcc = self.getEncodeRecord(ignore404=True,dcc_id=alias)
 		if not patch and exists_on_dcc:
 			self.logger.info("Will not POST metadata for {filename} with alias {alias} to DCC because it already exists as {encff}.".format(filename=filename,alias=alias,encff=exists_on_dcc["accession"]))
 			return exists_on_dcc
@@ -465,7 +502,7 @@ class Connection():
 				# File already uploaded fine.
 				return
 		graph = response["@graph"][0]
-		aws_creds = self.getAwsUploadCredsFromResponseGraph(graph)
+		aws_creds = self._setAwsUploadCredsFromResponseGraph(graph["upload_credentials"])
 		return aws_creds
 
 	def postFileToDcc(self,filepath,encff_number,aws_creds=None):
@@ -499,7 +536,7 @@ class Connection():
 	def getPlatformsOnExperiment(self,dcc_exp_alias=False,dcc_exp_encid=False):
 		if not dcc_exp_alias and not dcc_exp_encid:
 			raise Exception("You must specify either dcc_exp_alias or dcc_exp_encid.")
-		exp_json = self.getDccRecord(ignore404=False,dcc_alias=dcc_exp_alias,dcc_id=dcc_exp_encid,frame=None)
+		exp_json = self.getEncodeRecord(ignore404=False,dcc_alias=dcc_exp_alias,dcc_id=dcc_exp_encid,frame=None)
 		if "@graph" in exp_json:
 			exp_json = exp_json["@graph"][0]
 		files_json = exp_json["files"]
@@ -570,7 +607,7 @@ class Connection():
 			payload["attachment"] = attachment_properties
 			payload["documents"] = ["encode:motif_enrichment_method","encode:TF_Antibody_Characterization_ENCODE3_May2016.pdf"]
 
-			response = self.postToDcc(payload=payload,patch=patch)	
+			response = self.post(payload=payload,patch=patch)	
 			if "@graph" in response:
 				response = response["@graph"][0]
 			self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response["uuid"])

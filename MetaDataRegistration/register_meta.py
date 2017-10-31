@@ -89,6 +89,6 @@ if __name__ == "__main__":
 	for payload in gen:
 		#pdb.set_trace()
 		if not patch:
-			conn.postToDcc(payload=payload)
+			conn.post(payload=payload)
 		else:
-			conn.patchToDcc(payload=payload,error_if_not_found=error_if_not_found)
+			conn.patch(payload=payload,error_if_not_found=error_if_not_found)
