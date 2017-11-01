@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
+
 ###
 #Nathaniel Watson
 #nathankw@stanford.edu
 ###
-# -*- coding: utf-8 -*-
 import datetime
 import time
 import logging
@@ -253,11 +254,11 @@ class Connection():
                   show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
                   when appending "?datastore=database" to the URL. Setting this to True ultimately adds a 5 min. delay after POSTing an
                   object in the self.post() method. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
-                  search like https://www.encodeproject.org/_indexer  If it's indexing it will say the status is "indexing", versus 
+                  search like https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing", versus 
 									"waiting" and the results property will indicate the last object that was indexed."
 		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
 		"""
-		json_payload = json.dumps(payload) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
+		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN patch()")
 		objectType = json_payload.pop("@id") #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
 		if not record_id:
@@ -276,13 +277,12 @@ class Connection():
 		if extend_array_values:
 			for key in json_payload:
 				if type(json_payload[key]) is list:
-					new_val = json_payload[key].extend(get_response_json[key])
-					unique_new_val = list(set(new_val))
-					json_payload[key] = unique_new_val
+					json_payload[key].extend(get_response_json[key])
+					json_payload[key] = list(set(json_payload[key]))
 
 		url = os.path.join(self.dcc_url,record_id)
 		self.logger.info("<<<<<<Attempting to PATCH {record_id} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(record_id=record_id,url=url,payload=json_payload))
-		response = requests.patch(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json_payload, verify=False)
+		response = requests.patch(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json.dumps(json_payload), verify=False)
 
 		self.logger.debug("<<<<<<DCC PATCH RESPONSE: ")
 		self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
@@ -291,7 +291,7 @@ class Connection():
 		elif response.status_code == 403: #don't have permission to PATCH or POST to this object:
 			return get_response_json
 		else:
-			message = "Failed to PATCH {alias} to DCC".format(alias=alias)
+			message = "Failed to PATCH {} to DCC".format(record_id)
 			self.logger.error(message)
 			response.raise_for_status()
 		if indexing and not patch:
