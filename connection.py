@@ -14,15 +14,20 @@ import subprocess
 import os
 import re
 import urllib
+import base64
 import mimetypes
+import pdb
+
+import urllib3
 
 #inhouse libraries
 import encode_utils as en
 
 #debugging imports
 import time
-import pdb
 
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
 	"""
@@ -76,8 +81,10 @@ class Connection():
 
 	def __init__(self,dcc_username,dcc_mode):
 		"""
-		Opens up two log files in append mode in the calling directory named ${dcc_mode}_error.txt and ${dcc_mode}_posted.txt.
-		Parses the API keys from the config file pointed to by en.DCC_API_KEYS_FILE (in __init__.py). 
+		Function : Opens up two log files in append mode in the calling directory named ${dcc_mode}_error.txt and ${dcc_mode}_posted.txt.
+		           Parses the API keys from the config file pointed to by en.DCC_API_KEYS_FILE (in __init__.py). 
+		Args     : dcc_username - The user name used to log into the ENCODE Portal.
+							 dcc_mode     - The ENCODE Portal site ("prod" or "dev") to connect to.
 		"""
 
 		f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
@@ -186,17 +193,17 @@ class Connection():
 			response.raise_for_status()
 		return response.json()["@graph"] #the @graph object is a list
 
-	def getEncodeRecord(self,identifier,ignore404=True,frame=None):
+	def getEncodeRecord(self,rec_id,ignore404=True,frame=None):
 		"""
 		Function : Looks up an object in ENCODE using a unique identifier, such as the object id, an alias, uuid, or accession. 
 		Args     : ignore404 - bool. True indicates to not raise an Exception if a 404 is returned. 
-						 : identifier - A unique identifier, such as the object id, an alias, uuid, or accession.
+						 : rec_id - A unique identifier, such as the object id, an alias, uuid, or accession.
 		Returns  : The JSON response. 
 		Raises   : If the status code is 403 (forbidden), an Exception will be raised.
 							 A 404 (not found) status code will result in an Exception only if the 'ignore404' argument
 							 is set to False. 
 		"""
-		recordId = identifier
+		recordId = rec_id 
 		if recordId.endswith("/"):
 			recordId = recordId.lstrip("/")
 		url = os.path.join(self.dcc_url,recordId,"?format=json&datastore=database")
@@ -214,7 +221,7 @@ class Connection():
 			if ignore404:
 				return {}
 			else:
-				raise Exception("ENCODE entity {entity} not found".format(entity=recordId))
+				raise Exception("ENCODE entity '{entity}' not found".format(entity=recordId))
 		else:
 			#if response not okay and status_code equal to something other than 404
 			response.raise_for_status()
@@ -240,32 +247,30 @@ class Connection():
 		else:
 			return rec_json["aliases"][0]
 
-	def patch(self,payload,record_id=None,error_if_not_found=False,extend_array_values=True,indexing=False):
+	def patch(self,payload,record_id=None,error_if_not_found=True,raise_403=True, extend_array_values=True):
 		"""
 		Function : PATCH an object to the DCC. If the object doesn't exist, then this method will call self.post().
 		Args     : payload - dict. containing the attribute key and value pairs to patch.
 							 record_id - str. Identifier of the DCC record to patch. If not specified, will first check if it is set in the payload's 
 													 'id' attribute, and if not there, the 'aliases' attribute.
-							 error_if_not_found - bool. If set to True, then an Exception will be raised if the record to Patch is not found on the ENCODE Portal. 
-									If False and the record isn't found, then a POST will be attempted by calling self.PostToDcc().
+							 error_if_not_found - bool. If set to True, then an Exception will be raised if the record to Patch is not found
+									     	            on the ENCODE Portal. If False and the record isn't found, then a POST will be attempted by
+																		calling self.PostToDcc().
+							 raise_403 - bool. True means to raise an HTTPError if a 403 status (Forbidden) is returned.
 							 extend_array_values - bool. Only affects keys with array values. True (default) means to extend the corresponding value on the Portal with what's specified
 									in the payload. False means to replace the value on the Portal with what's in the payload. 
-							 indexing - bool. If set to True, means that the ENCODE Portal is indexing, thus newly POSTed objects may not 
-                  show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
-                  when appending "?datastore=database" to the URL. Setting this to True ultimately adds a 5 min. delay after POSTing an
-                  object in the self.post() method. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
-                  search like https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing", versus 
-									"waiting" and the results property will indicate the last object that was indexed."
-		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
+		Returns  : The PATCH response. 
+		Raises   : requests.exceptions.HTTPError if the return status is !ok (excluding a 403 status if 'raise_403' is False, and excluding
+							 a 404 status if 'error_if_not_found' is False. 
 		"""
 		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN patch()")
 		objectType = json_payload.pop("@id") #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
 		if not record_id:
-			record_id = self.getRecordId(json_payload)
+			record_id = self.getRecordId(json_payload) #first tries the @id field, then looks for the first alias in the 'aliases' attr.
 				
 		self.logger.info("Will check if {} exists in DCC with a GET request.".format(record_id))
-		get_response_json = self.getEncodeRecord(ignore404=True,identifier=record_id)
+		get_response_json = self.getEncodeRecord(ignore404=True,rec_id=record_id)
 		if not get_response_json:
 			if error_if_not_found:
 				raise Exception("Can't patch record '{}' since it was not found on the ENCODE Portal.".format(record_id))
@@ -274,6 +279,7 @@ class Connection():
 				json_payload["@id"] = objectType
 				response = self.post(payload=json_payload)
 				return response
+
 		if extend_array_values:
 			for key in json_payload:
 				if type(json_payload[key]) is list:
@@ -288,26 +294,19 @@ class Connection():
 		self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
 		if response.ok:
 			return response.json()
-		elif response.status_code == 403: #don't have permission to PATCH or POST to this object:
-			return get_response_json
+		elif response.status_code == 403: #don't have permission to PATCH this object.
+			if not raise_403:
+				return get_response_json
 		else:
 			message = "Failed to PATCH {} to DCC".format(record_id)
 			self.logger.error(message)
 			response.raise_for_status()
-		if indexing and not patch:
-			#then an object was just POSTed, and since the ENCODE portal is indexing, add a 5 min. delay:
-			time.sleep(60 * 5)
 
-	def post(self,payload,indexing=False):
+	def post(self,payload):
 		"""
 		Function : POST an object to the DCC.
 		Args     : payload - The data to submit.
-							 indexing - bool. If set to True, means that the ENCODE Portal is indexing, thus newly POSTed objects may not 
-                  show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
-                  when appending "?datastore=database" to the URL. Setting this to True ultimately adds a 5 min. delay after POSTing an
-                  object in the self.post() method. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
-                  search like https://www.encodeproject.org/_indexer  If it's indexing it will say the status is "indexing", versus 
-									"waiting" and the results property will indicate the last object that was indexed."
+		Returns  : The object's JSON sererialization from the DCC, after it is posted.
 		Raises   : requests.exceptions.HTTPError if the return status is !ok. 
 		"""
 		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
@@ -330,14 +329,12 @@ class Connection():
 			return response.json()
 		elif status_code == 409: #conflict
 			self.logger.info("Will not post {} to DCC because it already exists.".format(alias))
+			rec_json = self.getEncodeRecord(rec_id=alias,ignore404=False)
+			return rec_json
 		else:
 			message = "Failed to POST {alias} to DCC".format(alias=alias)
 			self.logger.error(message)
 			response.raise_for_status()
-		if indexing and not patch:
-			#then an object was just POSTed, and since the ENCODE portal is indexing, add a 5 min. delay:
-			time.sleep(60 * 5)
-
 
 	def doesReplicateExist(self,library_alias,biologicial_replicate_number,technical_replicate_number,replicates_json_from_dcc):
 		"""
@@ -368,6 +365,15 @@ class Connection():
 			if (library_alias in rep_lib_aliases) and (biologicial_replicate_number == rep_bio_rep_number) and (technical_replicate_number == rep_tech_rep_number):
 				return rep_alias
 		return False
+
+
+	def getReplicateNumbers(self,rep_json):
+		"""
+		Function : Given the replicate replicate JSON, extracts the biological and technical replicate numbers. 
+		Args     : rep_json - dict. representing the JSON serialization of a replicate from the DCC.
+		Returns  : tuple of the form (bio_rep_num,tech_rep_num).
+		"""
+		return rep_json["biological_replicate_number"],rep_json["technical_replicate_number"]
 		
 	def getFastqFileRepNumDico(self,dcc_exp_id):
 		"""
@@ -380,15 +386,14 @@ class Connection():
 		Args    : dcc_exp_id - list of DCC file IDs or aliases 
 		Returns : dict. 
 		"""
-		exp_json = self.getEncodeRecord(ignore404=False,dcc_id=dcc_exp_id)
+		exp_json = self.getEncodeRecord(ignore404=False,rec_id=dcc_exp_id)
 		dcc_file_ids = exp_json["original_files"]
 		dico = {}
 		for i in dcc_file_ids:
-			file_json = self.getEncodeRecord(ignore404=False,dcc_id=i)
+			file_json = self.getEncodeRecord(ignore404=False,rec_id=i)
 			if file_json["file_type"] != "fastq":
 				continue #this is not a file object for a FASTQ file.
-			brn = file_json["replicate"]["biological_replicate_number"]	#int
-			trn = file_json["replicate"]["technical_replicate_number"]	#int
+			brn,trn = self.getReplicateNumbers(file_json["replicate"])
 			read_num = file_json["paired_end"] #string
 			if brn not in dico:
 				dico[brn] = {}
@@ -424,7 +429,7 @@ class Connection():
 		"""
 		Function : This is only to be used for DCC "/file/" type objects, because for these we don't have a Syapse record for them (the regular POST method called
 							 post() will try to retrive the corresponding Syapse object. Before attempting a POST, will check if the file exists by doing a get on payload["aliases"][0].
-							 If the GET request succeeds, nothing will be POSTed.
+							 If the GET request succeeds, nothing will be POST'd.
 		Args     : payload - The data to submit.
 							 patch - bool. True indicates to perform an HTTP PATCH operation rather than POST.
 		"""
@@ -557,7 +562,7 @@ class Connection():
 		alias = alias.replace("/","_")	
 		alias = alias.replace("\\","_")
 		return alias
-	
+
 
 	def postMotifEnrichmentsFromTextFile(self,infile,patch=False):
 		"""
@@ -597,7 +602,8 @@ class Connection():
 
 			motif_analysis_basename= os.path.basename(motif_analysis_file)
 			motif_analysis_file_mime_type = str(mimetypes.guess_type(motif_analysis_basename)[0])
-			contents = open(motif_analysis_file,"rb").read().encode("base64").replace("\n", "")
+			contents = str(base64.b64encode(open(motif_analysis_file,"rb").read()),"utf-8")
+			pdb.set_trace()
 			motif_analysis_temp_uri = 'data:' + motif_analysis_file_mime_type + ';base64,' + contents
 			attachment_properties = {}
 			attachment_properties["download"] = motif_analysis_basename
@@ -611,3 +617,102 @@ class Connection():
 			if "@graph" in response:
 				response = response["@graph"][0]
 			self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response["uuid"])
+
+	def postDocument(self,download_filename,document,document_type,document_description,patch=False):
+		"""
+		Function : The alias for the document will be the lab prefix plus the file name (minus the file extension).
+		Args     : download_filename - str. The name to give the document when downloading it from the ENCODE portal.
+							 document_type - str. For possible values, see https://www.encodeproject.org/profiles/document.json. It
+								appears that one should use "data QA" for analysis results documents. 
+							 document_description - str. The description for the document.
+							 document - str. Local filepath to the document to be submitted.
+		"""
+		document_filename = os.path.basename(document)
+		document_alias = en.DCC_ALIAS_PREFIX + os.path.splitext(document_filename)[0]
+		mime_type = mimetypes.guess_type(document_filename)[0]
+		if not mime_type:
+			raise Exception("Couldn't guess MIME type for {}.".format(document_filename))
+		
+		## Post information to DCC
+		payload = {} 
+		payload["@id"] = "documents/"
+		payload.update(en.AWARD_AND_LAB)
+		payload["aliases"] = [document_alias]
+		payload["document_type"] = document_type
+		payload["description"] = document_description
+	
+		data = base64.b64encode(open(document,'rb').read())
+		temp_uri = str(data,"utf-8")
+		href = "data:{mime_type};base64,{temp_uri}".format(mime_type=mime_type,temp_uri=temp_uri)
+		#download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
+		attachment_properties = {} 
+		attachment_properties["download"] = download_filename
+		attachment_properties["href"] = href
+		attachment_properties["type"] = mime_type
+	
+		payload['attachment'] = attachment_properties
+		
+		if patch:
+			response = self.patch(payload=payload)
+		else:
+			response = self.post(payload=payload)
+		if "@graph" in response:
+			response = response["@graph"][0]
+		dcc_uuid = response['uuid']
+		return dcc_uuid
+	
+	
+	def linkDocument(self,rec_profile,rec_id,dcc_document_uuid):
+		"""
+		Function : Links an existing document on the ENCODE Portal to an existing experiment via the experiment's 'documents' attribute.
+		Args     : rec_profile - An object profile name in the DCC schema, i.e. document, library, antibody, ..., signifying the
+									profile of the object describing 'rec_id' that is to be linked to the document.  
+							 dcc_document_uuid - The value of the document's 'uuid' attribute.
+							 rec_id      - A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to link the document to. 	
+		Returns  : The PATCH response form self.patch().
+		"""
+		rec_json = self.getEncodeRecord(ignore404=False,rec_id=rec_id)
+		documents_json = rec_json["documents"]
+		#originally in form of [u'/documents/ba93f5cc-a470-41a2-842f-2cb3befbeb60/', u'/documents/tg81g5aa-a580-01a2-842f-2cb5iegcea03, ...]
+		#strip off the /documents/ prefix from each document UUID:
+		document_uuids = [x.strip("/").split("/")[-1] for x in documents_json]
+		if document_uuids:
+			document_uuids = self.addToSet(entries=document_uuids,new=dcc_document_uuid)
+		else:
+			document_uuids.append(dcc_document_uuid)
+		payload = {}
+		payload["@id"] = "{rec_profile}/".format(rec_profile=rec_profile)
+		payload["documents"] = document_uuids
+		self.patch(payload=payload,record_id=rec_id)
+	
+	def addToSet(self,entries,new):
+		"""
+		Function : Given a list of document IDs, determines whether the document to add to the list is alread in the list, and only adds it if it isn't yet a member.
+							 This function has a side-affect of removing any existing duplicate documents.
+		Args     : documents_list - list of document IDs in the form of UUIDs, document links (i.e. "/documents/709538e6-41a4-4dc1-a5d3-a5ee3c42413f/"), or a mix.
+							 document      - A document UUID or document link.
+		Returns  : list.
+		"""
+		entries.append(new)
+		#Extract UUIDs part from each document (in the event some documents were passed in as document links).
+		#documents_list = [x.strip("/").split("/")[-1] for x in documents_list]
+		unique_list = list(set(entries))
+		return unique_list
+	
+	#dcc_document_uuid = postDocument(download_filename="Snyder_RsemProtocol.txt",document="/srv/gsfs0/software/gbsc/encode/current/encode/sirna/rsem_protocol.txt",document_type="data QA",document_description="RSEM Protocol",patch=True)
+	
+	#exps=["ENCSR136ZPD","ENCSR045TQN","ENCSR181AXM","ENCSR542VBC","ENCSR977SOT","ENCSR509YMP","ENCSR669QED","ENCSR047MQO","ENCSR627AFW","ENCSR071JWS","ENCSR820EGA","ENCSR710CEM","ENCSR051NHG","ENCSR989NEA","ENCSR129WCZ","ENCSR261IHP","ENCSR431LBP","ENCSR067CAG","ENCSR169DSM","ENCSR965CCM","ENCSR798QCC","ENCSR793ISR","ENCSR640PVZ","ENCSR656ZOI","ENCSR174FUO","ENCSR301SWM","ENCSR626SFM","ENCSR856MQG","ENCSR205BWT","ENCSR312FIT","ENCSR555CYH","ENCSR390GWL","ENCSR345LKR","ENCSR472UFW","ENCSR133AIK","ENCSR675SDG","ENCSR874ZXG","ENCSR100ODO","ENCSR080OUZ","ENCSR336ZWX","ENCSR631RKH"]
+	
+	#for i in exps:
+		#patchDocumentToExperiment(dcc_exp_id=i,dcc_document_uuid=dcc_document_uuid)
+	#dcc_document_uuid = "455f1dae-ccec-495a-a76b-a0f7c64508b3"
+	#patchDocumentToExperiment(dcc_exp_id="ENCSR092LZV",dcc_document_uuid=dcc_document_uuid)
+	#patchDocumentToExperiment(dcc_exp_id="ENCSR576FFB/",dcc_document_uuid=dcc_document_uuid)
+
+
+
+#indexing - bool. If set to True, means that the ENCODE Portal is indexing, thus newly POSTed objects may not 
+# show up in search queries for several minutes. Giving an absolute resource identifier, on the other hand, seems to work
+# when appending "?datastore=database" to the URL. As Esther stated: "_indexer to the end of the URL to see the status of elastic 
+# search like https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing", versus 
+# waiting" and the results property will indicate the last object that was indexed."
