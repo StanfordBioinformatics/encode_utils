@@ -8,15 +8,22 @@
 
 import argparse
 
-import encode_utils.utils as u
+from encode_utils.parent_argparser import dcc_login_parser 
+#dcc_login_parser  contains the arguments needed for logging in to the ENCODE Portal, including which env.
+from encode_utils.connection import Connection
 
-description = "Hi"
-parser = argparse.ArgumentParser(description=description)
-parser.add_argument("-u","--dcc-username",required=True,help="The DCC user name used to log into the ENCODE Portal.")
-parser.add_argument("-m","--dcc-mode",required=True,help="The ENCODE Portal site ('prod' or 'dev') to connect to.")
+description = """
+Given an ENCODE experiment identifier, Prints the FASTQ ENCFF identifiers for the specified replicate and technical replicates, or all replicates. Also prints the replicate numbers. For each FASTQ identifer, the following is printed to stdout: 
+		$BioNum_$TechNum_$ReadNum\\t$encff
+where variables are defined as:
+		$BioNum  - the biological repliate number
+		$TechNum - the technial replicate number
+		$ReadNum - '1' for a forwards reads FASTQ file, and '2' for a reverse reads FASTQ file.
+"""
+parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("-e","--dcc-exp-id",required=True,help="The experiment to which the replicates belong. Must be set if --all-reps is absent.")
-parser.add_argument("-b","--bio-rep-num",type=int,help="The biological replicate number")
-parser.add_argument("-t","--tech-rep-num",type=int,help="The technical replicate number")
+parser.add_argument("-b","--bio-rep-num",type=int,help="Print FASTQ ENCFFs for this specified biological replicate number.")
+parser.add_argument("-t","--tech-rep-num",type=int,help="Print FASTQ ENCFFs for the specified technical replicate number of the specified biological replicate.")
 parser.add_argument("-a","--all-reps",action="store_true",help="Print FASTQ ENCFFs for all replicates on the experiment.")
 args = parser.parse_args()
 user_name = args.dcc_username
@@ -29,7 +36,7 @@ all_reps = args.all_reps
 if not bio_rep_num and not all_reps:
 	raise argparse.ArgumentTypeError("--bio-rep-num must be specified if --all-reps isn't.")
 
-conn = u.Connection(dcc_username=user_name,dcc_mode=mode)
+conn = Connection(dcc_username=user_name,dcc_mode=mode)
 REP_DICO = conn.getFastqFileRepNumDico(dcc_exp_id=exp_id)
 
 def process_tech_rep(bio_rep_num,tech_rep_num):

@@ -9,7 +9,7 @@
 import argparse
 import pdb
 
-import encode_utils.utils
+import encode_utils.connection
 
 
 RECORD_ID_FIELD = "record_id" #special field that won't be skipped in the create_payload() function.
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 	error_if_not_found = args.error_if_not_found
 	overwrite_array_values = args.overwrite_array_values
 
-	conn = encode_utils.utils.Connection(dcc_username="nathankw",dcc_mode=dcc_mode)
+	conn = encode_utils.connection.Connection(dcc_username="nathankw",dcc_mode=dcc_mode)
 
 	infile = args.infile
 	patch = args.patch

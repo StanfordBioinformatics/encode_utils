@@ -75,7 +75,7 @@ class Connection():
  	 DCC_DEV_MODE: "https://test.encodedcc.org/"
  	 }
 
-	DCC_ALIAS_PREFIX = en.DCC_ALIAS_PREFIX
+	LAB_PREFIX = en.LAB_PREFIX
 	
 	AWARD_AND_LAB = {"award": en.AWARD,"lab": en.LAB} 
 
@@ -585,7 +585,7 @@ class Connection():
 			encff = line[5].strip()
 			encab = line[6].strip() 
 			motif_analysis_file = line[8].strip()
-			alias = en.DCC_ALIAS_PREFIX + encff + "_" + encab + "_" + target
+			alias = en.LAB + encff + "_" + encab + "_" + target
 
 			caption = "The motif for target {target} is represented by the attached position weight matrix (PWM) derived from {encff}. Motif enrichment analysis was done by Dr. Zhizhuo Zhang (Broad Institute, Kellis Lab). Accept probability score: {accept_prob}; Global enrichment Z-score: {global_enrichment_zscore}; Positional bias Z-score: {pos_bias_zscore}; Peak rank bias Z-score: {peak_rank_bias_zscore}; Enrichment rank: 1.0.".format(target=target,encff=encff,accept_prob=accept_prob,global_enrichment_zscore=global_enrichment_zscore,pos_bias_zscore=pos_bias_zscore,peak_rank_bias_zscore=peak_rank_bias_zscore)
 		  
@@ -628,7 +628,7 @@ class Connection():
 							 document - str. Local filepath to the document to be submitted.
 		"""
 		document_filename = os.path.basename(document)
-		document_alias = en.DCC_ALIAS_PREFIX + os.path.splitext(document_filename)[0]
+		document_alias = en.LAB + os.path.splitext(document_filename)[0]
 		mime_type = mimetypes.guess_type(document_filename)[0]
 		if not mime_type:
 			raise Exception("Couldn't guess MIME type for {}.".format(document_filename))
