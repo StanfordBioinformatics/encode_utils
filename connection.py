@@ -538,17 +538,22 @@ class Connection():
 				raise Exception("Subprocess command {cmd} failed with returncode {retcode}. Stdout is {stdout}. Stderr is {stderr}.".format(cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr))
 			
 
-	def getPlatformsOnExperiment(self,dcc_exp_alias=False,dcc_exp_encid=False):
-		if not dcc_exp_alias and not dcc_exp_encid:
-			raise Exception("You must specify either dcc_exp_alias or dcc_exp_encid.")
-		exp_json = self.getEncodeRecord(ignore404=False,dcc_alias=dcc_exp_alias,dcc_id=dcc_exp_encid,frame=None)
+	def getPlatformsOnExperiment(self,rec_id)
+		"""
+		Function : Looks at all FASTQ files on the specified experiment, and tallies up the varying sequencing platforms that generated them. 
+							 This is moreless used to verify that there aren't a mix of multiple different platforms present as normally all reads
+							 should come from the same platform.
+		Args     : rec_id : str. DCC identifier for an experiment. 
+		Returns :  list. De-duplicated list of platforms seen on the experiment's FASTQ files. 
+		"""
+		exp_json = self.getEncodeRecord(rec_id=rec_id,frame=None)
 		if "@graph" in exp_json:
 			exp_json = exp_json["@graph"][0]
-		files_json = exp_json["files"]
+		files_json = exp_json["original_files"]
 		platforms = []
 		for f in files_json:
-			if "platform" not in f:
-				continue #could be an analysis file created by the DCC.
+			if not f["file_format"] == "fastq":
+				continue
 			platforms.extend(f["platform"]["aliases"])
 		return list(set(platforms))
 				
@@ -618,14 +623,15 @@ class Connection():
 				response = response["@graph"][0]
 			self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response["uuid"])
 
-	def postDocument(self,download_filename,document,document_type,document_description,patch=False):
+	def postDocument(self,download_filename,document,document_type,document_description):
 		"""
 		Function : The alias for the document will be the lab prefix plus the file name (minus the file extension).
 		Args     : download_filename - str. The name to give the document when downloading it from the ENCODE portal.
 							 document_type - str. For possible values, see https://www.encodeproject.org/profiles/document.json. It
-								appears that one should use "data QA" for analysis results documents. 
+								  appears that one should use "data QA" for analysis results documents. 
 							 document_description - str. The description for the document.
 							 document - str. Local filepath to the document to be submitted.
+		Returns  : The DCC UUID of the new document. 
 		"""
 		document_filename = os.path.basename(document)
 		document_alias = en.LAB + os.path.splitext(document_filename)[0]
@@ -652,10 +658,7 @@ class Connection():
 	
 		payload['attachment'] = attachment_properties
 		
-		if patch:
-			response = self.patch(payload=payload)
-		else:
-			response = self.post(payload=payload)
+		response = self.post(payload=payload)
 		if "@graph" in response:
 			response = response["@graph"][0]
 		dcc_uuid = response['uuid']
