@@ -3,7 +3,7 @@ Tools that are useful to any ENCODE submitting group. Library and scripts are co
 
 # Setup
 ## Dependencies 
-The only dependency is Python3. To uses this package, you must have "python3" in your environment that elicits some some version of Python3. 
+The only dependency for using this package is Python3 - you must have "python3" in your environment that elicits some some version of Python3. 
 
 ## Installation 
 Download the latest [release](https://github.com/StanfordBioinformatics/encode_utils/releases), and unpack it, which will result in a folder called encode_utils-$release, where $release is the release number. 
