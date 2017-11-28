@@ -1,4 +1,6 @@
 {
+	"lab": "michael-snyder",
+	"award": "U54HG006996",
 	"platforms": {
 		"GAIIx": "GAIIx",
 		"HiSeq": "HiSeq"

@@ -538,7 +538,7 @@ class Connection():
 				raise Exception("Subprocess command {cmd} failed with returncode {retcode}. Stdout is {stdout}. Stderr is {stderr}.".format(cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr))
 			
 
-	def getPlatformsOnExperiment(self,rec_id)
+	def getPlatformsOnExperiment(self,rec_id):
 		"""
 		Function : Looks at all FASTQ files on the specified experiment, and tallies up the varying sequencing platforms that generated them. 
 							 This is moreless used to verify that there aren't a mix of multiple different platforms present as normally all reads
