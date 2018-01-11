@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/bin/env python
 
 ###
 #Nathaniel Watson
@@ -7,8 +7,9 @@
 ###
 
 import os
+import json
 import argparse
-import pdb
+import requests
 
 import encode_utils.connection
 
@@ -18,6 +19,9 @@ RECORD_ID_FIELD = "record_id"
 # It is used when patching objects to indicate the identifier of the record to patch. 
 ENCODE_URL = "https://www.encodeproject.org"
 PROFILES_URL = os.path.join(ENCODE_URL,"profiles")
+
+class UnknownENCODEProfile(Exception):
+	pass
 
 def typecast_value(value,value_type):
 	"""
@@ -36,7 +40,7 @@ def get_profile_schema(profile):
 	res = requests.get(url,headers={"content-type": "application/json"})
 	status_code = res.status_code
 	if status_code == 404:
-		return 404
+		raise UnknownENCODEProfile("Please verify the profile name that you specifed.")
 	res.raise_for_status()
 	return res.json()
 
@@ -105,8 +109,25 @@ def create_payloads(profile,infile):
 			val_type = schema_props[field]["type"]
 			if val_type == "array":
 				item_val_type = schema_props[field]["items"]["type"]
-				val = [x.strip() for x in val.split(",")]
-				val = [typecast_value(value=x,value_type=item_val_type) for x in val] #could be interger value
+				if item_val_type == "object":
+					#Don't try to break down the individual pieces of a nested object. That will be too complext for this script, and will also
+					# be too complex for the end user to try and represent in some flattened way. Thus, require the end user to supply proper JSON
+					# for a nested object.
+
+					#Check if user supplied optional JSON array literal. If not, I'll add it. 
+					if not val.startswith("["):
+						val = "[" + val
+					if not val.endswith("]"):
+						val+= "]"
+					val = json.loads(val)
+				else:
+					#Remove optional JSON array literal since I'm converting to an array regardless.
+					if val.startswith("["):
+						val = val[1:]
+					if val.endswith("]"):
+						val = val[:-1]
+					val = [x.strip() for x in val.split(",")]
+					val = [typecast_value(value=x,value_type=item_val_type) for x in val] #could be interger value
 			else:
 				val = typecast_value(value=val,value_type=val_type)
 			payload[field] = val
@@ -153,7 +174,6 @@ configuration file conf_data.json.""")
 	patch = args.patch
 	gen = create_payloads(profile=profile,infile=infile)
 	for payload in gen:
-		#pdb.set_trace()
 		if not patch:
 			conn.post(payload=payload) #this method will pop out the '@id' field if it is present.
 		else:
