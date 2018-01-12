@@ -29,6 +29,20 @@ import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+def get_profile_schema(profile):
+	""" 
+	Function : Retrieves the JSON schema of the specified profile from the ENCODE Portal.
+	Raises   : requests.exceptions.HTTPError if the status code is something other than 200 or 404. 
+	Returns  : 404 (int) if profile not found, otherwise a dict representing the profile's JSON schema. 
+	"""
+	url = os.path.join(PROFILES_URL,profile + ".json?format=json")
+	res = requests.get(url,headers={"content-type": "application/json"})
+	status_code = res.status_code
+	if status_code == 404:
+	  raise UnknownENCODEProfile("Please verify the profile name that you specifed.")
+	res.raise_for_status()
+	return res.json()
+
 def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
 	"""
 	Function : Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes stdout and stderr. Stderr is always
@@ -270,7 +284,7 @@ class Connection():
 			record_id = self.getRecordId(json_payload) #first tries the @id field, then looks for the first alias in the 'aliases' attr.
 				
 		self.logger.info("Will check if {} exists in DCC with a GET request.".format(record_id))
-		get_response_json = self.getEncodeRecord(ignore404=True,rec_id=record_id)
+		get_response_json = self.getEncodeRecord(ignore404=True,rec_id=record_id,frame="object")
 		if not get_response_json:
 			if error_if_not_found:
 				raise Exception("Can't patch record '{}' since it was not found on the ENCODE Portal.".format(record_id))

@@ -10,6 +10,7 @@ import os
 import json
 import argparse
 import requests
+import re
 
 import encode_utils.connection
 
@@ -29,20 +30,6 @@ def typecast_value(value,value_type):
 	if value_type == "integer":
 		return int(value)
 	return value
-
-def get_profile_schema(profile):
-	"""
-	Function : Retrieves the JSON schema of the specified profile from the ENCODE Portal.
-	Raises   : requests.exceptions.HTTPError if the status code is something other than 200 or 404. 
-	Returns  : 404 (int) if profile not found, otherwise a dict representing the profile's JSON schema. 
-	"""
-	url = os.path.join(PROFILES_URL,profile + ".json?format=json")
-	res = requests.get(url,headers={"content-type": "application/json"})
-	status_code = res.status_code
-	if status_code == 404:
-		raise UnknownENCODEProfile("Please verify the profile name that you specifed.")
-	res.raise_for_status()
-	return res.json()
 
 def create_payloads(profile,infile):
 	"""
@@ -70,8 +57,9 @@ def create_payloads(profile,infile):
 
 	Yields  : dict. The payload that can be used to either register or patch the metadata for each row.
 	"""
+	STR_REGX = reg = re.compile(r'\'|"')
 	#Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
-	schema = get_profile_schema(profile)
+	schema = encode_utils.connection.get_profile_schema(profile)
 	schema_props = schema["properties"]
 	START_COUNT = -1
 	ID_FIELD_NAME = "@id"
@@ -106,30 +94,34 @@ def create_payloads(profile,infile):
 			if (count in skip_field_indices) or (not val):
 				continue
 			field = field_index[count]
-			val_type = schema_props[field]["type"]
-			if val_type == "array":
-				item_val_type = schema_props[field]["items"]["type"]
-				if item_val_type == "object":
-					#Don't try to break down the individual pieces of a nested object. That will be too complext for this script, and will also
-					# be too complex for the end user to try and represent in some flattened way. Thus, require the end user to supply proper JSON
-					# for a nested object.
-
-					#Check if user supplied optional JSON array literal. If not, I'll add it. 
-					if not val.startswith("["):
-						val = "[" + val
-					if not val.endswith("]"):
-						val+= "]"
-					val = json.loads(val)
+			if not field == RECORD_ID_FIELD:
+				val_type = schema_props[field]["type"]
+				if val_type == "array":
+					item_val_type = schema_props[field]["items"]["type"]
+					if item_val_type == "object":
+						#Don't try to break down the individual pieces of a nested object. That will be too complext for this script, and will also
+						# be too complex for the end user to try and represent in some flattened way. Thus, require the end user to supply proper JSON
+						# for a nested object.
+	
+						#Check if user supplied optional JSON array literal. If not, I'll add it. 
+						if not val.startswith("["):
+							val = "[" + val
+						if not val.endswith("]"):
+							val+= "]"
+						val = json.loads(val)
+					else:
+						#Remove optional JSON array literal since I'm converting to an array regardless.
+						if val.startswith("["):
+							val = val[1:]
+						if val.endswith("]"):
+							val = val[:-1]
+						val = [x.strip() for x in val.split(",")]
+						#For arrays of strings, user can use or omit string literals. Thus, I'll need to 
+						# check for them and strip them out:
+						val = [STR_REGX.sub("",x) for x in val] #user is allowed to enter values in string literals
+						val = [typecast_value(value=x,value_type=item_val_type) for x in val] #could be interger value
 				else:
-					#Remove optional JSON array literal since I'm converting to an array regardless.
-					if val.startswith("["):
-						val = val[1:]
-					if val.endswith("]"):
-						val = val[:-1]
-					val = [x.strip() for x in val.split(",")]
-					val = [typecast_value(value=x,value_type=item_val_type) for x in val] #could be interger value
-			else:
-				val = typecast_value(value=val,value_type=val_type)
+					val = typecast_value(value=val,value_type=val_type)
 			payload[field] = val
 		yield payload
 	
