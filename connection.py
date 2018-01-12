@@ -29,6 +29,8 @@ import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+PROFILES_URL = "https://www.encodeproject.org/profiles"
+
 def get_profile_schema(profile):
 	""" 
 	Function : Retrieves the JSON schema of the specified profile from the ENCODE Portal.
@@ -342,7 +344,7 @@ class Connection():
 			self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
 			return response.json()
 		elif status_code == 409: #conflict
-			self.logger.info("Will not post {} to DCC because it already exists.".format(alias))
+			self.logger.error("Will not post {} to DCC because it already exists.".format(alias))
 			rec_json = self.getEncodeRecord(rec_id=alias,ignore404=False)
 			return rec_json
 		else:
