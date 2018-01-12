@@ -95,12 +95,11 @@ class Connection():
 	
 	AWARD_AND_LAB = {"award": en.AWARD,"lab": en.LAB} 
 
-	def __init__(self,dcc_username,dcc_mode):
+	def __init__(self,dcc_mode):
 		"""
 		Function : Opens up two log files in append mode in the calling directory named ${dcc_mode}_error.txt and ${dcc_mode}_posted.txt.
-		           Parses the API keys from the config file pointed to by en.DCC_API_KEYS_FILE (in __init__.py). 
-		Args     : dcc_username - The user name used to log into the ENCODE Portal.
-							 dcc_mode     - The ENCODE Portal site ("prod" or "dev") to connect to.
+		           Parses the API keys from the environment variables DCC_API_KEY and DCC_SECRET_KEY.
+		Args     : dcc_mode     - The ENCODE Portal site ("prod" or "dev") to connect to.
 		"""
 
 		f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
@@ -131,7 +130,6 @@ class Connection():
 		self.logger = logger
 		self.post_logger = post_logger
 
-		self.dcc_username = dcc_username
 		self.dcc_mode = dcc_mode
 		self.dcc_url = self._setDccUrl()
 		self.api_key,self.secret_key = self._setApiKeys()
@@ -142,14 +140,11 @@ class Connection():
 
 	def _setApiKeys(self):
 		"""
-		Function : Retrieves the API key and secret key for the supplied dcc user name.
-		Args     : dcc_username - The username used to log into the DCC website (prod or dev website).
-		Returns  : Tuple containing the (API Key, Secret Key)
+		Function : Retrieves the API key and secret key based on the environment variables DCC_API_KEY and DCC_SECRET_KEY.
+		Args     : Returns  : Tuple containing the (API Key, Secret Key)
 		"""
-		fh = open(en.DCC_API_KEYS_FILE)
-		conf = json.load(fh)
-		api_key = conf[self.dcc_username]["api_key"]
-		secret_key = conf[self.dcc_username]["secret_key"]
+		api_key = os.environ["DCC_API_KEY"]
+		secret_key = os.environ["DCC_SECRET_KEY"]
 		return api_key,secret_key
 		
 	def _writeAliasAndDccAccessionToLog(self,alias,dcc_id=None):

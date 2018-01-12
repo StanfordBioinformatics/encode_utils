@@ -155,11 +155,10 @@ configuration file conf_data.json.""")
 	args = parser.parse_args()
 	profile = args.profile
 	dcc_mode = args.dcc_mode
-	dcc_user = args.dcc_username
 	error_if_not_found = args.error_if_not_found
 	overwrite_array_values = args.overwrite_array_values
 
-	conn = encode_utils.connection.Connection(dcc_username=dcc_user,dcc_mode=dcc_mode)
+	conn = encode_utils.connection.Connection(dcc_mode=dcc_mode)
 
 	infile = args.infile
 	patch = args.patch
