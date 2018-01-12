@@ -13,13 +13,12 @@ import requests
 import re
 
 import encode_utils.connection
+from encode_utils.parent_argparser import dcc_login_parser
 
 
 RECORD_ID_FIELD = "record_id" 
 #RECORD_ID_FIELD is a special field that won't be skipped in the create_payload() function.
 # It is used when patching objects to indicate the identifier of the record to patch. 
-ENCODE_URL = "https://www.encodeproject.org"
-PROFILES_URL = os.path.join(ENCODE_URL,"profiles")
 
 class UnknownENCODEProfile(Exception):
 	pass
@@ -130,9 +129,8 @@ if __name__ == "__main__":
 
 
 	description = "Given a tab-delimited input file containing records belonging to one of the profiles listed on the ENCODE Portal (such as https://www.encodeproject.org/profiles/biosample.json), either registers or patches metadata for each record. Don't mix input files containing both new records and records to patch - in this case they should be split into separate files."
-	parser = argparse.ArgumentParser(description=description,formatter_class=argparse.RawTextHelpFormatter)
+	parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
 	parser.add_argument("-p","--profile",required=True,help="The profile to submit to, i.e. put 'biosample' for https://www.encodeproject.org/profiles/biosample.json. The profile will be pulled down for type-checking in order to type-cast any values in the input file to the proper type (i.e. some values need to be submitted as integers, not strings).")
-	parser.add_argument("-m","--dcc-mode",required=True,help="The DCC environment to submit to (either 'dev' or 'prod').")
 	parser.add_argument("-i","--infile",help="""The tab-delimited input file with a field-header line as the first line. The field names must be exactly equal
 to the corresponding names in the profile given on the ENCODE Portal. For fields containing an array as the value,
 values within the array must be comma-delimited and should not themselves be wrapped in brackets. 
@@ -157,10 +155,11 @@ configuration file conf_data.json.""")
 	args = parser.parse_args()
 	profile = args.profile
 	dcc_mode = args.dcc_mode
+	dcc_user = args.dcc_username
 	error_if_not_found = args.error_if_not_found
 	overwrite_array_values = args.overwrite_array_values
 
-	conn = encode_utils.connection.Connection(dcc_username="nathankw",dcc_mode=dcc_mode)
+	conn = encode_utils.connection.Connection(dcc_username=dcc_user,dcc_mode=dcc_mode)
 
 	infile = args.infile
 	patch = args.patch
