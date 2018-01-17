@@ -3,7 +3,7 @@
 ###
 #Nathaniel Watson
 #nathankw@stanford.edu
-#2017-11-01
+#2018-01-16
 ###
 
 import argparse
@@ -25,38 +25,43 @@ Again, because there can be multiple controls listed in the "possible_controls" 
 parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("-e","--dcc-exp-id",required=True,help="The experiment whose FASTQ file objects need to have their controlled_by field set.")
 args = parser.parse_args()
-user_name = args.dcc_username
 mode = args.dcc_mode
 exp_id = args.dcc_exp_id
 
-conn = Connection(dcc_username=user_name,dcc_mode=mode)
+conn = Connection(dcc_mode=mode)
 exp_rep_dico = conn.getFastqFileRepNumDico(dcc_exp_id=exp_id)
-exp_json = conn.getEncodeRecord(rec_id=dcc_exp_id,ignore404=True,frame="object")
-num_exp_reps = len(exp_json["replicates"])
-control_ids = exp_json["controlled_by"]
-controls = {}
-control_rep_counts = []
-for c in controls_ids:
+exp_bio_rep_count = len(exp_rep_dico.keys())
+exp_json = conn.getEncodeRecord(rec_id=exp_id,ignore404=True,frame="object")
+control_ids = exp_json["possible_controls"]
+controls = {} #A dict of dicts.
+control_bio_rep_counts = []
+for c in control_ids:
 	controls[c] = {}
-	c_json = conn.getEncodeRecord(rec_id=c,ignore404=True,frame="object")
-	rep_count = len(c_json["replicates"])
-	control[c]["count"] = rep_count
-	control_rep_counts.append(rep_count)
-	control[c]["rep_dico"] = conn.getFastqFileRepNumDico(dcc_exp_id=c)
+	ctl_rep_dico = conn.getFastqFileRepNumDico(dcc_exp_id=c)
+	controls[c]["rep_dico"] = ctl_rep_dico
+	ctl_bio_rep_count = len(ctl_rep_dico.keys())
+	control_bio_rep_counts.append(ctl_bio_rep_count)
 
-#Make sure that all control experiments have the same number of replicates:
-if len(set(control_rep_counts)) != 1:
-	raise Exception("The controls '{controls}' have different numbers of replicates from one another '{rep_nums}'.".format(controls=control_ids,rep_nums=control_rep_counts))
+#Make sure that all control experiments have the same number of biological replicates:
+if len(set(control_bio_rep_counts)) != 1:
+	raise Exception("The controls '{controls}' have different numbers of biological replicates from one another '{rep_nums}'.".format(controls=control_ids,rep_nums=control_bio_rep_counts))
 
-#Make sure that the number of control reps equals the number of experiment reps:
-if num_exp_reps != control_rep_counts[0]:
-	raise Exception("The number of experiment replicates '{}' doesn't equal the number of control replicates '{}'."format(num_exp_reps,control_rep_counts[0])
+#Make sure that the number of control bio reps equals the number of experiment bio reps:
+if exp_bio_rep_count != control_bio_rep_counts[0]:
+	raise Exception("The number of experiment replicates '{}' doesn't equal the number of control replicates '{}'.".format(exp_bio_rep_count,control_bio_rep_counts[0]))
 
-for b in exp_rep_dico:
-	for t in exp_rep_dico[b]:
+sorted_exp_bio_reps = sorted(exp_rep_dico)
+count = -1
+for b in sorted_exp_bio_reps: #biological rep
+	count += 1
+	for t in exp_rep_dico[b]: #technical rep
 		for read_num in exp_rep_dico[b][t]:
 			encff_json=exp_rep_dico[b][t][read_num]
 			alias = encff_json["aliases"][0]
-			print("_".join([bio_rep_num,tech_rep_num,read_num]) + "\t" + alias)
-
-
+			controlled_by = []
+			for c in controls:
+				ctl_bio_rep = sorted(controls[c]["rep_dico"].keys())[count]
+				tech_reps = controls[c]["rep_dico"][ctl_bio_rep]
+				for c_t in tech_reps:
+					for c_t_r in c_t:
+						print(c_t[c_t_r]["aliases"][0])
