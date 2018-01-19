@@ -271,8 +271,6 @@ class Connection():
 
 	def parse_profile_from_id_prop(self,val):
 		#i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
-		if not val.startswith("/"):
-			return ""
 		profile = val.strip("/").split("/")[0].rstrip("s").lower()
 		if not profile in PROFILE_NAMES:
 			return ""
@@ -351,6 +349,8 @@ class Connection():
 		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN post().")
 		profile = self.parse_profile_from_id_prop(json_payload)
+		if not profile:
+			raise Exception("Invalid profile '{}' specified in the '@id' attribute.".format(profile))
 		url = os.path.join(self.dcc_url,profile)
 		alias = json_payload["aliases"][0]
 		self.logger.info("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(alias=alias,url=url,payload=json_payload))
