@@ -154,7 +154,7 @@ configuration file conf_data.json.""")
 
 	parser.add_argument("--patch",action="store_true",help="Presence of this option indicates to patch an existing DCC record rather than register a new one.")
 	parser.add_argument("-e","--error-if-not-found", action="store_true",help="If trying to PATCH a record and the record cannot be found on the ENCODE Portal, the default behavior is to then attempt a POST. Specifying this option causes an Exception to be raised.")
-	parser.add_argument("--overwrite-array-values",action="store_true",help="Only has meaning in combination with the --patch option. When this is specified, it means that any keys with array values will be overwritten on the ENCODE Portal with the corresponding value to patch. The default action is to extend the array value with the patch value and then to remove any duplicates.")
+	parser.add_argument("-w","--overwrite-array-values",action="store_true",help="Only has meaning in combination with the --patch option. When this is specified, it means that any keys with array values will be overwritten on the ENCODE Portal with the corresponding value to patch. The default action is to extend the array value with the patch value and then to remove any duplicates.")
 	args = parser.parse_args()
 	profile = args.profile
 	dcc_mode = args.dcc_mode
@@ -168,7 +168,7 @@ configuration file conf_data.json.""")
 	gen = create_payloads(profile=profile,infile=infile)
 	for payload in gen:
 		if not patch:
-			conn.post(payload=payload) #this method will pop out the '@id' field if it is present.
+			conn.post(payload=payload)
 		else:
 			record_id = payload.get(RECORD_ID_FIELD,False)
 			if not record_id:

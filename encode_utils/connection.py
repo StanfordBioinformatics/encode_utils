@@ -36,7 +36,7 @@ PROFILES_URL = "https://www.encodeproject.org/profiles"
 PROFILE_NAMES = [x.lower() for x in requests.get(url=PROFILES_URL + "/?format=json", headers={"content-type": "application/json"}).json().keys()]
 #PROFILE_NAMES are lower case.
 
-class UnknownDccProfile(Exception)
+class UnknownDccProfile(Exception):
 	pass
 
 
@@ -269,9 +269,18 @@ class Connection():
 		else:
 			return rec_json["aliases"][0]
 
-	def parse_profile_from_id_prop(self,val):
+	def parse_profile_from_id_prop(self,id_val):
+		"""
+		Function : Given the value of the '@id' property of any schema that supports it (all I think?), extracts
+							 the profile out of it. On the portal, a record stores its ID in this field also, following the profile.
+							 For example, given the file object identified by ENCFF859CWS, the value its '@id' property as shown on
+							 the Portal is '/files/ENCFF859CWS/'. The profile can be extracted out of this and singularized in order
+							 match the name of a profile listed in https://www.encodeproject.org/profiles/.
+		Args     : id_val - str. The value of the '@id' key in a record's JSON.
+		Returns  : str. Will be empty if no profile could be extracted.
+		"""
 		#i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
-		profile = val.strip("/").split("/")[0].rstrip("s").lower()
+		profile = id_val.strip("/").split("/")[0].rstrip("s").lower()
 		if not profile in PROFILE_NAMES:
 			return ""
 		return profile
@@ -279,29 +288,31 @@ class Connection():
 
 	def patch(self,payload,record_id=None,error_if_not_found=True,raise_403=True, extend_array_values=True):
 		"""
-		Function : PATCH an object to the DCC. If the object doesn't exist, then this method will call self.post().
+		Function : PATCH an object to the DCC. If the object doesn't exist, then this method will call self.post(), unless
+							 the argument 'error_if_not_found' is set to True.
 		Args     : payload - dict. containing the attribute key and value pairs to patch.
 							 record_id - str. Identifier of the DCC record to patch. If not specified, will first check if it is set in the payload's 
 													 'id' attribute, and if not there, the 'aliases' attribute.
-							 error_if_not_found - bool. If set to True, then an Exception will be raised if the record to Patch is not found
-									     	            on the ENCODE Portal. If False and the record isn't found, then a POST will be attempted by
-																		calling self.PostToDcc().
-							 raise_403 - bool. True means to raise an HTTPError if a 403 status (Forbidden) is returned.
-							 extend_array_values - bool. Only affects keys with array values. True (default) means to extend the corresponding value on the Portal with what's specified
-									in the payload. False means to replace the value on the Portal with what's in the payload. 
+							 error_if_not_found - bool. If set to True, then an Exception will be raised if the record to PATCH is not found
+                           on the ENCODE Portal. If False and the record isn't found, then a POST will be attempted by
+                           calling self.PostToDcc().
+							 raise_403 - bool. True means to raise an HTTPError if a 403 status (Forbidden) is returned. If set to False and
+													 there still is a 403 return status, then the object you were trying to PATCH will be fetched from the Portal
+													 in JSON format as this function's return value.
+							 extend_array_values - bool. Only affects keys with array values. True (default) means to extend the corresponding
+                           value on the Portal with what's specified in the payload. False means to replace the value on the 
+													 Portal with what's in the payload. 
 		Returns  : The PATCH response. 
-		Raises   : requests.exceptions.HTTPError if the return status is !ok (excluding a 403 status if 'raise_403' is False, and excluding
+		Raises   : requests.exceptions.HTTPError() if the return status is !ok (excluding a 403 status if 'raise_403' is False, and excluding
 							 a 404 status if 'error_if_not_found' is False. 
+							 UnknownDccProfile() can be raised if a POST is attempted and the payload does not contain the profile to post to (as a 
+							 value of the '@id' key).
 		"""
 		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN patch()")
 		if not record_id:
 			record_id = self.getRecordId(json_payload) #first tries the @id field, then looks for the first alias in the 'aliases' attr.
 				
-		profile = False #Only needed for POSTing as the value of the '@id' prop.
-		if "@id" in json_payload:
-			profile = self.parse_profile_from_id_prop(json_payload.pop("@id")) #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
-		#We don't submit the '@id' prop when PATCHing, only POSTing (and in this latter case it must specify the profile to POST to). 
 		self.logger.info("Will check if {} exists in DCC with a GET request.".format(record_id))
 		get_response_json = self.getEncodeRecord(ignore404=True,rec_id=record_id,frame="object")
 		if not get_response_json:
@@ -309,11 +320,12 @@ class Connection():
 				raise Exception("Can't patch record '{}' since it was not found on the ENCODE Portal.".format(record_id))
 			#then need to do a POST
 			else:
-				if not profile:
-					raise UnknownDccProfile("Can't post record '{}' since there isn't a valid profile specified as the value of the '@id' property.".format(record_id))
-				json_payload["@id"] = profile
 				response = self.post(payload=json_payload)
 				return response
+
+		if "@id" in json_payload:
+			#We don't submit the '@id' prop when PATCHing, only POSTing (and in this latter case it must specify the profile to POST to). 
+			json_payload.pop("@id")
 
 		if extend_array_values:
 			for key in json_payload:
