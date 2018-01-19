@@ -26,16 +26,26 @@ import encode_utils as en
 #debugging imports
 import time
 
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+#urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 PROFILES_URL = "https://www.encodeproject.org/profiles"
+PROFILE_NAMES = [x.lower() for x in requests.get(url=PROFILES_URL + "/?format=json", headers={"content-type": "application/json"}).json().keys()]
+#PROFILE_NAMES are lower case.
+
+class UnknownDccProfile(Exception)
+	pass
+
 
 def get_profile_schema(profile):
 	""" 
 	Function : Retrieves the JSON schema of the specified profile from the ENCODE Portal.
 	Raises   : requests.exceptions.HTTPError if the status code is something other than 200 or 404. 
-	Returns  : 404 (int) if profile not found, otherwise a dict representing the profile's JSON schema. 
+	Returns  : 404 (int) if profile not found, otherwise a two-item tuple where item 1 is the URL
+					   used to fetch the schema, and item 2 is a dict representing the profile's JSON schema.
 	"""
 	url = os.path.join(PROFILES_URL,profile + ".json?format=json")
 	res = requests.get(url,headers={"content-type": "application/json"})
@@ -43,7 +53,7 @@ def get_profile_schema(profile):
 	if status_code == 404:
 	  raise UnknownENCODEProfile("Please verify the profile name that you specifed.")
 	res.raise_for_status()
-	return res.json()
+	return url, res.json()
 
 def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
 	"""
@@ -73,7 +83,7 @@ def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
 		stderr = stderr.strip()
 		retcode = popen.returncode
 		if retcode:
-			#below, I'd like to raise a subprocess.SubprocessError, but that doens't exist until Python 3.3.
+			#below, I'd like to raise a subprocess.SubprocessError, but that doesn't exist until Python 3.3.
 			raise Exception("subprocess command '{cmd}' failed with returncode '{returncode}'.\n\nstdout is: '{stdout}'.\n\nstderr is: '{stderr}'.".format(cmd=cmd,returncode=retcode,stdout=stdout,stderr=stderr))
 		return stdout,stderr
 	else:
@@ -120,7 +130,8 @@ class Connection():
 		#Create separate logger to log IDs of posted objects. These message will need to be logged at INFO level.
 		post_logger = logging.getLogger("post")
 		post_logger.setLevel(logging.INFO)
-		#posted IDs will get writtin to a file logger
+		#posted IDs will get logged to a file whose name is prefixed with the ENCODE Portal env (prod or dev) and ends with
+		# _posted.txt. This file is used for tracking successful POST operations.
 		post_logger_fh = logging.FileHandler(filename=dcc_mode + "_" + "posted.txt",mode="a")
 		post_logger_fh.setLevel(logging.INFO)
 		post_logger_fh.setFormatter(f_formatter)
@@ -258,6 +269,16 @@ class Connection():
 		else:
 			return rec_json["aliases"][0]
 
+	def parse_profile_from_id_prop(self,val):
+		#i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
+		if not val.startswith("/"):
+			return ""
+		profile = val.strip("/").split("/")[0].rstrip("s").lower()
+		if not profile in PROFILE_NAMES:
+			return ""
+		return profile
+		
+
 	def patch(self,payload,record_id=None,error_if_not_found=True,raise_403=True, extend_array_values=True):
 		"""
 		Function : PATCH an object to the DCC. If the object doesn't exist, then this method will call self.post().
@@ -276,10 +297,13 @@ class Connection():
 		"""
 		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN patch()")
-		objectType = json_payload.pop("@id") #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
 		if not record_id:
 			record_id = self.getRecordId(json_payload) #first tries the @id field, then looks for the first alias in the 'aliases' attr.
 				
+		profile = False #Only needed for POSTing as the value of the '@id' prop.
+		if "@id" in json_payload:
+			profile = self.parse_profile_from_id_prop(json_payload.pop("@id")) #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
+		#We don't submit the '@id' prop when PATCHing, only POSTing (and in this latter case it must specify the profile to POST to). 
 		self.logger.info("Will check if {} exists in DCC with a GET request.".format(record_id))
 		get_response_json = self.getEncodeRecord(ignore404=True,rec_id=record_id,frame="object")
 		if not get_response_json:
@@ -287,14 +311,18 @@ class Connection():
 				raise Exception("Can't patch record '{}' since it was not found on the ENCODE Portal.".format(record_id))
 			#then need to do a POST
 			else:
-				json_payload["@id"] = objectType
+				if not profile:
+					raise UnknownDccProfile("Can't post record '{}' since there isn't a valid profile specified as the value of the '@id' property.".format(record_id))
+				json_payload["@id"] = profile
 				response = self.post(payload=json_payload)
 				return response
 
 		if extend_array_values:
 			for key in json_payload:
 				if type(json_payload[key]) is list:
-					json_payload[key].extend(get_response_json[key])
+					json_payload[key].extend(get_response_json.get(key,[]))
+					#I use get_response_json.get(key,[]) above because in a GET request, not all props are pulled back when they are empty.
+					# For ex, in a file object, if the controlled_by prop isn't set, then it won't be in the response.
 					json_payload[key] = list(set(json_payload[key]))
 
 		url = os.path.join(self.dcc_url,record_id)
@@ -322,8 +350,8 @@ class Connection():
 		"""
 		json_payload = json.loads(json.dumps(payload)) #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
 		self.logger.info("\nIN post().")
-		objectType = json_payload.pop("@id")
-		url = os.path.join(self.dcc_url,objectType)
+		profile = self.parse_profile_from_id_prop(json_payload)
+		url = os.path.join(self.dcc_url,profile)
 		alias = json_payload["aliases"][0]
 		self.logger.info("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this payload:\n\n{payload}\n\n".format(alias=alias,url=url,payload=json_payload))
 		response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON, data=json.dumps(json_payload), verify=False)
@@ -378,14 +406,6 @@ class Connection():
 		return False
 
 
-	def getReplicateNumbers(self,rep_json):
-		"""
-		Function : Given the replicate replicate JSON, extracts the biological and technical replicate numbers. 
-		Args     : rep_json - dict. representing the JSON serialization of a replicate from the DCC.
-		Returns  : tuple of the form (bio_rep_num,tech_rep_num).
-		"""
-		return rep_json["biological_replicate_number"],rep_json["technical_replicate_number"]
-		
 	def getFastqFileRepNumDico(self,dcc_exp_id):
 		"""
 		Function : Given a DCC experiment ID, finds the original FASTQ files that were submitted and creates
@@ -404,7 +424,7 @@ class Connection():
 			file_json = self.getEncodeRecord(ignore404=False,rec_id=i)
 			if file_json["file_type"] != "fastq":
 				continue #this is not a file object for a FASTQ file.
-			brn,trn = self.getReplicateNumbers(file_json["replicate"])
+			brn,trn = file_json["replicate"]["biological_replicate_number"], file_json["replicate"]["technical_replicate_number"]
 			read_num = file_json["paired_end"] #string
 			if brn not in dico:
 				dico[brn] = {}
@@ -676,13 +696,12 @@ class Connection():
 		return dcc_uuid
 	
 	
-	def linkDocument(self,rec_profile,rec_id,dcc_document_uuid):
+	def linkDocument(self,rec_id,dcc_document_uuid):
 		"""
-		Function : Links an existing document on the ENCODE Portal to an existing experiment via the experiment's 'documents' attribute.
-		Args     : rec_profile - An object profile name in the DCC schema, i.e. document, library, antibody, ..., signifying the
-									profile of the object describing 'rec_id' that is to be linked to the document.  
+		Function : Links an existing document on the ENCODE Portal to another existing object on the Portal via
+							 the latter's "documents" property.
+		Args     : rec_id      - A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to link the document to. 	
 							 dcc_document_uuid - The value of the document's 'uuid' attribute.
-							 rec_id      - A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to link the document to. 	
 		Returns  : The PATCH response form self.patch().
 		"""
 		rec_json = self.getEncodeRecord(ignore404=False,rec_id=rec_id)
@@ -695,7 +714,7 @@ class Connection():
 		else:
 			document_uuids.append(dcc_document_uuid)
 		payload = {}
-		payload["@id"] = "{rec_profile}/".format(rec_profile=rec_profile)
+		payload["@id"] = self.parse_profile_from_id_prop(rec_json["@id"])
 		payload["documents"] = document_uuids
 		self.patch(payload=payload,record_id=rec_id)
 	

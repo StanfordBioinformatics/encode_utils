@@ -1,3 +1,6 @@
+
+#https://docs.python.org/2/distutils/setupscript.html
+
 from distutils.core import setup
 
 setup(

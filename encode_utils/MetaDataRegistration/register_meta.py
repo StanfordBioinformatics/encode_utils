@@ -58,7 +58,7 @@ def create_payloads(profile,infile):
 	"""
 	STR_REGX = reg = re.compile(r'\'|"')
 	#Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
-	schema = encode_utils.connection.get_profile_schema(profile)
+	schema_url, schema = encode_utils.connection.get_profile_schema(profile)
 	schema_props = schema["properties"]
 	START_COUNT = -1
 	ID_FIELD_NAME = "@id"
@@ -72,6 +72,9 @@ def create_payloads(profile,infile):
 		if field.startswith("#"): #non-schema field
 			skip_field_indices.append(count)
 			continue
+		if field not in schema_props:
+			if field != RECORD_ID_FIELD:
+				raise Exception("Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(field,schema_url.split("?")[0]))	
 		field_index[count] = field
 
 	for line in fh:
