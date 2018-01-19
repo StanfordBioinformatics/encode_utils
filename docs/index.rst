@@ -7,8 +7,9 @@ Welcome to ENCODE Utils's documentation!
 ========================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 3
+
+   connection
 
 Indices and tables
 ==================
