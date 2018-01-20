@@ -13,6 +13,7 @@ import requests
 import re
 
 import encode_utils.connection
+import encode_utils.utils
 from encode_utils.parent_argparser import dcc_login_parser
 
 
@@ -58,7 +59,7 @@ def create_payloads(profile,infile):
 	"""
 	STR_REGX = reg = re.compile(r'\'|"')
 	#Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
-	schema_url, schema = encode_utils.connection.get_profile_schema(profile)
+	schema_url, schema = encode_utils.utils.get_profile_schema(profile)
 	schema_props = schema["properties"]
 	START_COUNT = -1
 	ID_FIELD_NAME = "@id"

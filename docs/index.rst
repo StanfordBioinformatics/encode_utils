@@ -9,6 +9,7 @@ Welcome to ENCODE Utils's documentation!
 .. toctree::
    :maxdepth: 3
 
+   utils
    connection
 
 Indices and tables
