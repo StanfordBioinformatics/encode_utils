@@ -32,7 +32,7 @@ for line in fh:
 		fout.write(line)
 		continue
 	rep_json = conn.getEncodeRecord(rec_id=rep_id,ignore404=False)
-	bio,tech = conn.getReplicateNumbers(rep_json=rep_json)
+	bio,tech = rep_json["biological_replicate_number"], rep_json["technical_replicate_number"]
 	fout.write("\t".join([line.strip("\n"),str(bio),str(tech)]) + "\n")
 fh.close()
 fout.close()

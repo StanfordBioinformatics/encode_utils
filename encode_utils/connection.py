@@ -41,9 +41,11 @@ class UnknownDccProfile(Exception):
 
 
 def get_profile_schema(profile):
-	""" 
-	Function : Retrieves the JSON schema of the specified profile from the ENCODE Portal.
-	Raises   : requests.exceptions.HTTPError if the status code is something other than 200 or 404. 
+	"""Retrieves the JSON schema of the specified profile from the ENCODE Portal.
+
+	Raises: 
+	    requests.exceptions.HTTPError if the status code is something other than 200 or 404. 
+
 	Returns  : 404 (int) if profile not found, otherwise a two-item tuple where item 1 is the URL
 					   used to fetch the schema, and item 2 is a dict representing the profile's JSON schema.
 	"""
@@ -56,19 +58,23 @@ def get_profile_schema(profile):
 	return url, res.json()
 
 def createSubprocess(cmd,pipeStdout=False,checkRetcode=True):
-	"""
-	Function : Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes stdout and stderr. Stderr is always
-						 piped; stdout if off by default. If the argument 'checkRetcode' is True, which it is by defualt, then for any non-zero
-						 return code, an Exception is raised that will print out the the command, stdout, stderr, and the returncode.
-						 Otherwise, the Popen instance will be returned, in which case the caller must call the instance's communicate() method 
-						 (and not it's wait() method!!) in order to get the return code to see if the command was successful. communicate() will 
-						 return a tuple containing (stdout, stderr), after that you can then check the return code with Popen instance's 'returncode' 
-						 attribute.
-	Args     : cmd   - str. The command line for the subprocess wrapped in the subprocess.Popen instance. If given, will be printed to stdout when there is an error in the subprocess.
-						 pipeStdout - bool. True means to pipe stdout of the subprocess.
-						 checkRetcode - bool. Default is True. See documentation in the description above for specifics.
-	Returns  : A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the command has a 0 exit status. If
-						 'checkRetCode' is False, then a subprocess.Popen() instance is returned. 
+	"""howdy
+
+	Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes stdout and stderr. Stderr is always
+  piped; stdout if off by default. If the argument 'checkRetcode' is True, which it is by defualt, then for any non-zero
+  return code, an Exception is raised that will print out the the command, stdout, stderr, and the returncode.
+  Otherwise, the Popen instance will be returned, in which case the caller must call the instance's communicate() method 
+	(and not it's wait() method!!) in order to get the return code to see if the command was successful. communicate() will 
+	return a tuple containing (stdout, stderr), after that you can then check the return code with Popen instance's 'returncode' 
+	attribute.
+
+	Args: 
+	    cmd: str. The command line for the subprocess wrapped in the subprocess.Popen instance. If given, will be printed to stdout when there is an error in the subprocess.
+	         pipeStdout: bool. True means to pipe stdout of the subprocess.
+  				 checkRetcode: bool. Default is True. See documentation in the description above for specifics.
+
+	Returns: A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the command has a 0 exit status. If
+  				 'checkRetCode' is False, then a subprocess.Popen() instance is returned. 
 	"""
 	stdout = None
 	if pipeStdout:
