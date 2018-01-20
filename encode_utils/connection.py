@@ -32,6 +32,14 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 #urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+def bob():
+  """howdy there bob
+   
+  hey this is bob
+  """
+  print("hi")
+
+
 class UnknownDccProfile(Exception):
   pass
 
