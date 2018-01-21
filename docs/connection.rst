@@ -1,5 +1,7 @@
-Connection
-==========
+encode\_utils\.connection
+-------------------------
 
-.. automodule:: connection
+.. automodule:: encode_utils.connection
    :members:
+   :undoc-members:
+   :show-inheritance:

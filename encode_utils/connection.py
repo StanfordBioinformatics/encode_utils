@@ -50,10 +50,6 @@ class Connection():
     DCC_DEV_MODE: "https://test.encodedcc.org/"
     }
 
-  LAB_PREFIX = en.LAB_PREFIX
-  
-  AWARD_AND_LAB = {"award": en.AWARD,"lab": en.LAB} 
-
   def __init__(self,dcc_mode):
     """
     Opens up two log files in append mode in the calling directory named${dcc_mode}_error.txt and 
@@ -642,7 +638,7 @@ class Connection():
       payload = {} #payload will hold the secondary char submission
       payload["@id"] = "antibody_characterization/"
       payload["secondary_characterization_method"] = "motif enrichment"
-      payload.update(self.AWARD_AND_LAB)
+      payload.update(en.AWARD_AND_LAB)
       payload["aliases"] = [alias]
       payload["characterizes"] = encab
       payload["target"] = target + "-human"
