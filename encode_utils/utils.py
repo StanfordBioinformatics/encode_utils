@@ -16,10 +16,11 @@ def parse_profile_from_id_prop(id_val):
   """Figures out what profile a record belongs to by looking at it's '@id' attribute.
 
   Given the value of the '@id' property of any schema that supports it (all I think?), extracts
-  the profile out of it. On the portal, a record stores its ID in this field also, following the profile.
-  For example, given the file object identified by ENCFF859CWS, the value its '@id' property as shown on
-  the Portal is '/files/ENCFF859CWS/'. The profile can be extracted out of this and singularized in order
-  match the name of a profile listed in https://www.encodeproject.org/profiles/.
+  the profile out of it. On the portal, a record stores its ID in this field also, following the 
+  profile. For example, given the file object identified by ENCFF859CWS, the value its '@id' 
+  property as shown on the Portal is '/files/ENCFF859CWS/'. The profile can be extracted out of 
+  this and singularized in order match the name of a profile listed in 
+  https://www.encodeproject.org/profiles/.
 
   Args: 
       id_val: str. The value of the '@id' key in a record's JSON.
@@ -51,21 +52,23 @@ def cleanAliasName(self,alias):
 def createSubprocess(cmd,checkRetcode=True):
   """Runs a command in a subprocess and checks for any errors.
 
-  Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes stdout and stderr. Stderr is always
-  piped; stdout if off by default. If the argument 'checkRetcode' is True, which it is by defualt, then for any non-zero
-  return code, an Exception is raised that will print out the the command, stdout, stderr, and the returncode.
-  Otherwise, the Popen instance will be returned, in which case the caller must call the instance's communicate() method 
-  (and not it's wait() method!!) in order to get the return code to see if the command was successful. communicate() will 
-  return a tuple containing (stdout, stderr), after that you can then check the return code with Popen instance's 'returncode' 
-  attribute.
+  Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes 
+  stdout and stderr. Stderr is always piped; stdout if off by default. If the argument 
+  'checkRetcode' is True, which it is by defualt, then for any non-zero return code, an Exception 
+  is raised that will print out the the command, stdout, stderr, and the returncode.  Otherwise, 
+  the Popen instance will be returned, in which case the caller must call the instance's 
+  communicate() method (and not it's wait() method!!) in order to get the return code to see if the 
+  command was successful. communicate() will return a tuple containing (stdout, stderr), after 
+  that you can then check the return code with Popen instance's 'returncode' attribute.
 
   Args: 
-      cmd: str. The command line for the subprocess wrapped in the subprocess.Popen instance. If given, will be 
-           printed to stdout when there is an error in the subprocess.
+      cmd: str. The command line for the subprocess wrapped in the subprocess.Popen instance. If 
+          given, will be printed to stdout when there is an error in the subprocess.
       checkRetcode: bool. Default is True. See documentation in the description above for specifics.
 
-  Returns: A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the command has a 0 exit status. If
-           'checkRetCode' is False, then a subprocess.Popen() instance is returned. 
+  Returns: A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the 
+           command has a 0 exit status. If 'checkRetCode' is False, then a subprocess.Popen() 
+           instance is returned. 
   """
   popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   if checkRetcode:
@@ -75,7 +78,10 @@ def createSubprocess(cmd,checkRetcode=True):
     retcode = popen.returncode
     if retcode:
       #below, I'd like to raise a subprocess.SubprocessError, but that doesn't exist until Python 3.3.
-      raise Exception("subprocess command '{cmd}' failed with returncode '{returncode}'.\n\nstdout is: '{stdout}'.\n\nstderr is: '{stderr}'.".format(cmd=cmd,returncode=retcode,stdout=stdout,stderr=stderr))
+      raise Exception(
+          ("subprocess command '{cmd}' failed with returncode '{returncode}'.\n\nstdout is:"
+           " '{stdout}'.\n\nstderr is: '{stderr}'.").format(
+               cmd=cmd,returncode=retcode,stdout=stdout,stderr=stderr))
     return stdout,stderr
   else:
     return popen
@@ -99,8 +105,9 @@ def get_profile_schema(profile):
 
 def stripDccAliasPrefix(self,alias):
   """
-  Splits 'alias' on ':' to strip off any alias prefix. Aliases must have a lab-specific prefix. The ':' is the 
-  seperator between prefix and the rest of the alias, and can't appear elsewhere in the alias. 
+  Splits 'alias' on ':' to strip off any alias prefix. Aliases must have a lab-specific prefix. 
+  The ':' is the seperator between prefix and the rest of the alias, and can't appear elsewhere in 
+  the alias. 
 
   Returns:
       str.
@@ -131,11 +138,13 @@ def doesReplicateExist(library_alias,biologicial_replicate_number,technical_repl
       library_alias: str. Any of the associated library's aliases. i.e. michael-snyder:L-208.
       biologicial_replicate_number: int. The biological replicate number. 
       technical_replicate_number: int. The technical replicate number. 
-      replicates_json_from_dcc: dict. The value of the "replicates" key in the JSON of a DCC experiment.
+      replicates_json_from_dcc: dict. The value of the "replicates" key in the JSON of a DCC 
+          experiment.
         
   Returns: 
-      False if the 'library_alias' doesn't exist in the nested library object of any of the replicates.
-      If the 'library_alias' is present, then True if both 'biologicial_replicate_number' and 'technical_replicate_number'
+      False if the 'library_alias' doesn't exist in the nested library object of any of the 
+      replicates. If the 'library_alias' is present, then True if both 
+      'biologicial_replicate_number' and 'technical_replicate_number'
       match for the given keys by the same name in the repliate, False otherwise. 
   """
   biologicial_replicate_number = int(biologicial_replicate_number)
