@@ -66,9 +66,10 @@ def createSubprocess(cmd,checkRetcode=True):
           given, will be printed to stdout when there is an error in the subprocess.
       checkRetcode: bool. Default is True. See documentation in the description above for specifics.
 
-  Returns: A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the 
-           command has a 0 exit status. If 'checkRetCode' is False, then a subprocess.Popen() 
-           instance is returned. 
+  Returns: 
+      A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the 
+      command has a 0 exit status. If 'checkRetCode' is False, then a subprocess.Popen() 
+      instance is returned. 
   """
   popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   if checkRetcode:
