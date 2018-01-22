@@ -38,6 +38,13 @@ class UnknownDccProfile(Exception):
 class Connection():
   """ENCODE Portal data submission and retrieval. 
 
+  In order to authenticate with the DCC servers when making HTTP requests, you must have the 
+  the environment variables DCC_API_KEY and DCC_SECRET_KEY set. Check with your DCC data wrangler
+  if you haven't been assigned these keys. 
+
+  Two log files will be opened in append mode in the calling directory, and named 
+  ${dcc_mode}_posted.txt and ${dcc_mode}_error.txt.
+
   Attributes:
       dcc_mode: The environment of the ENCODE Portal site ("prod" or "dev") to connect to.
   """
@@ -51,18 +58,12 @@ class Connection():
     }
 
   def __init__(self,dcc_mode):
-    """
-    Opens up two log files in append mode in the calling directory named${dcc_mode}_error.txt and 
-    ${dcc_mode}_posted.txt.  Parses the API keys from the environment variables DCC_API_KEY and 
-    DCC_SECRET_KEY.
-
-    Args:
-        dcc_mode: The ENCODE Portal site ("prod" or "dev") to connect to.
-    """
 
     f_formatter = logging.Formatter(
         '%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
-    #Create logger
+    #: A logging instance with a console handler accepting DEBUG level messages.
+    #: Also contains an error handler, logging error messages at the ERROR level to a file by the 
+    #: name of ${dcc_mode}_error.txt that is opened in append mode in the calling directory.
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     #Create console handler
@@ -77,25 +78,31 @@ class Connection():
     error_fh.setFormatter(f_formatter)
     logger.addHandler(error_fh)
 
-    #Create separate logger to log IDs of posted objects. These message will need to be logged at 
-    # the INFO level.
+    #: Another logging instance to log the IDs of posted objects. Accepts messages at the 
+    #: INFO level and logs them to a file named ${dcc_mode}_posted that is opened in append mode
+    #: in the calling directory. 
     post_logger = logging.getLogger("post")
     post_logger.setLevel(logging.INFO)
-    #Posted IDs will get logged to a file whose name is prefixed with the ENCODE Portal env (prod 
-    # or dev) and ends with _posted.txt. This file is used for tracking successful POST operations.
     post_logger_fh = logging.FileHandler(filename=dcc_mode + "_" + "posted.txt",mode="a")
     post_logger_fh.setLevel(logging.INFO)
     post_logger_fh.setFormatter(f_formatter)
     post_logger.addHandler(post_logger_fh)
-    #Create file logger to contain the error messages that I catch before either continuing on or
-    # raising the error.
     
     self.logger = logger
     self.post_logger = post_logger
 
+    #: Stores the value of the passed in argumement by the same name.
     self.dcc_mode = dcc_mode
+
+    #: The prod or dev DCC URL, determined by the value of the dcc_mode instance attribute.
     self.dcc_url = self._setDccUrl()
-    self.api_key,self.secret_key = self._setApiKeys()
+
+    #: The API key to use when authenticating with the DCC servers. This is set automatically
+    #: to the value of the DCC_API_KEY variable in the _setDccUrl() private method. 
+    self.api_key = self._setApiKeys()[0]
+    #: The secret key to use when authenticating with the DCC servers. This is set automatically
+    #: to the value of the DCC_SECRET_KEY variable in the _setDccUrl() private method.
+    self.secret_key = self._setApiKeys()[1]
     self.auth = (self.api_key,self.secret_key)
 
   def _setDccUrl(self):
