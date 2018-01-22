@@ -44,9 +44,6 @@ class Connection():
 
   Two log files will be opened in append mode in the calling directory, and named 
   ${dcc_mode}_posted.txt and ${dcc_mode}_error.txt.
-
-  Attributes:
-      dcc_mode: The environment of the ENCODE Portal site ("prod" or "dev") to connect to.
   """
   REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
   
@@ -58,6 +55,13 @@ class Connection():
     }
 
   def __init__(self,dcc_mode):
+    if dcc_mode not in self.DCC_MODES:
+      raise ValueError(
+        "Invalid dcc_mode '{}' specified. Must be one of '{}'".format(
+          dcc_mode,self.DCC_MODES.keys()))
+
+    #: dcc_mode: The environment of the ENCODE Portal site ("prod" or "dev") to connect to. 
+    self.dcc_mode = dcc_mode
 
     f_formatter = logging.Formatter(
         '%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
@@ -91,17 +95,14 @@ class Connection():
     self.logger = logger
     self.post_logger = post_logger
 
-    #: Stores the value of the passed in argumement by the same name.
-    self.dcc_mode = dcc_mode
-
     #: The prod or dev DCC URL, determined by the value of the dcc_mode instance attribute.
     self.dcc_url = self._setDccUrl()
 
     #: The API key to use when authenticating with the DCC servers. This is set automatically
-    #: to the value of the DCC_API_KEY variable in the _setDccUrl() private method. 
+    #: to the value of the DCC_API_KEY environment variable in the _setDccUrl() private method. 
     self.api_key = self._setApiKeys()[0]
     #: The secret key to use when authenticating with the DCC servers. This is set automatically
-    #: to the value of the DCC_SECRET_KEY variable in the _setDccUrl() private method.
+    #: to the value of the DCC_SECRET_KEY environment variable in the _setDccUrl() private method.
     self.secret_key = self._setApiKeys()[1]
     self.auth = (self.api_key,self.secret_key)
 
@@ -128,7 +129,7 @@ class Connection():
 
   def getAliases(self,dcc_id,strip_alias_prefix=False):
     """
-    Given the ENCODE ID for an object, returns the aliases for that object. 
+    Given an ENCODE identifier for an object, performs a GET request and extracts the aliases.
 
     Args: 
         dcc_id: The ENCODE ID for a given object, i.e ENCSR999EHG.
@@ -182,63 +183,73 @@ class Connection():
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
 
-  def getEncodeRecord(self,rec_id,ignore404=True,frame=None):
+  def getEncodeRecord(self,rec_ids,ignore404=True,frame=None):
     """
-
-    Looks up an object in ENCODE using a unique identifier, such as the object id, an alias, uuid, 
-    or accession. 
+    Looks up a record in ENCODE and performs a GET request, returning the JSON serialization of 
+    the object. You supply a list of identifiers for a specific record, such as the object ID, an
+    alias, uuid, or accession. The ENCODE Portal will be searched for each identifier in turn 
+    until one is either found or the list is exhaused.
 
     Args: 
-        ignore404: bool. True indicates to not raise an Exception if a 404 is returned. 
-        rec_id: A unique identifier, such as the object id, an alias, uuid, or accession.
+        rec_ids: list of identifiers for a specific record.
+        ignore404: bool. Only matters when none of the passed in record IDs were found on the 
+            ENCODE Portal. If set to True, then no Exception will be raised.
+           
 
     Returns:
-        The JSON response. 
+        dict. containing the JSON response. Will be an empty dict if no record was found 
+          and ignore404=True.
 
     Raises:
-        Exception: The status code is 403 (forbidden) or 404 (not found). If the 'ignore404'
-            argument is set to True, however, an Exception will not be raised in this latter case. 
+        Exception: None of the identifiers were found and either there was a 403 (Forbidden) 
+            response code, or ignore404=False was set.
     """
-    recordId = rec_id 
-    if recordId.endswith("/"):
-      recordId = recordId.lstrip("/")
-    url = os.path.join(self.dcc_url,recordId,"?format=json&datastore=database")
-    if frame:
-      url += "&frame={frame}".format(frame=frame)
-    self.logger.info(">>>>>>GETTING {recordId} From DCC with URL {url}".format(
-        recordId=recordId,url=url))
-    response = requests.get( url,auth=self.auth, headers=self.REQUEST_HEADERS_JSON, verify=False)
-    if response.ok:
-      #logger.info("<<<<<GET RESPONSE: ")
-      #self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
-      return response.json()
-    elif response.status_code == 403: #forbidden
-      raise Exception("Access to ENCODE entity {entity} is forbidden".format( entity=recordId))
-    elif response.status_code == 404: #not found
+    FORBIDDEN_CODE = 403
+    NOT_FOUND_CODE = 404
+    if rec_ids is str:
+      rec_ids = [rec_ids]
+    status_codes = {} #key is return code, value is the record ID
+    for r in rec_ids:
+      if r.endswith("/"):
+        r = r.rstrip("/")
+      url = os.path.join(self.dcc_url,recordId,"?format=json&datastore=database")
+      if frame:
+        url += "&frame={frame}".format(frame=frame)
+      self.logger.info(">>>>>>GETTING {recordId} From DCC with URL {url}".format(
+          recordId=recordId,url=url))
+      response = requests.get(url,auth=self.auth, headers=self.REQUEST_HEADERS_JSON, verify=False)
+      if response.ok:
+        return response.json()
+      status_codes[response.status_code] = r
+
+    if FORBIDDEN_CODE in status_codes:
+      raise Exception(
+        "Access to ENCODE entity {} is forbidden".format(status_codes[FORBIDDEN_CODE]))
+    elif NOT_FOUND_CODE in status_codes:
       if ignore404:
         return {}
       else:
-        raise Exception("ENCODE entity '{entity}' not found".format(entity=recordId))
+        raise Exception("ENCODE identifiers not found".format(rec_ids))
     else:
-      #if response not okay and status_code equal to something other than 404
-      response.raise_for_status()
+      #If response not okay and status_code equal to something other than [403,404],
+      # then raise the error for last response we got:
+      response.raise_for_status() 
 
 
   def getRecordId(self,rec_json):
     """
-
-    Given the JSON serialization of a DCC record, extracts an ID from it. The ID will be the value
-    of the 'id' key if that is present in rec_json, otherwise it will be the value of the first 
-    alias in the 'aliases' key. If there isn't an alias present, an IndexError will be raised.
+    Given the JSON serialization of a DCC record, extracts an ID from it. The ID will be 
+    the value of the '@id' key if that is present in rec_json, otherwise it will be the value of 
+    the first alias in the 'aliases' key. If neither is present, an IndexError will be raised.
 
     Args:
-        rec_json - The JSON serialization of the record in question.
+        rec_json - The JSON serialization of a DCC record.
 
     Returns:
         str. 
 
     Raises:
-        IndexError: if a record ID can't be found (since the last attempt to find an identifier 
+        IndexError: if a record identifier can't be found (since the last attempt to find an identifier 
             works by subsetting the first element in the 'aliases' key).
     """
 
@@ -253,10 +264,24 @@ class Connection():
     else:
       return rec_json["aliases"][0]
 
+
+  def sendToDcc(self,payload,post=False,extend_array_values=True)
+    """
+    Howdy
+
+    Args:
+        post: bool. If True, then only attempt a POST operation.
+            When False, then a PATCH will be first attempted, and if the object doesn't
+            exist on the DCC, then a POST will be attempted.
+    """
+    if post:
+      return self.post(payload=payload)
+    return self.patch(payload=payload,error_if_not_found=False,extend_
+
   def patch(self,payload,record_id=None,error_if_not_found=True,raise_403=True,
             extend_array_values=True):
     """
-    PATCH an object to the DCC. If the object doesn't exist, then this method will call 
+    PATCH an record on the DCC. If the object doesn't exist, then this method will instead call 
     self.post(), unless the argument 'error_if_not_found' is set to True.
 
     Args: 
@@ -445,9 +470,8 @@ class Connection():
   
   def postFileMetaDataToDcc(self,payload,patch):
     """
-    This is only to be used for DCC "/file/" type objects, because for these we don't have a Syapse
-    record for them (the regular POST method called post() will try to retrive the corresponding 
-    Syapse object. Before attempting a POST, will check if the file exists by doing a get on 
+    This is only to be used for DCC "/file/" type objects, because for these we don't have a 
+    Before attempting a POST, will check if the file exists by doing a get on 
     payload["aliases"][0].  If the GET request succeeds, nothing will be POST'd.
 
     Args:
@@ -461,7 +485,7 @@ class Connection():
     md5_alias = "md5:" + payload["md5sum"]
     alias = md5_alias
     
-    #check if file already exists on DCC using md5sum. Useful if file exists 
+    #check if file object (ENCFF) already exists on DCC using md5sum. Useful if file exists 
     # already but under different alias.
     exists_on_dcc = self.getEncodeRecord(ignore404=True,dcc_id=alias)
     if not exists_on_dcc:
