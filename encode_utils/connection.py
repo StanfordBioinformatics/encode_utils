@@ -211,57 +211,6 @@ class Connection():
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
 
-  def lookup(self,rec_ids,ignore404=True,frame=None):
-    """
-    Looks up a record in ENCODE and performs a GET request, returning the JSON serialization of 
-    the object. You supply a list of identifiers for a specific record, such as the object ID, an
-    alias, uuid, or accession. The ENCODE Portal will be searched for each identifier in turn 
-    until one is either found or the list is exhaused.
-
-    Args: 
-        rec_ids: str. containing a single record identifier, or a list of identifiers for a 
-            specific record.
-        ignore404: bool. Only matters when none of the passed in record IDs were found on the 
-            ENCODE Portal. In this case, If set to True, then no Exception will be raised. If
-            set to False, an empty dict will be returned.
-           
-
-    Returns:
-        dict. containing the JSON response. Will be an empty dict if no record was found 
-          and ignore404=True.
-
-    Raises:
-        Exception: None of the identifiers were found and either there was a 403 (Forbidden) 
-            response code, or ignore404=False was set.
-    """
-    if rec_ids is str:
-      rec_ids = [rec_ids]
-    status_codes = {} #key is return code, value is the record ID
-    for r in rec_ids:
-      if r.endswith("/"):
-        r = r.rstrip("/")
-      url = os.path.join(self.dcc_url,recordId,"?format=json&datastore=database")
-      if frame:
-        url += "&frame={frame}".format(frame=frame)
-      self.logger.info(">>>>>>GETTING {recordId} From DCC with URL {url}".format(
-          recordId=recordId,url=url))
-      response = requests.get(url,auth=self.auth, headers=self.REQUEST_HEADERS_JSON, verify=False)
-      if response.ok:
-        return response.json()
-      status_codes[response.status_code] = r
-
-    if requests.codes.FORBIDDEN in status_codes:
-      raise Exception(
-        "Access to ENCODE entity {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
-    elif requests.codes.NOT_FOUND in status_codes:
-      if ignore404:
-        return {}
-      else:
-        raise Exception("ENCODE identifiers not found".format(rec_ids))
-    else:
-      #If response not okay and status_code equal to something other than [403,404],
-      # then raise the error for last response we got:
-      response.raise_for_status() 
 
   def validate_profile_in_payload(payload):
     """
@@ -325,6 +274,59 @@ class Connection():
            " non-schematic key {}.".format(self.ENCODE_IDENTIFIER_KEY)))
             
     return lookup_ids
+
+
+  def lookup(self,rec_ids,ignore404=True,frame=None):
+    """
+    Looks up a record in ENCODE and performs a GET request, returning the JSON serialization of 
+    the object. You supply a list of identifiers for a specific record, such as the object ID, an
+    alias, uuid, or accession. The ENCODE Portal will be searched for each identifier in turn 
+    until one is either found or the list is exhaused.
+
+    Args: 
+        rec_ids: str. containing a single record identifier, or a list of identifiers for a 
+            specific record.
+        ignore404: bool. Only matters when none of the passed in record IDs were found on the 
+            ENCODE Portal. In this case, If set to True, then no Exception will be raised. If
+            set to False, an empty dict will be returned.
+           
+
+    Returns:
+        dict. containing the JSON response. Will be an empty dict if no record was found 
+          and ignore404=True.
+
+    Raises:
+        Exception: None of the identifiers were found and either there was a 403 (Forbidden) 
+            response code, or ignore404=False was set.
+    """
+    if rec_ids is str:
+      rec_ids = [rec_ids]
+    status_codes = {} #key is return code, value is the record ID
+    for r in rec_ids:
+      if r.endswith("/"):
+        r = r.rstrip("/")
+      url = os.path.join(self.dcc_url,recordId,"?format=json&datastore=database")
+      if frame:
+        url += "&frame={frame}".format(frame=frame)
+      self.logger.info(">>>>>>GETTING {recordId} From DCC with URL {url}".format(
+          recordId=recordId,url=url))
+      response = requests.get(url,auth=self.auth, headers=self.REQUEST_HEADERS_JSON, verify=False)
+      if response.ok:
+        return response.json()
+      status_codes[response.status_code] = r
+
+    if requests.codes.FORBIDDEN in status_codes:
+      raise Exception(
+        "Access to ENCODE entity {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
+    elif requests.codes.NOT_FOUND in status_codes:
+      if ignore404:
+        return {}
+      else:
+        raise Exception("ENCODE identifiers not found".format(rec_ids))
+    else:
+      #If response not okay and status_code equal to something other than [403,404],
+      # then raise the error for last response we got:
+      response.raise_for_status() 
 
   def post(self,payload):
     """ POST an object to the DCC.
