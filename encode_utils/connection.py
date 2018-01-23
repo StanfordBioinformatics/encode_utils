@@ -138,7 +138,7 @@ class Connection():
     Returns:
         list.
     """
-    record = self.getEncodeRecord(ignore404=False,dcc_id=dcc_id)
+    record = self.lookup(ignore404=False,dcc_id=dcc_id)
     aliases = record["aliases"]
     for index in range(len(aliases)):
       alias = aliases[index]
@@ -183,7 +183,7 @@ class Connection():
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
 
-  def getEncodeRecord(self,rec_ids,ignore404=True,frame=None):
+  def lookup(self,rec_ids,ignore404=True,frame=None):
     """
     Looks up a record in ENCODE and performs a GET request, returning the JSON serialization of 
     the object. You supply a list of identifiers for a specific record, such as the object ID, an
@@ -191,7 +191,8 @@ class Connection():
     until one is either found or the list is exhaused.
 
     Args: 
-        rec_ids: list of identifiers for a specific record.
+        rec_ids: str. containing a single record identifier, or a list of identifiers for a 
+            specific record.
         ignore404: bool. Only matters when none of the passed in record IDs were found on the 
             ENCODE Portal. If set to True, then no Exception will be raised.
            
@@ -319,7 +320,7 @@ class Connection():
         
     self.logger.info(
         "Will check if {} exists in DCC with a GET request.".format(record_id))
-    get_response_json = self.getEncodeRecord(ignore404=True,rec_id=record_id,frame="object")
+    get_response_json = self.lookup(ignore404=True,rec_id=record_id,frame="object")
     if not get_response_json:
       if error_if_not_found:
         raise Exception(("Can't patch record '{}' since it was not found on the"
@@ -406,7 +407,7 @@ class Connection():
       return response.json()
     elif status_code == 409: #conflict
       self.logger.error("Will not post {} to DCC because it already exists.".format(alias))
-      rec_json = self.getEncodeRecord(rec_id=alias,ignore404=False)
+      rec_json = self.lookup(rec_id=alias,ignore404=False)
       return rec_json
     else:
       message = "Failed to POST {alias} to DCC".format(alias=alias)
@@ -427,11 +428,11 @@ class Connection():
     Returns:
         dict. 
     """
-    exp_json = self.getEncodeRecord(ignore404=False,rec_id=dcc_exp_id)
+    exp_json = self.lookup(ignore404=False,rec_id=dcc_exp_id)
     dcc_file_ids = exp_json["original_files"]
     dico = {}
     for i in dcc_file_ids:
-      file_json = self.getEncodeRecord(ignore404=False,rec_id=i)
+      file_json = self.lookup(ignore404=False,rec_id=i)
       if file_json["file_type"] != "fastq":
         continue #this is not a file object for a FASTQ file.
       brn,trn = file_json["replicate"]["biological_replicate_number"], file_json["replicate"]["technical_replicate_number"]
@@ -487,13 +488,13 @@ class Connection():
     
     #check if file object (ENCFF) already exists on DCC using md5sum. Useful if file exists 
     # already but under different alias.
-    exists_on_dcc = self.getEncodeRecord(ignore404=True,dcc_id=alias)
+    exists_on_dcc = self.lookup(ignore404=True,dcc_id=alias)
     if not exists_on_dcc:
       #check with actual file alias in the payload. Useful if previously we only
       # had part of the file by mistake (i.e incomplete downoad)
       # hence the uploaded file on DCC would have a different md5sum.
       alias = payload["aliases"][0]
-      exists_on_dcc = self.getEncodeRecord(ignore404=True,dcc_id=alias)
+      exists_on_dcc = self.lookup(ignore404=True,dcc_id=alias)
     if not patch and exists_on_dcc:
       self.logger.info(
           ("Will not POST metadata for {filename} with alias {alias} to DCC"
@@ -619,7 +620,7 @@ class Connection():
     Returns:
         De-duplicated list of platforms seen on the experiment's FASTQ files. 
     """
-    exp_json = self.getEncodeRecord(rec_id=rec_id,frame=None)
+    exp_json = self.lookup(rec_id=rec_id,frame=None)
     if "@graph" in exp_json:
       exp_json = exp_json["@graph"][0]
     files_json = exp_json["original_files"]
@@ -757,7 +758,7 @@ class Connection():
     Returns:
         The PATCH response form self.patch().
     """
-    rec_json = self.getEncodeRecord(ignore404=False,rec_id=rec_id)
+    rec_json = self.lookup(ignore404=False,rec_id=rec_id)
     documents_json = rec_json["documents"]
     #Originally in form of [u'/documents/ba93f5cc-a470-41a2-842f-2cb3befbeb60/',
     #                       u'/documents/tg81g5aa-a580-01a2-842f-2cb5iegcea03, ...]
