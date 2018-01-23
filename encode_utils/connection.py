@@ -179,7 +179,7 @@ class Connection():
     url = os.path.join(self.dcc_url,"search/?",query)
     self.logger.info("Searching DCC with query {url}.".format(url=url))
     response = requests.get(url,auth=self.auth,headers=self.REQUEST_HEADERS_JSON,verify=False)
-    if response.status_code not in [200,404]: #if not ok or not found
+    if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
 
@@ -205,8 +205,6 @@ class Connection():
         Exception: None of the identifiers were found and either there was a 403 (Forbidden) 
             response code, or ignore404=False was set.
     """
-    FORBIDDEN_CODE = 403
-    NOT_FOUND_CODE = 404
     if rec_ids is str:
       rec_ids = [rec_ids]
     status_codes = {} #key is return code, value is the record ID
@@ -223,10 +221,10 @@ class Connection():
         return response.json()
       status_codes[response.status_code] = r
 
-    if FORBIDDEN_CODE in status_codes:
+    if requests.codes.FORBIDDEN in status_codes:
       raise Exception(
-        "Access to ENCODE entity {} is forbidden".format(status_codes[FORBIDDEN_CODE]))
-    elif NOT_FOUND_CODE in status_codes:
+        "Access to ENCODE entity {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
+    elif requests.codes.NOT_FOUND in status_codes:
       if ignore404:
         return {}
       else:
@@ -235,35 +233,6 @@ class Connection():
       #If response not okay and status_code equal to something other than [403,404],
       # then raise the error for last response we got:
       response.raise_for_status() 
-
-
-  def getRecordId(self,rec_json):
-    """
-    Given the JSON serialization of a DCC record, extracts an ID from it. The ID will be 
-    the value of the '@id' key if that is present in rec_json, otherwise it will be the value of 
-    the first alias in the 'aliases' key. If neither is present, an IndexError will be raised.
-
-    Args:
-        rec_json - The JSON serialization of a DCC record.
-
-    Returns:
-        str. 
-
-    Raises:
-        IndexError: if a record identifier can't be found (since the last attempt to find an identifier 
-            works by subsetting the first element in the 'aliases' key).
-    """
-
-    #The '@id' key has a value in the format /profile/id, where profile is 
-    #  something like 'documents', 'libraries', 'antibodies', ... This key also 
-    #  stores a record ID at the end when addressing a record belonging to a 
-    #  particular profile.
-    if "@id" in rec_json:
-      id_tokens = rec_json["@id"].strip("/").split()
-      if len(id_tokens) > 1: #Then there is a record ID stored here
-        return id_tokens[-1]
-    else:
-      return rec_json["aliases"][0]
 
 
   def sendToDcc(self,payload,post=False,extend_array_values=True)
@@ -275,6 +244,8 @@ class Connection():
             When False, then a PATCH will be first attempted, and if the object doesn't
             exist on the DCC, then a POST will be attempted.
     """
+    #Check wither record already exists on the portal
+    rec_json = self.lookup(rec_id=payload["aliases"],ignore404=False) 
     if post:
       return self.post(payload=payload)
     return self.patch(payload=payload,error_if_not_found=False,extend_
@@ -287,9 +258,9 @@ class Connection():
 
     Args: 
         payload: dict. containing the attribute key and value pairs to patch.
-        record_id: str. Identifier of the DCC record to patch. If not specified, will first check 
-            if it is set in the payload's '@id' attribute, and if not there, the 'aliases'
-            attribute.
+        record_id: str. Identifier of the DCC record to patch. If not specified, then the first 
+            alias specified in the 'aliases' attribute will be used as the record_id. 
+        
         error_if_not_found: bool. If set to True, then an Exception will be raised if the record to
             PATCH is not found on the ENCODE Portal. If False and the record isn't found, then a 
             POST will be attempted by calling self.PostToDcc().
@@ -304,6 +275,8 @@ class Connection():
         The PATCH response. 
 
     Raises: 
+        KeyError: The passed-in record_id argument is not set and there aren't any aliases
+            provided in the payload's 'aliases' key. 
         requests.exceptioas.HTTPError: if the return status is not in the 200 range (excluding a 
             403 status if 'raise_403' is False, and excluding a 404 status if 'error_if_not_found' 
             is False. 
@@ -315,7 +288,7 @@ class Connection():
       # tuples become arrays, ...
     self.logger.info("\nIN patch()")
     if not record_id:
-      record_id = self.getRecordId(json_payload) 
+      record_id = json_payload["aliases"][0]
         #first tries the @id field, then looks for the first alias in the 'aliases' attr.
         
     self.logger.info(
@@ -358,7 +331,7 @@ class Connection():
     self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
     if response.ok:
       return response.json()
-    elif response.status_code == 403:
+    elif response.status_code == requests.codes.FORBIDDEN:
       #don't have permission to PATCH this object.
       if not raise_403:
         return get_response_json
@@ -405,7 +378,7 @@ class Connection():
         pass #some objects don't have an accession, i.e. replicates.
       self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
       return response.json()
-    elif status_code == 409: #conflict
+    elif status_code == requests.codes.CONFLICT:
       self.logger.error("Will not post {} to DCC because it already exists.".format(alias))
       rec_json = self.lookup(rec_id=alias,ignore404=False)
       return rec_json
@@ -484,17 +457,13 @@ class Connection():
     filename = payload["submitted_file_name"]
     #alias = payload["aliases"][0]
     md5_alias = "md5:" + payload["md5sum"]
-    alias = md5_alias
+    alias = payload["aliases"][0]
     
-    #check if file object (ENCFF) already exists on DCC using md5sum. Useful if file exists 
-    # already but under different alias.
-    exists_on_dcc = self.lookup(ignore404=True,dcc_id=alias)
-    if not exists_on_dcc:
-      #check with actual file alias in the payload. Useful if previously we only
-      # had part of the file by mistake (i.e incomplete downoad)
-      # hence the uploaded file on DCC would have a different md5sum.
-      alias = payload["aliases"][0]
-      exists_on_dcc = self.lookup(ignore404=True,dcc_id=alias)
+    #Check if record exists already using actual file alias provided in the payload.
+    # In addition, check on file's MD5 sum in case the former search doesn't return a hit, since 
+    # if previously we only had part of the file by mistake (i.e incomplete downoad) then the 
+    # uploaded file on DCC would have a different md5sum.
+    exists_on_dcc = self.lookup(ignore404=True,rec_ids=[md5_alias,alias])
     if not patch and exists_on_dcc:
       self.logger.info(
           ("Will not POST metadata for {filename} with alias {alias} to DCC"
@@ -534,7 +503,7 @@ class Connection():
     self.logger.debug(
         "<<<<<<DCC {httpMethod} RESPONSE: ".format(httpMethod=httpMethod))
     self.logger.debug(json.dumps(response_json, indent=4, sort_keys=True))
-    if "code" in response_json and response_json["code"] == 409:
+    if "code" in response_json and response_json["code"] == requests.codes.CONFLICT:
       #There was a conflict when trying to complete your request
       # i.e could be trying to post the same file again and there is thus a key
       # conflict with the md5sum key. This can happen when the alias we have 
@@ -570,7 +539,7 @@ class Connection():
     self.logger.info(response)
     if "code" in response:
       code = response["code"]
-      if code == 403:
+      if code == requests.codes.FORBIDDEN:
         #Access was denied to this resource. File already uploaded fine.
         return
     graph = response["@graph"][0]
@@ -598,7 +567,7 @@ class Connection():
     #print("STDERR: {stderr}.".format(stderr=stderr))
     retcode = popen.returncode
     if retcode:
-      if retcode == 403:
+      if retcode == requests.codes.FORBIDDEN:
         #HTTPForbidden; now allowed to update.
         logger.info(("Will not upload file {filepath} to s3. Attempt failed with status code HTTP"
                     " 403 (Forbidden). Normally, this means we shouldn't be editing this object"
