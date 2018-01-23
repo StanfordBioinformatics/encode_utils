@@ -32,6 +32,12 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 #urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+class ProfileNotSpecified(Exception):
+  """
+  Raised when the profile (object schema) to submit to isn't specifed in a payload.
+  """
+pass
+
 class UnknownDccProfile(Exception):
   pass
 
@@ -53,6 +59,17 @@ class Connection():
     DCC_PROD_MODE: "https://www.encodeproject.org/",
     DCC_DEV_MODE: "https://test.encodedcc.org/"
     }
+
+  #: Identifies the name of the key in the payload (dictionary) that stores a valid ENCODE-assigned
+  #: identifier for a record, such as 'accession', 'uuid', 'md5sum', ... depending on the object 
+  #: being submitted. 
+  #: This is not a valid attribute of any ENCOCE object schema, and is only used in the patch()
+  #: instance method when you need to designate the record to update and don't have an alias you 
+  #: can specify in the 'aliases' attribute. 
+  ENCODE_IDENTIFIER_KEY = "_enc_id"
+
+  #: Identifies the name of the key in the payload (dictionary) that stores
+  ENCODE_PROFILE_KEY = "_profile"
 
   def __init__(self,dcc_mode):
     if dcc_mode not in self.DCC_MODES:
@@ -194,7 +211,8 @@ class Connection():
         rec_ids: str. containing a single record identifier, or a list of identifiers for a 
             specific record.
         ignore404: bool. Only matters when none of the passed in record IDs were found on the 
-            ENCODE Portal. If set to True, then no Exception will be raised.
+            ENCODE Portal. In this case, If set to True, then no Exception will be raised. If
+            set to False, an empty dict will be returned.
            
 
     Returns:
@@ -234,21 +252,83 @@ class Connection():
       # then raise the error for last response we got:
       response.raise_for_status() 
 
-
-  def sendToDcc(self,payload,post=False,extend_array_values=True)
+  def validate_profile_in_payload(payload):
     """
-    Howdy
+    Useful to call when doing a POST (and self.post() does call this). Ensures that the profile key
+    identified by self.ENCODE_PROFILE_KEY exists in the passed-in payload and that the value is 
+    a recognized ENCODE objece profile (schema).
 
     Args:
-        post: bool. If True, then only attempt a POST operation.
-            When False, then a PATCH will be first attempted, and if the object doesn't
-            exist on the DCC, then a POST will be attempted.
+        payload: dict. The intended object data to POST.
+
+    Returns:
+        The name of the profile if all validations pass, otherwise.
+
+    Raises:
+        connection.ProfileNotSpecified: The key self.ENCODE_PROFILE_KEY is missing in the payload.
+        connection.UnknownDccProfile: The profile isn't recognized.
     """
-    #Check wither record already exists on the portal
-    rec_json = self.lookup(rec_id=payload["aliases"],ignore404=False) 
-    if post:
-      return self.post(payload=payload)
-    return self.patch(payload=payload,error_if_not_found=False,extend_
+
+    #profile = encode_utls.utils.parse_profile_from_id_prop(json_payload)
+    profile = payload.get(self.ENCODE_PROFILE_KEY)
+    if not profile:
+      raise ProfileNotSpecified(
+        ("You need to specify the profile to submit to by using the '{}' key"
+         " in the payload.}").format(self.ENCODE_PROFILE_KEY))
+    exists = encode_utils.utils.does_profile_exist(profile)
+    if not exists:
+      raise UnknownDccProfile(
+          "Invalid profile '{}' specified in the '@id' attribute.".format( profile))
+    return profile
+
+  def post(self,payload):
+    """ POST an object to the DCC.
+
+    Requires that your include in the payload the non-schematic key self.ENCODE_PROFILE_KEY to
+    designate the name of the ENCODE object profile that you are submitting against.
+
+    Args:
+        payload: dict. The data to submit.
+
+    Returns: 
+        The object's JSON sererialization from the DCC when the POST succeeds, or when the object
+        already exists on the DCC. 
+
+    Raises:
+        requests.exceptions.HTTPError: if the return status is !ok. 
+    """
+    self.logger.info("\nIN post().")
+    #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
+    json_payload = json.loads(json.dumps(payload)) 
+    profile = self.validate_profile_in_payload(payload)
+    payload.pop(self.self.ENCODE_PROFILE_KEY)
+    url = os.path.join(self.dcc_url,profile)
+    alias = json_payload["aliases"][0]
+    self.logger.info(
+        ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
+         " payload:\n\n{payload}\n\n").format( alias=alias,url=url,payload=json_payload))
+
+    response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON,
+                             data=json.dumps(json_payload), verify=False)
+    self.logger.debug("<<<<<<DCC POST RESPONSE: ")
+    self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
+    status_code = response.status_code
+    if response.ok:
+      response_dcc_accession = ""
+      try:
+        response_dcc_accession = response.json()["@graph"][0]["accession"]
+      except KeyError:
+        pass #some objects don't have an accession, i.e. replicates.
+      self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
+      return response.json()
+    elif status_code == requests.codes.CONFLICT:
+      self.logger.error("Will not post {} to DCC because it already exists.".format(alias))
+      rec_json = self.lookup(rec_ids=alias,ignore404=False)
+      return rec_json
+    else:
+      message = "Failed to POST {alias} to DCC".format(alias=alias)
+      self.logger.error(message)
+      response.raise_for_status()
 
   def patch(self,payload,record_id=None,error_if_not_found=True,raise_403=True,
             extend_array_values=True):
@@ -283,9 +363,8 @@ class Connection():
         UnknownDccProfile: can be raised if a POST is attempted and the payload does not contain 
             the profile to post to (as a value of the '@id' key).
     """
+    #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json_payload = json.loads(json.dumps(payload)) 
-      #make sure we have a payload that can be converted to valid JSON, and 
-      # tuples become arrays, ...
     self.logger.info("\nIN patch()")
     if not record_id:
       record_id = json_payload["aliases"][0]
@@ -293,7 +372,7 @@ class Connection():
         
     self.logger.info(
         "Will check if {} exists in DCC with a GET request.".format(record_id))
-    get_response_json = self.lookup(ignore404=True,rec_id=record_id,frame="object")
+    get_response_json = self.lookup(ignore404=True,rec_ids=record_id,frame="object")
     if not get_response_json:
       if error_if_not_found:
         raise Exception(("Can't patch record '{}' since it was not found on the"
@@ -340,52 +419,28 @@ class Connection():
       self.logger.error(message)
       response.raise_for_status()
 
-  def post(self,payload):
-    """ POST an object to the DCC.
+  def sendToDcc(self,payload,post=False,error_if_not_found=False,extend_array_values=True)
+    """
+    Howdy
 
     Args:
-        payload: The data to submit.
-
-    Returns: 
-        The object's JSON sererialization from the DCC, after it is posted.
-
-    Raises:
-        requests.exceptions.HTTPError: if the return status is !ok. 
+        post: bool. If True, then only attempt a POST operation.
+            When False, then a PATCH will be first attempted, and if the object doesn't
+            exist on the DCC, then a POST will be attempted.
     """
-    #make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
-    json_payload = json.loads(json.dumps(payload)) 
-    self.logger.info("\nIN post().")
-    profile = encode_utls.utils.parse_profile_from_id_prop(json_payload)
-    if not profile:
-      raise UnknownDccProfile(
-          "Invalid profile '{}' specified in the '@id' attribute.".format( profile))
-    url = os.path.join(self.dcc_url,profile)
-    alias = json_payload["aliases"][0]
-    self.logger.info(
-        ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
-         " payload:\n\n{payload}\n\n").format( alias=alias,url=url,payload=json_payload))
-
-    response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON,
-                             data=json.dumps(json_payload), verify=False)
-    self.logger.debug("<<<<<<DCC POST RESPONSE: ")
-    self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
-    status_code = response.status_code
-    if response.ok:
-      response_dcc_accession = ""
-      try:
-        response_dcc_accession = response.json()["@graph"][0]["accession"]
-      except KeyError:
-        pass #some objects don't have an accession, i.e. replicates.
-      self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
-      return response.json()
-    elif status_code == requests.codes.CONFLICT:
-      self.logger.error("Will not post {} to DCC because it already exists.".format(alias))
-      rec_json = self.lookup(rec_id=alias,ignore404=False)
-      return rec_json
-    else:
-      message = "Failed to POST {alias} to DCC".format(alias=alias)
-      self.logger.error(message)
-      response.raise_for_status()
+    #Check wither record already exists on the portal
+    lookup_ids = payload["aliases"]
+    if self.ENCODE_IDENTIFIER_KEY in payload:
+      lookup_ids.append(payload[self.ENCODE_IDENTIFIER_KEY])
+    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=True) 
+    if not rec_json:
+      #If post=True, then POST as intended.
+      #But if post=False, then POST anyway since can't PATCH.
+      return self.post(payload=payload)
+    elif rec_json:
+      #If post=False, then PATCH as intended
+      #But if post=True, then PATCH anyway since can't POST.
+	    return self.patch(payload=payload,extend_array_values=extend_array_values)
 
   def getFastqFileRepNumDico(self,dcc_exp_id):
     """
@@ -401,11 +456,11 @@ class Connection():
     Returns:
         dict. 
     """
-    exp_json = self.lookup(ignore404=False,rec_id=dcc_exp_id)
+    exp_json = self.lookup(ignore404=False,rec_ids=dcc_exp_id)
     dcc_file_ids = exp_json["original_files"]
     dico = {}
     for i in dcc_file_ids:
-      file_json = self.lookup(ignore404=False,rec_id=i)
+      file_json = self.lookup(ignore404=False,rec_ids=i)
       if file_json["file_type"] != "fastq":
         continue #this is not a file object for a FASTQ file.
       brn,trn = file_json["replicate"]["biological_replicate_number"], file_json["replicate"]["technical_replicate_number"]
@@ -589,7 +644,7 @@ class Connection():
     Returns:
         De-duplicated list of platforms seen on the experiment's FASTQ files. 
     """
-    exp_json = self.lookup(rec_id=rec_id,frame=None)
+    exp_json = self.lookup(rec_ids=rec_id,frame=None)
     if "@graph" in exp_json:
       exp_json = exp_json["@graph"][0]
     files_json = exp_json["original_files"]
@@ -727,7 +782,7 @@ class Connection():
     Returns:
         The PATCH response form self.patch().
     """
-    rec_json = self.lookup(ignore404=False,rec_id=rec_id)
+    rec_json = self.lookup(ignore404=False,rec_ids=rec_id)
     documents_json = rec_json["documents"]
     #Originally in form of [u'/documents/ba93f5cc-a470-41a2-842f-2cb3befbeb60/',
     #                       u'/documents/tg81g5aa-a580-01a2-842f-2cb5iegcea03, ...]

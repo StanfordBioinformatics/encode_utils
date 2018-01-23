@@ -31,7 +31,7 @@ for line in fh:
 	if not rep_id or rep_id.startswith("#"):
 		fout.write(line)
 		continue
-	rep_json = conn.lookup(rec_id=rep_id,ignore404=False)
+	rep_json = conn.lookup(rec_ids=rep_id,ignore404=False)
 	bio,tech = rep_json["biological_replicate_number"], rep_json["technical_replicate_number"]
 	fout.write("\t".join([line.strip("\n"),str(bio),str(tech)]) + "\n")
 fh.close()

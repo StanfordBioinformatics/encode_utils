@@ -12,6 +12,9 @@ PROFILES_URL = "https://www.encodeproject.org/profiles"
 
 PROFILE_NAMES = [x.lower() for x in requests.get(url=PROFILES_URL + "/?format=json", headers={"content-type": "application/json"}).json().keys()]
 
+def does_profile_exist(profile):
+  return profile.lower() in PROFILE_NAMES
+
 def parse_profile_from_id_prop(id_val):
   """Figures out what profile a record belongs to by looking at it's '@id' attribute.
 

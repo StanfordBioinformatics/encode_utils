@@ -44,7 +44,7 @@ for line in fh:
 	if dcc_exp_id not in exp_encids:
 		exp_encids.append(dcc_exp_id)
 	dcc_rep_id = line[1].strip()
-	rep_json = conn.lookup(ignore404=False,rec_id=dcc_rep_id)
+	rep_json = conn.lookup(ignore404=False,rec_ids=dcc_rep_id)
 	try:
 		dcc_lib_id = rep_json["library"]["aliases"][0]
 	except IndexError:
