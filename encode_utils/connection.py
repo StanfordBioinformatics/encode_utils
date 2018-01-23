@@ -36,9 +36,20 @@ class ProfileNotSpecified(Exception):
   """
   Raised when the profile (object schema) to submit to isn't specifed in a payload.
   """
-pass
+  pass
+
+class RecordIdNotPresent(Exception):
+  """
+  Raised when a payload to submit to the Portal doesn't have any record identifier (either 
+  a pre-existing ENCODE assigned identifier or an alias.
+  """
+  pass
 
 class UnknownDccProfile(Exception):
+  """
+  Raised when the profile in question doesn't match any valid profile name present in 
+  encode_utils.utils.PROFILE_NAMES.
+  """
   pass
 
 class Connection():
@@ -281,6 +292,40 @@ class Connection():
           "Invalid profile '{}' specified in the '@id' attribute.".format( profile))
     return profile
 
+  def get_lookup_ids_from_payload(self,payload):
+    """
+    Given a payload to submit to the Portal, extracts the identifiers that can be used to lookup
+    the record on the Portal, i.e. to see if the record already exists. Identifiers are extracted
+    from the following fields:
+       1) self.ENCODE_IDENTIFIER_KEY,
+       2) aliases,
+       3) md5sum (in the case of a file object)
+
+    Args:
+        payload: dict. The data to submit.
+
+    Returns:
+        list of possible lookup identifiers.
+    """
+    lookup_ids = []
+    if self.ENCODE_IDENTIFIER_KEY in payload:
+      lookup_ids.append(payload[self.ENCODE_IDENTIFIER_KEY])
+    if "aliases" in payload:
+      lookup_ids.extend(payload["aliases"])
+    if "md5sum" in payload:
+      #The case for file objects.
+      lookup_ids.append(payload["md5sum"])
+
+    lookup_ids = [x.strip() for x in lookup_ids]
+    lookup_ids = [x for x in lookup_ids]
+    if not lookup_ids:
+        raise RecordIdNotPresent(
+          ("The payload does not contain a recognized identifier for traceability. For example,"
+           " you need to set the 'aliases' key, or specify an ENCODE assigned identifier in the"
+           " non-schematic key {}.".format(self.ENCODE_IDENTIFIER_KEY)))
+            
+    return lookup_ids
+
   def post(self,payload):
     """ POST an object to the DCC.
 
@@ -330,20 +375,13 @@ class Connection():
       self.logger.error(message)
       response.raise_for_status()
 
-  def patch(self,payload,record_id=None,error_if_not_found=True,raise_403=True,
-            extend_array_values=True):
+  def patch(self,payload,raise_403=True, extend_array_values=True):
     """
-    PATCH an record on the DCC. If the object doesn't exist, then this method will instead call 
-    self.post(), unless the argument 'error_if_not_found' is set to True.
+    PATCH a record on the DCC.
 
     Args: 
-        payload: dict. containing the attribute key and value pairs to patch.
-        record_id: str. Identifier of the DCC record to patch. If not specified, then the first 
-            alias specified in the 'aliases' attribute will be used as the record_id. 
-        
-        error_if_not_found: bool. If set to True, then an Exception will be raised if the record to
-            PATCH is not found on the ENCODE Portal. If False and the record isn't found, then a 
-            POST will be attempted by calling self.PostToDcc().
+        payload: dict. containing the attribute key and value pairs to patch. Must contain the key
+            self.ENCODE_IDENTIFIER_KEY in order to indicate which record to PATCH.
         raise_403: bool. True means to raise an HTTPError if a 403 status (Forbidden) is returned. 
             If set to False and there still is a 403 return status, then the object you were 
             trying to PATCH will be fetched from the Portal in JSON format as this function's
@@ -355,92 +393,80 @@ class Connection():
         The PATCH response. 
 
     Raises: 
-        KeyError: The passed-in record_id argument is not set and there aren't any aliases
-            provided in the payload's 'aliases' key. 
+        KeyError: The payload doesn't have the key self.ENCODE_IDENTIFIER_KEY set AND there aren't 
+            any aliases provided in the payload's 'aliases' key. 
         requests.exceptioas.HTTPError: if the return status is not in the 200 range (excluding a 
-            403 status if 'raise_403' is False, and excluding a 404 status if 'error_if_not_found' 
-            is False. 
-        UnknownDccProfile: can be raised if a POST is attempted and the payload does not contain 
-            the profile to post to (as a value of the '@id' key).
+            403 status if 'raise_403' is False.
     """
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json_payload = json.loads(json.dumps(payload)) 
     self.logger.info("\nIN patch()")
-    if not record_id:
-      record_id = json_payload["aliases"][0]
-        #first tries the @id field, then looks for the first alias in the 'aliases' attr.
+    encode_id = json_payload[self.ENCODE_IDENTIFIER_KEY]
+    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=True) 
         
-    self.logger.info(
-        "Will check if {} exists in DCC with a GET request.".format(record_id))
-    get_response_json = self.lookup(ignore404=True,rec_ids=record_id,frame="object")
-    if not get_response_json:
-      if error_if_not_found:
-        raise Exception(("Can't patch record '{}' since it was not found on the"
-                         " ENCODE Portal.").format(record_id))
-      #then need to do a POST
-      else:
-        response = self.post(payload=json_payload)
-        return response
-
-    if "@id" in json_payload:
-      #We don't submit the '@id' prop when PATCHing, only POSTing (and in this 
-      # latter case it must specify the profile to POST to). 
-      json_payload.pop("@id")
-
     if extend_array_values:
       for key in json_payload:
         if type(json_payload[key]) is list:
-          json_payload[key].extend(get_response_json.get(key,[]))
-          #I use get_response_json.get(key,[]) above because in a GET request, 
+          val = json_payload[key]
+          val.extend(rec_json.get(key,[]))
+          #I use rec_json.get(key,[]) above because in a GET request, 
           # not all props are pulled back when they are empty.
           # For ex, in a file object, if the controlled_by prop isn't set, then 
           # it won't be in the response.
-          json_payload[key] = list(set(json_payload[key]))
+          json_payload[key] = list(set(val))
 
-    url = os.path.join(self.dcc_url,record_id)
+    url = os.path.join(self.dcc_url,encode_id)
     self.logger.info(
-        ("<<<<<<Attempting to PATCH {record_id} To DCC with URL"
+        ("<<<<<<Attempting to PATCH {encode_id} To DCC with URL"
          " {url} and this payload:\n\n{payload}\n\n").format(
-             record_id=record_id,url=url,payload=json_payload))
+             encode_id=encode_id,url=url,payload=json_payload))
 
-    response = requests.patch(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON,
-                              data=json.dumps(json_payload), verify=False)
+    response = requests.patch(url,auth=self.auth,headers=self.REQUEST_HEADERS_JSON,
+                              data=json.dumps(json_payload),verify=False)
 
     self.logger.debug("<<<<<<DCC PATCH RESPONSE: ")
     self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
     if response.ok:
       return response.json()
     elif response.status_code == requests.codes.FORBIDDEN:
-      #don't have permission to PATCH this object.
+      #Don't have permission to PATCH this object.
       if not raise_403:
-        return get_response_json
+        return rec_json 
     else:
-      message = "Failed to PATCH {} to DCC".format(record_id)
+      message = "Failed to PATCH {} to DCC".format(encode_id)
       self.logger.error(message)
       response.raise_for_status()
 
-  def sendToDcc(self,payload,post=False,error_if_not_found=False,extend_array_values=True)
+
+  def send(self,payload,error_if_not_found=False,extend_array_values=True,raise_403=True)
     """
     Howdy
 
     Args:
-        post: bool. If True, then only attempt a POST operation.
-            When False, then a PATCH will be first attempted, and if the object doesn't
-            exist on the DCC, then a POST will be attempted.
+        payload: dict. The data to submit.
+        error_if_not_found: bool. If set to True, then a PATCH will be attempted, and an Exception
+            will be raised if the record isn't found on the ENCODE Portal. 
+        raise_403: bool. Only matters when doing a PATCH. True means to raise an HTTPError if a 
+            403 status (Forbidden) is returned. 
+            If set to False and there still is a 403 return status, then the object you were 
+            trying to PATCH will be fetched from the Portal in JSON format as this function's
+            return value (as handled by self.patch()).
     """
     #Check wither record already exists on the portal
-    lookup_ids = payload["aliases"]
-    if self.ENCODE_IDENTIFIER_KEY in payload:
-      lookup_ids.append(payload[self.ENCODE_IDENTIFIER_KEY])
+    lookup_ids = self.get_lookup_ids_from_payload(payload)
     rec_json = self.lookup(rec_ids=lookup_ids,ignore404=True) 
+
     if not rec_json:
-      #If post=True, then POST as intended.
-      #But if post=False, then POST anyway since can't PATCH.
+      if error_if_not_found:
+        raise Exception(
+          ("Can't patch record '{}' since it wasn't found on the portal.").format(lookup_ids)) 
       return self.post(payload=payload)
-    elif rec_json:
-      #If post=False, then PATCH as intended
-      #But if post=True, then PATCH anyway since can't POST.
-	    return self.patch(payload=payload,extend_array_values=extend_array_values)
+    else:
+      #PATCH
+      #Set self.ENCODE_IDENTIFIER_KEY, even if already set.
+      encode_id = rec_json["@id"].split("/")[-1]
+      payload[self.ENCODE_IDENTIFIER_KEY] = encode_id
+      return self.patch(payload=payload,extend_array_values=extend_array_values,raise_403=raise_403)
 
   def getFastqFileRepNumDico(self,dcc_exp_id):
     """
