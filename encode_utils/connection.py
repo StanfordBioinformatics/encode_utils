@@ -297,9 +297,9 @@ class Connection():
     Given a payload to submit to the Portal, extracts the identifiers that can be used to lookup
     the record on the Portal, i.e. to see if the record already exists. Identifiers are extracted
     from the following fields:
-       1) self.ENCODE_IDENTIFIER_KEY,
-       2) aliases,
-       3) md5sum (in the case of a file object)
+    1) self.ENCODE_IDENTIFIER_KEY,
+    2) aliases,
+    3) md5sum (in the case of a file object)
 
     Args:
         payload: dict. The data to submit.
@@ -438,7 +438,7 @@ class Connection():
       response.raise_for_status()
 
 
-  def send(self,payload,error_if_not_found=False,extend_array_values=True,raise_403=True)
+  def send(self,payload,error_if_not_found=False,extend_array_values=True,raise_403=True):
     """
     Howdy
 
