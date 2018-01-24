@@ -283,7 +283,8 @@ class Connection():
 
 
   def lookup(self,rec_ids,ignore404=True,frame=None):
-    """
+    """GET a record from the ENCODE Portal.
+
     Looks up a record in ENCODE and performs a GET request, returning the JSON serialization of 
     the object. You supply a list of identifiers for a specific record, such as the object ID, an
     alias, uuid, or accession. The ENCODE Portal will be searched for each identifier in turn 
@@ -332,7 +333,7 @@ class Connection():
     response.raise_for_status() 
 
   def post(self,payload):
-    """ POST an object to the DCC.
+    """POST a record to the ENCODE Portal.
 
     Requires that you include in the payload the non-schematic key self.ENCODE_PROFILE_KEY to
     designate the name of the ENCODE object profile that you are submitting against.
@@ -381,8 +382,7 @@ class Connection():
       response.raise_for_status()
 
   def patch(self,payload,raise_403=True, extend_array_values=True):
-    """
-    PATCH a record on the DCC.
+    """PATCH a record on the ENCODE Portal.
 
     Args: 
         payload: dict. containing the attribute key and value pairs to patch. Must contain the key
