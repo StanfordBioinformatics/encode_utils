@@ -38,6 +38,12 @@ class ProfileNotSpecified(Exception):
   """
   pass
 
+class RecordNotFound(Exception):
+  """
+  Raised when a record that should exist on the Portal can't be retrieved via a GET request.
+  """
+  pass
+
 class RecordIdNotPresent(Exception):
   """
   Raised when a payload to submit to the Portal doesn't have any record identifier (either 
@@ -186,7 +192,7 @@ class Connection():
         list of search results. 
 
     Raises:
-        HTTPError: If the status code is not in the set [200,404].
+        requests.exceptions.HTTPError: If the status code is not in the set [200,404].
 
     Example
         Given we have the following dictionary *d* of key and value pairs::
@@ -287,8 +293,8 @@ class Connection():
         rec_ids: str. containing a single record identifier, or a list of identifiers for a 
             specific record.
         ignore404: bool. Only matters when none of the passed in record IDs were found on the 
-            ENCODE Portal. In this case, If set to True, then no Exception will be raised. If
-            set to False, an empty dict will be returned.
+            ENCODE Portal. In this case, If set to True, then an empty dict will be returned.
+            If set to False, then an E
            
 
     Returns:
@@ -296,8 +302,8 @@ class Connection():
           and ignore404=True.
 
     Raises:
-        Exception: None of the identifiers were found and either there was a 403 (Forbidden) 
-            response code, or ignore404=False was set.
+        requests.exceptions.HTTPError: The status code is not okay (in the 200 range), and the 
+            cause isn't due to a 404 (not found) status code when ignore404=True.
     """
     if rec_ids is str:
       rec_ids = [rec_ids]
@@ -321,17 +327,14 @@ class Connection():
     elif requests.codes.NOT_FOUND in status_codes:
       if ignore404:
         return {}
-      else:
-        raise Exception("ENCODE identifiers not found".format(rec_ids))
-    else:
-      #If response not okay and status_code equal to something other than [403,404],
-      # then raise the error for last response we got:
-      response.raise_for_status() 
+    #At this point in the code, the response is not okay.
+    # Raise the error for last response we got:
+    response.raise_for_status() 
 
   def post(self,payload):
     """ POST an object to the DCC.
 
-    Requires that your include in the payload the non-schematic key self.ENCODE_PROFILE_KEY to
+    Requires that you include in the payload the non-schematic key self.ENCODE_PROFILE_KEY to
     designate the name of the ENCODE object profile that you are submitting against.
 
     Args:
@@ -384,7 +387,8 @@ class Connection():
     Args: 
         payload: dict. containing the attribute key and value pairs to patch. Must contain the key
             self.ENCODE_IDENTIFIER_KEY in order to indicate which record to PATCH.
-        raise_403: bool. True means to raise an HTTPError if a 403 status (Forbidden) is returned. 
+        raise_403: bool. True means to raise a requests.exceptions.HTTPError if a 403 status
+            (Forbidden) is returned. 
             If set to False and there still is a 403 return status, then the object you were 
             trying to PATCH will be fetched from the Portal in JSON format as this function's
             return value.
@@ -397,7 +401,7 @@ class Connection():
     Raises: 
         KeyError: The payload doesn't have the key self.ENCODE_IDENTIFIER_KEY set AND there aren't 
             any aliases provided in the payload's 'aliases' key. 
-        requests.exceptioas.HTTPError: if the return status is not in the 200 range (excluding a 
+        requests.exceptions.HTTPError: if the return status is not in the 200 range (excluding a 
             403 status if 'raise_403' is False.
     """
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
@@ -442,26 +446,34 @@ class Connection():
 
   def send(self,payload,error_if_not_found=False,extend_array_values=True,raise_403=True):
     """
-    Howdy
+    A wrapper over self.post() and self.patch() that determines which to call based on whether the
+    record exists on the Portal or not. Especially useful when submitting a high-level object,
+    such as an experiment which contains many dependent objects, in which case you could have a mix
+    where some need to be POST'd and some PATCH'd. 
 
     Args:
         payload: dict. The data to submit.
-        error_if_not_found: bool. If set to True, then a PATCH will be attempted, and an Exception
-            will be raised if the record isn't found on the ENCODE Portal. 
-        raise_403: bool. Only matters when doing a PATCH. True means to raise an HTTPError if a 
-            403 status (Forbidden) is returned. 
+        error_if_not_found: bool. If set to True, then a PATCH will be attempted and a 
+            requests.exceptions.HTTPError will be raised if the record doesn't exist on the Portal.
+        extend_array_values: bool. Only matters when doing a PATCH, and Only affects keys with
+            array values. True (default) means to extend the corresponding value on the Portal
+            with what's specified in the payload. False means to replace the value on the Portal 
+            with what's in the payload. 
+        raise_403: bool. Only matters when doing a PATCH. True means to raise an
+            requests.exceptions.HTTPError if a 403 status (Forbidden) is returned. 
             If set to False and there still is a 403 return status, then the object you were 
             trying to PATCH will be fetched from the Portal in JSON format as this function's
             return value (as handled by self.patch()).
+
+    Raises:
+          requests.exceptions.HTTPError: You want to do a PATCH (indicated by setting 
+              error_if_not_found=True) but the record isn't found.
     """
     #Check wither record already exists on the portal
     lookup_ids = self.get_lookup_ids_from_payload(payload)
-    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=True) 
+    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=!error_if_not_found) 
 
     if not rec_json:
-      if error_if_not_found:
-        raise Exception(
-          ("Can't patch record '{}' since it wasn't found on the portal.").format(lookup_ids)) 
       return self.post(payload=payload)
     else:
       #PATCH
