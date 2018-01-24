@@ -29,7 +29,7 @@ mode = args.dcc_mode
 exp_id = args.dcc_exp_id
 
 conn = Connection(dcc_mode=mode)
-exp_rep_dico = conn.getFastqFileRepNumDico(dcc_exp_id=exp_id)
+exp_rep_dico = conn.get_fastqfile_replicate_hash(dcc_exp_id=exp_id)
 exp_bio_rep_count = len(exp_rep_dico.keys())
 exp_json = conn.lookup(rec_ids=exp_id,ignore404=True,frame="object")
 control_ids = exp_json["possible_controls"]
@@ -37,7 +37,7 @@ controls = {} #A dict of dicts.
 control_bio_rep_counts = []
 for c in control_ids:
 	controls[c] = {}
-	ctl_rep_dico = conn.getFastqFileRepNumDico(dcc_exp_id=c)
+	ctl_rep_dico = conn.get_fastqfile_replicate_hash(dcc_exp_id=c)
 	controls[c]["rep_dico"] = ctl_rep_dico
 	ctl_bio_rep_count = len(ctl_rep_dico.keys())
 	control_bio_rep_counts.append(ctl_bio_rep_count)

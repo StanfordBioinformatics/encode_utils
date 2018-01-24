@@ -37,7 +37,7 @@ def parse_profile_from_id_prop(id_val):
     return ""
   return profile
 
-def cleanAliasName(self,alias):
+def clean_alias_name(self,alias):
   """
   Removes unwanted characters from the alias name. Only the '/' character purportedly causes issues.
   This function replaces both '/' and '\' with '_'.
@@ -52,7 +52,7 @@ def cleanAliasName(self,alias):
   alias = alias.replace("\\","_")
   return alias
 
-def createSubprocess(cmd,checkRetcode=True):
+def create_subprocess(cmd,checkRetcode=True):
   """Runs a command in a subprocess and checks for any errors.
 
   Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes 
@@ -107,7 +107,7 @@ def get_profile_schema(profile):
   res.raise_for_status()
   return url, res.json()
 
-def stripDccAliasPrefix(self,alias):
+def strip_alias_prefix(self,alias):
   """
   Splits 'alias' on ':' to strip off any alias prefix. Aliases must have a lab-specific prefix. 
   The ':' is the seperator between prefix and the rest of the alias, and can't appear elsewhere in 
@@ -118,7 +118,7 @@ def stripDccAliasPrefix(self,alias):
   """
   return name.split(":")[-1]
  
-def addToSet(self,entries,new):
+def add_to_set(self,entries,new):
   """Adds an entry to a list and makes a set for uniqueness before returning the list.
 
   Args:
@@ -132,7 +132,7 @@ def addToSet(self,entries,new):
   unique_list = list(set(entries))
   return unique_list
  
-def doesReplicateExist(library_alias,biologicial_replicate_number,technical_replicate_number,replicates_json_from_dcc):
+def does_replicate_exist(library_alias,biologicial_replicate_number,technical_replicate_number,replicates_json_from_dcc):
   """
   Checks if a replicate exists for a specified library alias with the given biological replicate
   number and technical replicate number. Note that this method only works on a library alias

@@ -124,20 +124,20 @@ class Connection():
     self.post_logger = post_logger
 
     #: The prod or dev DCC URL, determined by the value of the dcc_mode instance attribute.
-    self.dcc_url = self._setDccUrl()
+    self.dcc_url = self._set_dcc_url()
 
     #: The API key to use when authenticating with the DCC servers. This is set automatically
-    #: to the value of the DCC_API_KEY environment variable in the _setDccUrl() private method. 
-    self.api_key = self._setApiKeys()[0]
+    #: to the value of the DCC_API_KEY environment variable in the _set_dcc_url() private method. 
+    self.api_key = self._set_api_keys()[0]
     #: The secret key to use when authenticating with the DCC servers. This is set automatically
-    #: to the value of the DCC_SECRET_KEY environment variable in the _setDccUrl() private method.
-    self.secret_key = self._setApiKeys()[1]
+    #: to the value of the DCC_SECRET_KEY environment variable in the _set_dcc_url() private method.
+    self.secret_key = self._set_api_keys()[1]
     self.auth = (self.api_key,self.secret_key)
 
-  def _setDccUrl(self):
+  def _set_dcc_url(self):
     return self.DCC_MODES[self.dcc_mode]
 
-  def _setApiKeys(self):
+  def _set_api_keys(self):
     """
     Retrieves the API key and secret key based on the environment variables DCC_API_KEY and 
     DCC_SECRET_KEY.
@@ -149,13 +149,13 @@ class Connection():
     secret_key = os.environ["DCC_SECRET_KEY"]
     return api_key,secret_key
     
-  def _writeAliasAndDccAccessionToLog(self,alias,dcc_id=None):
+  def _log_post(self,alias,dcc_id=None):
     txt = alias
     if dcc_id:
       txt += " -> {dcc_id}".format(dcc_id=dcc_id)
     self.post_logger.info(txt)
 
-  def getAliases(self,dcc_id,strip_alias_prefix=False):
+  def get_aliases(self,dcc_id,strip_alias_prefix=False):
     """
     Given an ENCODE identifier for an object, performs a GET request and extracts the aliases.
 
@@ -171,10 +171,10 @@ class Connection():
     for index in range(len(aliases)):
       alias = aliases[index]
       if strip_alias_prefix:
-        aliases[index] =  encode_utils.utils.stripDccAliasPrefix(alias)
+        aliases[index] =  encode_utils.utils.strip_alias_prefix(alias)
     return aliases
 
-  def searchEncode(self,search_args):
+  def search_encode(self,search_args):
     """
     Searches the ENCODE Portal using the provided query parameters in dictionary format. The query 
     parameters will be first URL encoded. 
@@ -200,7 +200,7 @@ class Connection():
   
         We can call the function as::
 
-            searchEncode(search_args=d)
+            search_encode(search_args=d)
             
     """
     query = urllib.parse.urlencode(search_args)
@@ -366,7 +366,7 @@ class Connection():
         response_dcc_accession = response.json()["@graph"][0]["accession"]
       except KeyError:
         pass #some objects don't have an accession, i.e. replicates.
-      self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
+      self._log_post(alias=alias,dcc_id=response_dcc_accession)
       return response.json()
     elif status_code == requests.codes.CONFLICT:
       self.logger.error("Will not post {} to DCC because it already exists.".format(alias))
@@ -470,13 +470,13 @@ class Connection():
       payload[self.ENCODE_IDENTIFIER_KEY] = encode_id
       return self.patch(payload=payload,extend_array_values=extend_array_values,raise_403=raise_403)
 
-  def getFastqFileRepNumDico(self,dcc_exp_id):
+  def get_fastqfile_replicate_hash(self,dcc_exp_id):
     """
     Given a DCC experiment ID, finds the original FASTQ files that were submitted and creates a 
     dictionary with keys being the biological_replicate_number. The value of each key is another 
     dictionary having the technical_replicate_number as the single key. The value of this is 
     another dictionary with keys being file read numbers, i.e. 1 for forward reads, 2 for reverse 
-    reads.  The value for a give key of this most inner dictionary is the file JSON. 
+    reads.  The value for a given key of this most inner dictionary is the file JSON. 
 
     Args:
         dcc_exp_id - list of DCC file IDs or aliases 
@@ -501,14 +501,14 @@ class Connection():
     return dico
 
 
-  def _setAwsUploadCredsFromResponseGraph(self,upload_credentials):
+  def _set_aws_upload_creds_from_response(self,upload_credentials):
     """
     After posting the metadata for a file object to ENCODE, the response will contain the key 
     'upload_credentials'. This method parses the document pointed to by this key, constructing a 
     dictionary of keys that will be exported as environment variables that can be used by the aws 
-    CL agent.  That is what self.postFileToDcc() does, indirectly. self.postFileToDcc() has an 
+    CL agent.  That is what self.post_file() does, indirectly. self.post_file() has an 
     argument 'aws_creds' that expects a value generated from this method.  This method is also 
-    called from self.regenerateAwsUploadCreds(), which produces a JSON document also containing the
+    called from self.regenerate_aws_upload_creds(), which produces a JSON document also containing the
     key 'upload_credentials'. 
 
     Returns:
@@ -519,13 +519,12 @@ class Connection():
     creds = graph["upload_credentials"]
     aws_creds = {}
     aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
-    aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
     aws_creds["AWS_SECRET_ACCESS_KEY"] = creds["secret_key"]
     aws_creds["AWS_SECURITY_TOKEN"] = creds["session_token"]
     aws_creds["UPLOAD_URL"] = creds["upload_url"]
     return aws_creds
   
-  def postFileMetaDataToDcc(self,payload,patch):
+  def post_file_metadata(self,payload,patch):
     """
     This is only to be used for DCC "/file/" type objects, because for these we don't have a 
     Before attempting a POST, will check if the file exists by doing a get on 
@@ -535,7 +534,7 @@ class Connection():
         payload: The data to submit.
         patch: bool. True indicates to perform an HTTP PATCH operation rather than POST.
     """
-    self.logger.info("\nIN postFileMetaDataToDcc(), patch={patch}\n".format(patch=patch))  
+    self.logger.info("\nIN post_file_metadata(), patch={patch}\n".format(patch=patch))  
     objectType = payload.pop("@id") #should be /file/
     filename = payload["submitted_file_name"]
     #alias = payload["aliases"][0]
@@ -559,7 +558,7 @@ class Connection():
       if not exists_on_dcc:
         #then do POST
         payload["@id"] = objectType
-        response = self.postFileMetaDataToDcc(payload=payload,patch=False)
+        response = self.post_file_metadata(payload=payload,patch=False)
         return response
       httpMethod = "PATCH"
       url = os.path.join(self.dcc_url,alias)
@@ -602,11 +601,11 @@ class Connection():
       response_json = response_json["@graph"][0]  
     response_dcc_accession = response_json["accession"]
     if not patch:
-      self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response_dcc_accession)
+      self._log_post(alias=alias,dcc_id=response_dcc_accession)
     return response_json
 
 
-  def regenerateAwsUploadCreds(self,encff_number):
+  def regenerate_aws_upload_creds(self,encff_number):
     self.logger.info("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
            " https://{api_key}:{secret_key}@www.encodeproject.org/files/{encff_number}/upload -d '{{}}' | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,encff_number=encff_number)
@@ -626,10 +625,10 @@ class Connection():
         #Access was denied to this resource. File already uploaded fine.
         return
     graph = response["@graph"][0]
-    aws_creds = self._setAwsUploadCredsFromResponseGraph(graph["upload_credentials"])
+    aws_creds = self._set_aws_upload_creds_from_response(graph["upload_credentials"])
     return aws_creds
 
-  def postFileToDcc(self,filepath,encff_number,aws_creds=None):
+  def post_file(self,filepath,encff_number,aws_creds=None):
     """
     Args:
         filepath: The local path to the file to upload.
@@ -637,9 +636,9 @@ class Connection():
         aws_creds: dict. with keys AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SECURITY_TOKEN.
     Returns:
     """
-    self.logger.info("\nIN postFileToDcc()\n")
+    self.logger.info("\nIN post_file()\n")
     if not aws_creds:
-      aws_creds = self.regenerateAwsUploadCreds(encff_number=encff_number)
+      aws_creds = self.regenerate_aws_upload_creds(encff_number=encff_number)
       if not aws_creds:
         return
     cmd = "aws s3 cp {filepath} {upload_url}".format(filepath=filepath,upload_url=aws_creds["UPLOAD_URL"])
@@ -661,7 +660,7 @@ class Connection():
              " Stderr is {stderr}.").format(cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr))
       
 
-  def getPlatformsOnExperiment(self,rec_id):
+  def get_platforms_on_experiment(self,rec_id):
     """
     Looks at all FASTQ files on the specified experiment, and tallies up the varying sequencing 
     platforms that generated them.  This is moreless used to verify that there aren't a mix of 
@@ -683,7 +682,7 @@ class Connection():
       platforms.extend(f["platform"]["aliases"])
     return list(set(platforms))
         
-  def postMotifEnrichmentsFromTextFile(self,infile,patch=False):
+  def post_motif_enrichments_from_textfile(self,infile,patch=False):
     """
     Submits motif enrichment metadata organized in a text file to the DCC.
 
@@ -747,9 +746,9 @@ class Connection():
       response = self.post(payload=payload,patch=patch)  
       if "@graph" in response:
         response = response["@graph"][0]
-      self._writeAliasAndDccAccessionToLog(alias=alias,dcc_id=response["uuid"])
+      self._log_post(alias=alias,dcc_id=response["uuid"])
 
-  def postDocument(self,download_filename,document,document_type,document_description):
+  def post_document(self,download_filename,document,document_type,document_description):
     """
     The alias for the document will be the lab prefix plus the file name (minus the file extension).
 
@@ -797,7 +796,7 @@ class Connection():
     return dcc_uuid
   
   
-  def linkDocument(self,rec_id,dcc_document_uuid):
+  def link_document(self,rec_id,dcc_document_uuid):
     """
     Links an existing document on the ENCODE Portal to another existing object on the Portal via
     the latter's "documents" property.
@@ -817,7 +816,7 @@ class Connection():
     #Strip off the /documents/ prefix from each document UUID:
     document_uuids = [x.strip("/").split("/")[-1] for x in documents_json]
     if document_uuids:
-      document_uuids = encode_utils.utils.addToSet(entries=document_uuids,new=dcc_document_uuid)
+      document_uuids = encode_utils.utils.add_to_set(entries=document_uuids,new=dcc_document_uuid)
     else:
       document_uuids.append(dcc_document_uuid)
     payload = {}

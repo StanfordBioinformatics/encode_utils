@@ -65,7 +65,7 @@ for lib_id in dico:
 	barplot = dico[lib_id]["barplot"]
 	download_filename = lib_id + "_relative_knockdown.jpeg"
 	#download_filename is the name the user will get when they downoad the file from the ENCODE Portal.
-	dcc_uuid = conn.postDocument(download_filename=download_filename,document=barplot,document_type="data QA",document_description=barplot_description,patch=False)
+	dcc_uuid = conn.post_document(download_filename=download_filename,document=barplot,document_type="data QA",document_description=barplot_description,patch=False)
 	line = dico[lib_id]["line"]
 	line.append(dcc_uuid)
 	log_fh.write("\t".join(line) + "\n")
@@ -75,4 +75,4 @@ log_fh.close()
 
 print("Linking RSEM analysis and plotting protocol document to each experiment")
 for exp in exp_encids:
-	conn.linkDocument(rec_profile="experiment",rec_id=exp,dcc_document_uuid=protocol_uuid)
+	conn.link_document(rec_profile="experiment",rec_id=exp,dcc_document_uuid=protocol_uuid)
