@@ -16,10 +16,13 @@ url = PROFILES_URL + "/?format=json"
 PROFILE_NAMES = [x.lower() for x in requests.get(PROFILES_URL + "/?format=json",timeout=TIMEOUT,headers={"content-type": "application/json"}).json().keys()]
 
 def does_profile_exist(profile):
+  """
+  Indicates whether the specified profile exists on the Portal.  
+  """
   return profile.lower() in PROFILE_NAMES
 
 def parse_profile_from_id_prop(id_val):
-  """Figures out what profile a record belongs to by looking at it's '@id' attribute.
+  """Figures out what profile a record belongs to by looking at it's '@id' property.
 
   Given the value of the '@id' property of any schema that supports it (all I think?), extracts
   the profile out of it. On the portal, a record stores its ID in this field also, following the 

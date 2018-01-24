@@ -32,17 +32,37 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 #urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+class AwardPropertyMissing(Exception):
+  """
+  Raised when the 'award' property isn't set in the payload when doing a POST, and a default isn't
+  set by the environment variable DCC_AWARD either. 
+  """
+  message = ("The property '{}' is missing from the payload and a default isn't set either. To"
+             " store a default, set the DCC_AWARD environment variable.")
+     
+
+class LabPropertyMissing(Exception):
+  """
+  Raised when the 'lab' property isn't set in the payload when doing a POST, and a default isn't
+  set by the environment variable DCC_AWARD either. 
+  """
+  message = ("The property '{}' is missing from the payload and a default isn't set either. To"
+             " store a default, set the DCC_LAB environment variable.")
+
+
 class ProfileNotSpecified(Exception):
   """
   Raised when the profile (object schema) to submit to isn't specifed in a payload.
   """
   pass
 
+
 class RecordNotFound(Exception):
   """
   Raised when a record that should exist on the Portal can't be retrieved via a GET request.
   """
   pass
+
 
 class RecordIdNotPresent(Exception):
   """
@@ -51,12 +71,14 @@ class RecordIdNotPresent(Exception):
   """
   pass
 
+
 class UnknownDccProfile(Exception):
   """
   Raised when the profile in question doesn't match any valid profile name present in 
   encode_utils.utils.PROFILE_NAMES.
   """
   pass
+
 
 class Connection():
   """ENCODE Portal data submission and retrieval. 
@@ -340,6 +362,10 @@ class Connection():
     Requires that you include in the payload the non-schematic key self.ENCODE_PROFILE_KEY to
     designate the name of the ENCODE object profile that you are submitting against.
 
+    If the 'lab' property isn't present in the payload, then the default will be set to the value
+    of the DCC_LAB environment variable. Similarly, if the 'award' property isn't present, then the
+    default will be set to the value of the DCC_AWARD environment variable.
+
     Args:
         payload: dict. The data to submit.
 
@@ -348,7 +374,11 @@ class Connection():
         already exists on the DCC. 
 
     Raises:
-        requests.exceptions.HTTPError: if the return status is !ok. 
+        AwardPropertyMissing: The 'award' property isn't present in the payload and there isn't a
+          defualt set by the environment variable DCC_AWARD.
+        LabPropertyMissing: The 'lab' property isn't present in the payload and there isn't a
+          default set by the environment variable DCC_AWARD.
+        requests.exceptions.HTTPError: The return status is not okay (not in the 200 range). 
     """
     self.logger.info("\nIN post().")
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
@@ -357,6 +387,14 @@ class Connection():
     profile = self.validate_profile_in_payload(json_payload)
     json_payload.pop(self.ENCODE_PROFILE_KEY)
     url = os.path.join(self.dcc_url,profile)
+    if en.AWARD_PROP_NAME not in json_payload:
+      if not en.AWARD:
+        raise AwardPropertyMissing
+      json_payload.update(en.AWARD)
+    if en.LAB_PROP_NAME not in json_payload:
+      if not en.LAB:
+        raise LabPropertyMissing
+      json_payload.update(en.LAB)
     alias = json_payload["aliases"][0]
     self.logger.info(
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
@@ -737,7 +775,6 @@ class Connection():
       payload = {} #payload will hold the secondary char submission
       payload["@id"] = "antibody_characterization/"
       payload["secondary_characterization_method"] = "motif enrichment"
-      payload.update(en.AWARD_AND_LAB)
       payload["aliases"] = [alias]
       payload["characterizes"] = encab
       payload["target"] = target + "-human"
@@ -788,7 +825,6 @@ class Connection():
     ## Post information to DCC
     payload = {} 
     payload["@id"] = "documents/"
-    payload.update(en.AWARD_AND_LAB)
     payload["aliases"] = [document_alias]
     payload["document_type"] = document_type
     payload["description"] = document_description

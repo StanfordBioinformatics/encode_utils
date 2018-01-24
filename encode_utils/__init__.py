@@ -1,3 +1,6 @@
+"""An API and scripts for submitting datasetss to the ENCODE Portal.
+"""
+
 import os
 import json
 
@@ -5,35 +8,44 @@ import json
 package_path = __path__[0]
 
 
-#: The conf data file that sets defaults for things like Lab and Award that are used
-#: when submitting datasets to the DCC.
-CONF_DATA_FILE = os.path.join(package_path,"conf_data.json")
-conf = json.load(open(CONF_DATA_FILE))
-
 #: Define constants for a few properties that are common to all ENCODE profiles:
 #: The award property name that is common to all ENCODE Portal object profiles.
-DCC_AWARD_ATTR = "award"
+AWARD_PROP_NAME = "award"
 
 #: The lab property name that is common to all ENCODE Portal object profiles.
-DCC_LAB_ATTR = "lab"
+LAB_PROP_NAME = "lab"
 
 #: List of profiles that we track which don't have the 'award' and 'lab' properties.
 AWARDLESS_PROFILES = ["replicate"] #these profiles don't have the 'award' and 'lab' properties.
 
-#: Sets the default for the submitting lab name.
-LAB = conf["lab"]
+#: dict. Stores the 'lab' property to the value of the environment variable DCC_LAB to act as 
+#: the default lab when submitting an object to the Portal. 
+#: encode_utils.connection.Connection.post() will use this default if this property doesn't appear
+#: in the payload. 
+LAB = {}
+try:
+  LAB = {LAB_PROP_NAME: os.environ["DCC_LAB"]}
+except KeyError:
+  pass
 
-#: The prefix to add to each alias when submitting an object to the DCC.
-#: Most profiles have an 'alias' key, which stores a list of object aliases useful to the lab.
-#: When submitting objects to the DCC, these aliases must be prefixed with the lab name.
-#: and end with a colon.
-LAB_PREFIX = LAB + ":" 
+#: dict. Stores the prefix to add to each object alias when submitting to the Portal.
+#: Most profiles have an 'alias' key, which stores a list of aliase names that are
+#: useful to the lab.  When submitting objects to the Portal, these aliases must be prefixed 
+#: with the lab name and end with a colon, and this configuration variable stores that
+#: prefix value.
+LAB_PREFIX = ""
+if LAB:
+  LAB_PREFIX = LAB + ":" 
 
-#: Sets the default for the award of the submiting lab to associate submissions with.
-AWARD = conf["award"] 
-
-#:
-AWARD_AND_LAB = {DCC_AWARD_ATTR: AWARD, DCC_LAB_ATTR: LAB}
+#: dict. Stores the 'award' property to the value of the environment variable DCC_AWARD to act as 
+#: the default award when submiting an object to the Portal.
+#: encode_utils.connection.Connection.post() will use this default if this property doesn't appear
+#: in the payload. 
+AWARD = {}
+try:
+  AWARD = {AWARD_PROP_NAME: os.environ["DCC_AWARD"]}
+except KeyError:
+  pass
 
 del package_path
 del conf
