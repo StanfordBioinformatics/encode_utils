@@ -69,6 +69,8 @@ class Connection():
   ${dcc_mode}_posted.txt and ${dcc_mode}_error.txt.
   """
   REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
+  #: The timeout in seconds when making HTTP requests via the 'requests' module.
+  TIMEOUT = 20
   
   DCC_PROD_MODE = "prod"
   DCC_DEV_MODE = "dev"
@@ -212,13 +214,13 @@ class Connection():
     query = urllib.parse.urlencode(search_args)
     url = os.path.join(self.dcc_url,"search/?",query)
     self.logger.info("Searching DCC with query {url}.".format(url=url))
-    response = requests.get(url,auth=self.auth,headers=self.REQUEST_HEADERS_JSON,verify=False)
+    response = requests.get(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,verify=False)
     if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
 
 
-  def validate_profile_in_payload(payload):
+  def validate_profile_in_payload(self,payload):
     """
     Useful to call when doing a POST (and self.post() does call this). Ensures that the profile key
     identified by self.ENCODE_PROFILE_KEY exists in the passed-in payload and that the value is 
@@ -240,7 +242,7 @@ class Connection():
     if not profile:
       raise ProfileNotSpecified(
         ("You need to specify the profile to submit to by using the '{}' key"
-         " in the payload.}").format(self.ENCODE_PROFILE_KEY))
+         " in the payload.").format(self.ENCODE_PROFILE_KEY))
     exists = encode_utils.utils.does_profile_exist(profile)
     if not exists:
       raise UnknownDccProfile(
@@ -306,18 +308,18 @@ class Connection():
         requests.exceptions.HTTPError: The status code is not okay (in the 200 range), and the 
             cause isn't due to a 404 (not found) status code when ignore404=True.
     """
-    if rec_ids is str:
+    if isinstance(rec_ids,str):
       rec_ids = [rec_ids]
     status_codes = {} #key is return code, value is the record ID
     for r in rec_ids:
       if r.endswith("/"):
         r = r.rstrip("/")
-      url = os.path.join(self.dcc_url,recordId,"?format=json&datastore=database")
+      url = os.path.join(self.dcc_url,r,"?format=json&datastore=database")
       if frame:
         url += "&frame={frame}".format(frame=frame)
-      self.logger.info(">>>>>>GETTING {recordId} From DCC with URL {url}".format(
-          recordId=recordId,url=url))
-      response = requests.get(url,auth=self.auth, headers=self.REQUEST_HEADERS_JSON, verify=False)
+      self.logger.info(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
+          rec_id=r,url=url))
+      response = requests.get(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
       if response.ok:
         return response.json()
       status_codes[response.status_code] = r
@@ -351,15 +353,16 @@ class Connection():
     self.logger.info("\nIN post().")
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json_payload = json.loads(json.dumps(payload)) 
-    profile = self.validate_profile_in_payload(payload)
-    payload.pop(self.self.ENCODE_PROFILE_KEY)
+    del payload
+    profile = self.validate_profile_in_payload(json_payload)
+    json_payload.pop(self.ENCODE_PROFILE_KEY)
     url = os.path.join(self.dcc_url,profile)
     alias = json_payload["aliases"][0]
     self.logger.info(
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format( alias=alias,url=url,payload=json_payload))
 
-    response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON,
+    response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                              data=json.dumps(json_payload), verify=False)
     self.logger.debug("<<<<<<DCC POST RESPONSE: ")
     self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
@@ -406,13 +409,14 @@ class Connection():
     """
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json_payload = json.loads(json.dumps(payload)) 
+    del payload
     self.logger.info("\nIN patch()")
     encode_id = json_payload[self.ENCODE_IDENTIFIER_KEY]
     rec_json = self.lookup(rec_ids=lookup_ids,ignore404=True) 
         
     if extend_array_values:
       for key in json_payload:
-        if type(json_payload[key]) is list:
+        if isinstance(json_payload[key],list):
           val = json_payload[key]
           val.extend(rec_json.get(key,[]))
           #I use rec_json.get(key,[]) above because in a GET request, 
@@ -427,7 +431,7 @@ class Connection():
          " {url} and this payload:\n\n{payload}\n\n").format(
              encode_id=encode_id,url=url,payload=json_payload))
 
-    response = requests.patch(url,auth=self.auth,headers=self.REQUEST_HEADERS_JSON,
+    response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                               data=json.dumps(json_payload),verify=False)
 
     self.logger.debug("<<<<<<DCC PATCH RESPONSE: ")
@@ -581,7 +585,7 @@ class Connection():
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
                                  url=url,payload=payload))
 
-      response = requests.patch(url,auth=self.auth,headers=self.REQUEST_HEADERS_JSON,
+      response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
     else:
       httpMethod = "POST"
@@ -590,7 +594,7 @@ class Connection():
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
                filename=filename,url=url,payload=payload))
-      response = requests.post(url, auth=self.auth, headers=self.REQUEST_HEADERS_JSON,
+      response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
     response_json = response.json()
@@ -743,7 +747,6 @@ class Connection():
       motif_analysis_basename= os.path.basename(motif_analysis_file)
       motif_analysis_file_mime_type = str(mimetypes.guess_type(motif_analysis_basename)[0])
       contents = str(base64.b64encode(open(motif_analysis_file,"rb").read()),"utf-8")
-      pdb.set_trace()
       motif_analysis_temp_uri = 'data:' + motif_analysis_file_mime_type + ';base64,' + contents
       attachment_properties = {}
       attachment_properties["download"] = motif_analysis_basename

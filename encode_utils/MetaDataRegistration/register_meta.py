@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/bin/env python3
 
 ###
 #Nathaniel Watson
@@ -62,7 +62,6 @@ def create_payloads(profile,infile):
 	schema_url, schema = encode_utils.utils.get_profile_schema(profile)
 	schema_props = schema["properties"]
 	START_COUNT = -1
-	ID_FIELD_NAME = "@id"
 	field_index = {}
 	fh = open(infile,'r')
 	header_fields = fh.readline().strip("\n").split("\t")
@@ -83,7 +82,7 @@ def create_payloads(profile,infile):
 		if not line or line[0].startswith("#"):
 			continue
 		payload = {}
-		payload[ID_FIELD_NAME] = "{}/".format(profile)
+		payload[conn.ENCODE_PROFILE_KEY] = profile
 		if encode_utils.DCC_AWARD_ATTR not in header_fields:
 			if profile not in encode_utils.AWARDLESS_PROFILES:
 				payload[encode_utils.DCC_AWARD_ATTR] = encode_utils.AWARD

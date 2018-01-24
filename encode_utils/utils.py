@@ -3,14 +3,17 @@ import os
 import requests
 import subprocess
 
+import pdb
 """
 Contains utilities that don't require authorization on the ENCODE Servers. 
 """
 
-PROFILES_URL = "https://www.encodeproject.org/profiles/"
+#: The timeout in seconds when making HTTP requests via the 'requests' module.
+TIMEOUT = 20
+PROFILES_URL = "https://www.encodeproject.org/profiles"
 #PROFILE_NAMES are lower case.
-
-PROFILE_NAMES = [x.lower() for x in requests.get(PROFILES_URL + "/?format=json", headers={"content-type": "application/json"}).json().keys()]
+url = PROFILES_URL + "/?format=json"
+PROFILE_NAMES = [x.lower() for x in requests.get(PROFILES_URL + "/?format=json",timeout=TIMEOUT,headers={"content-type": "application/json"}).json().keys()]
 
 def does_profile_exist(profile):
   return profile.lower() in PROFILE_NAMES
@@ -100,7 +103,8 @@ def get_profile_schema(profile):
              used to fetch the schema, and item 2 is a dict representing the profile's JSON schema.
   """
   url = os.path.join(PROFILES_URL,profile + ".json?format=json")
-  res = requests.get(url,headers={"content-type": "application/json"})
+  print(url)
+  res = requests.get(url,headers={"content-type": "application/json"},timeout=TIMEOUT)
   status_code = res.status_code
   if status_code == 404:
     raise UnknownENCODEProfile("Please verify the profile name that you specifed.")
