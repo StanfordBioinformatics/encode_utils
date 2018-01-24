@@ -83,12 +83,6 @@ def create_payloads(profile,infile):
 			continue
 		payload = {}
 		payload[conn.ENCODE_PROFILE_KEY] = profile
-		if encode_utils.DCC_AWARD_ATTR not in header_fields:
-			if profile not in encode_utils.AWARDLESS_PROFILES:
-				payload[encode_utils.DCC_AWARD_ATTR] = encode_utils.AWARD
-		if encode_utils.DCC_LAB_ATTR not in header_fields:
-			if profile not in encode_utils.AWARDLESS_PROFILES:
-				payload[encode_utils.DCC_LAB_ATTR] = encode_utils.LAB
 		count = START_COUNT
 		for val in line:
 			count += 1

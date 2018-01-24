@@ -48,4 +48,3 @@ except KeyError:
   pass
 
 del package_path
-del conf
