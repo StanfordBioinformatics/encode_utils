@@ -387,15 +387,15 @@ class Connection():
     profile = self.validate_profile_in_payload(json_payload)
     json_payload.pop(self.ENCODE_PROFILE_KEY)
     url = os.path.join(self.dcc_url,profile)
-    if profile not in encode_utils.AWARDLESS_PROFILES:
+    if profile not in encode_utils.AWARDLESS_PROFILES: #No lab prop for these profiles either.
       if en.AWARD_PROP_NAME not in json_payload:
         if not en.AWARD:
           raise AwardPropertyMissing
         json_payload.update(en.AWARD)
-    if en.LAB_PROP_NAME not in json_payload:
-      if not en.LAB:
-        raise LabPropertyMissing
-      json_payload.update(en.LAB)
+      if en.LAB_PROP_NAME not in json_payload:
+        if not en.LAB:
+          raise LabPropertyMissing
+        json_payload.update(en.LAB)
     alias = json_payload["aliases"][0]
     self.logger.info(
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
