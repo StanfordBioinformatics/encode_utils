@@ -471,7 +471,7 @@ class Connection():
     """
     #Check wither record already exists on the portal
     lookup_ids = self.get_lookup_ids_from_payload(payload)
-    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=!error_if_not_found) 
+    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=not error_if_not_found) 
 
     if not rec_json:
       return self.post(payload=payload)
