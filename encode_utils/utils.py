@@ -7,10 +7,10 @@ import subprocess
 Contains utilities that don't require authorization on the ENCODE Servers. 
 """
 
-PROFILES_URL = "https://www.encodeproject.org/profiles"
+PROFILES_URL = "https://www.encodeproject.org/profiles/"
 #PROFILE_NAMES are lower case.
 
-PROFILE_NAMES = [x.lower() for x in requests.get(url=PROFILES_URL + "/?format=json", headers={"content-type": "application/json"}).json().keys()]
+PROFILE_NAMES = [x.lower() for x in requests.get(PROFILES_URL + "/?format=json", headers={"content-type": "application/json"}).json().keys()]
 
 def does_profile_exist(profile):
   return profile.lower() in PROFILE_NAMES
