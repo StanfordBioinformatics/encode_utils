@@ -4,33 +4,33 @@
 #Nathaniel Watson
 #nathankw@stanford.edu
 ###
-import datetime
-import time
-import logging
-import json
-import requests
-import sys
-import subprocess
-import os
-import re
-import urllib
-import base64
-import mimetypes
-import pdb
 
+import base64
+import datetime
+import json
+import logging
+import mimetypes
+import os
+import pdb
+import pprint
+import re
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import subprocess
+import sys
+import time
+import urllib
 import urllib3
 
 #inhouse libraries
 import encode_utils as en
 import encode_utils.utils
 
-import time
-
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
 #urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+pp = pprint.PrettyPrinter(indent=2)
 
 class AwardPropertyMissing(Exception):
   """
@@ -180,6 +180,8 @@ class Connection():
     return api_key,secret_key
     
   def _log_post(self,alias,dcc_id=None):
+    """Uses self.post_logger to log the submitted object's alias and dcc_id. 
+    """
     txt = alias
     if dcc_id:
       txt += " -> {dcc_id}".format(dcc_id=dcc_id)
@@ -259,7 +261,7 @@ class Connection():
         connection.UnknownDccProfile: The profile isn't recognized.
     """
 
-    #profile = encode_utls.utils.parse_profile_from_id_prop(json_payload)
+    #profile = encode_utls.utils.parse_profile_from_id_prop(payload)
     profile = payload.get(self.ENCODE_PROFILE_KEY)
     if not profile:
       raise ProfileNotSpecified(
@@ -382,27 +384,26 @@ class Connection():
     """
     self.logger.info("\nIN post().")
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
-    json_payload = json.loads(json.dumps(payload)) 
-    del payload
-    profile = self.validate_profile_in_payload(json_payload)
-    json_payload.pop(self.ENCODE_PROFILE_KEY)
+    json.loads(json.dumps(payload)) 
+    profile = self.validate_profile_in_payload(payload)
+    payload.pop(self.ENCODE_PROFILE_KEY)
     url = os.path.join(self.dcc_url,profile)
     if profile not in encode_utils.AWARDLESS_PROFILES: #No lab prop for these profiles either.
-      if en.AWARD_PROP_NAME not in json_payload:
+      if en.AWARD_PROP_NAME not in payload:
         if not en.AWARD:
           raise AwardPropertyMissing
-        json_payload.update(en.AWARD)
-      if en.LAB_PROP_NAME not in json_payload:
+        payload.update(en.AWARD)
+      if en.LAB_PROP_NAME not in payload:
         if not en.LAB:
           raise LabPropertyMissing
-        json_payload.update(en.LAB)
-    alias = json_payload["aliases"][0]
+        payload.update(en.LAB)
+    alias = payload["aliases"][0]
     self.logger.info(
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
-         " payload:\n\n{payload}\n\n").format( alias=alias,url=url,payload=json_payload))
+         " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=pp.pprint(payload)))
 
     response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
-                             data=json.dumps(json_payload), verify=False)
+                             json=payload, verify=False)
     self.logger.debug("<<<<<<DCC POST RESPONSE: ")
     self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
     status_code = response.status_code
@@ -447,31 +448,30 @@ class Connection():
             403 status if 'raise_403' is False.
     """
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
-    json_payload = json.loads(json.dumps(payload)) 
-    del payload
+    json.loads(json.dumps(payload)) 
     self.logger.info("\nIN patch()")
-    encode_id = json_payload[self.ENCODE_IDENTIFIER_KEY]
+    encode_id = payload[self.ENCODE_IDENTIFIER_KEY]
     rec_json = self.lookup(rec_ids=lookup_ids,ignore404=True) 
         
     if extend_array_values:
-      for key in json_payload:
-        if isinstance(json_payload[key],list):
-          val = json_payload[key]
+      for key in payload:
+        if isinstance(payload[key],list):
+          val = payload[key]
           val.extend(rec_json.get(key,[]))
           #I use rec_json.get(key,[]) above because in a GET request, 
           # not all props are pulled back when they are empty.
           # For ex, in a file object, if the controlled_by prop isn't set, then 
           # it won't be in the response.
-          json_payload[key] = list(set(val))
+          payload[key] = list(set(val))
 
     url = os.path.join(self.dcc_url,encode_id)
     self.logger.info(
         ("<<<<<<Attempting to PATCH {encode_id} To DCC with URL"
          " {url} and this payload:\n\n{payload}\n\n").format(
-             encode_id=encode_id,url=url,payload=json_payload))
+             encode_id=encode_id,url=url,payload=pp.pprint(payload)))
 
     response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
-                              data=json.dumps(json_payload),verify=False)
+                              json=payload,verify=False)
 
     self.logger.debug("<<<<<<DCC PATCH RESPONSE: ")
     self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
@@ -622,7 +622,7 @@ class Connection():
           ("<<<<<<Attempting to PATCH {filename} metadata with alias {alias} and ENCFF ID"
            " {encff_id} for replicate to DCC with URL {url} and this payload:"
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
-                                 url=url,payload=payload))
+                                 url=url,payload=pp.pprint(payload)))
 
       response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
@@ -632,7 +632,7 @@ class Connection():
       self.logger.debug(
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
-               filename=filename,url=url,payload=payload))
+               filename=filename,url=url,payload=pp.pprint(payload)))
       response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 

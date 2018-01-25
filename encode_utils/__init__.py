@@ -35,7 +35,7 @@ except KeyError:
 #: prefix value.
 LAB_PREFIX = ""
 if LAB:
-  LAB_PREFIX = LAB + ":" 
+  LAB_PREFIX = LAB[LAB_PROP_NAME] + ":" 
 
 #: dict. Stores the 'award' property to the value of the environment variable DCC_AWARD to act as 
 #: the default award when submiting an object to the Portal.
