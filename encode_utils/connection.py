@@ -121,8 +121,7 @@ class Connection():
     #: dcc_mode: The environment of the ENCODE Portal site ("prod" or "dev") to connect to. 
     self.dcc_mode = dcc_mode
 
-    f_formatter = logging.Formatter(
-        '%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
+    f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
     #: A logging instance with a console handler accepting DEBUG level messages.
     #: Also contains an error handler, logging error messages at the ERROR level to a file by the 
     #: name of ${dcc_mode}_error.txt that is opened in append mode in the calling directory.
@@ -400,7 +399,7 @@ class Connection():
     alias = payload["aliases"][0]
     self.logger.info(
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
-         " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=pp.pprint(payload)))
+         " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=pp.pformat(payload)))
 
     response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
@@ -468,7 +467,7 @@ class Connection():
     self.logger.info(
         ("<<<<<<Attempting to PATCH {encode_id} To DCC with URL"
          " {url} and this payload:\n\n{payload}\n\n").format(
-             encode_id=encode_id,url=url,payload=pp.pprint(payload)))
+             encode_id=encode_id,url=url,payload=pp.pformat(payload)))
 
     response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                               json=payload,verify=False)
@@ -622,7 +621,7 @@ class Connection():
           ("<<<<<<Attempting to PATCH {filename} metadata with alias {alias} and ENCFF ID"
            " {encff_id} for replicate to DCC with URL {url} and this payload:"
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
-                                 url=url,payload=pp.pprint(payload)))
+                                 url=url,payload=pp.pformat(payload)))
 
       response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
@@ -632,7 +631,7 @@ class Connection():
       self.logger.debug(
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
-               filename=filename,url=url,payload=pp.pprint(payload)))
+               filename=filename,url=url,payload=pp.pformat(payload)))
       response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
