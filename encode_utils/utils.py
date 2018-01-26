@@ -8,6 +8,7 @@
 Contains utilities that don't require authorization on the ENCODE Servers. 
 """
 
+import json
 import os
 import requests
 import subprocess
