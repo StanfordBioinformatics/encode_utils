@@ -1,12 +1,18 @@
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
+
+"""
+Contains utilities that don't require authorization on the ENCODE Servers. 
+"""
 
 import os
 import requests
 import subprocess
 
 import pdb
-"""
-Contains utilities that don't require authorization on the ENCODE Servers. 
-"""
 
 #: The timeout in seconds when making HTTP requests via the 'requests' module.
 TIMEOUT = 20

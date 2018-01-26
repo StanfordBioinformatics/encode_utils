@@ -1,5 +1,11 @@
 #!/bin/env python3
 
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
+
 import argparse
 from encode_utils.connection import Connection
 

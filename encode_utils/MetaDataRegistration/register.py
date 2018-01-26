@@ -1,10 +1,10 @@
 #!/bin/env python3
 
-###
-#Nathaniel Watson
-#2017-10-23
-#nathankw@stanford.edu
-###
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
 
 import os
 import json

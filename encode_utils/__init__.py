@@ -1,3 +1,9 @@
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+###
+
 """An API and scripts for submitting datasetss to the ENCODE Portal.
 """
 

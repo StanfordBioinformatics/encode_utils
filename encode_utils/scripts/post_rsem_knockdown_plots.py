@@ -1,11 +1,17 @@
 #!/bin/env python3
 
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
+
 import argparse
 import glob
 import pdb
 
-from encode_utils.parent_argparser import dcc_login_parser #contains the arguments needed for logging in to the ENCODE Portal, including which env. 
 from encode_utils.connection import Connection
+from encode_utils.parent_argparser import dcc_login_parser #contains the arguments needed for logging in to the ENCODE Portal, including which env. 
 
 
 OUTPUT_FILE = "submitted.txt"

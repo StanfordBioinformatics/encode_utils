@@ -1,16 +1,15 @@
 #!/bin/env python3
 
-###
-#Nathaniel Watson
-#nathankw@stanford.edu
-#2017-11-02
-###
-
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
 
 import argparse
+from encode_utils.connection import Connection
 from encode_utils.parent_argparser import dcc_login_parser 
 #dcc_login_parser  contains the arguments needed for logging in to the ENCODE Portal, including which env.
-from encode_utils.connection import Connection
 
 description = "Given an input file with replicate IDs, one per line, retrieves the attributes biological_replicate_number and technical_replicate_number. An output file is created in tab-delimited format with these two additional columns appended to the original lines."
 

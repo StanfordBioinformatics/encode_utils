@@ -1,16 +1,16 @@
-#!/bin/env python
+#!/bin/env python3
 
-###
-#Nathaniel Watson
-#nathankw@stanford.edu
-#2018-01-16
-###
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
 
 import argparse
 
+from encode_utils.connection import Connection
 from encode_utils.parent_argparser import dcc_login_parser 
 #dcc_login_parser  contains the arguments needed for logging in to the ENCODE Portal, including which env.
-from encode_utils.connection import Connection
 
 description = """
 Given an ENCODE experiment identifier (not a control), loops through all replicates and sets the controlled_by attribute on each FASTQ file of the replicate. This attribute will be set by looking into the FASTQs of the corresponding replicate on the control experiment, thus, the possible_controls attribute must be set already on the provided experiment ID. This script is usefuly when the experiment has the controls set but not the possible controls attribute set, or when the user changes the list of possible_controls.

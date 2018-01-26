@@ -1,3 +1,9 @@
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
+
 import argparse
 
 dcc_login_parser = argparse.ArgumentParser(add_help=False)

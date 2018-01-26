@@ -1,16 +1,15 @@
 #!/bin/env python3
 
-###
-#Nathaniel Watson
-#nathankw@stanford.edu
-#2017-11-02
-###
-
+###                                                                                                    
+# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# Nathaniel Watson                                                                                      
+# nathankw@stanford.edu                                                                                 
+### 
 
 import argparse
+from encode_utils.connection import Connection
 from encode_utils.parent_argparser import dcc_login_parser 
 #dcc_login_parser  contains the arguments needed for logging in to the ENCODE Portal, including which env.
-from encode_utils.connection import Connection
 
 description = "Given an input file with ENCODE object identifiers, one per line, retrieves the aliases. An output file is created in tab-delimited format with additional tab-delimited columns appended to the original lines - one for each alias."
 
