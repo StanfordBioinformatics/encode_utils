@@ -15,7 +15,7 @@ for line in fh:
 	line = line.strip().split("\t")
 	if not line or line[0].startswith("#"):
 		continue
-	rec = conn.lookup(rec_ids=line[3])
+	rec = conn.get(rec_ids=line[3])
 	bio_rep_num = int(line[1])
 	caption = rec["description"]
 	new_cap = "Barplot for replicate {bio_rep_num}{cap}".format(bio_rep_num=bio_rep_num,cap=caption.split("Barplot")[1])

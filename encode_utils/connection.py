@@ -12,7 +12,6 @@ import logging
 import mimetypes
 import os
 import pdb
-import pprint
 import re
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -29,8 +28,6 @@ import encode_utils.utils
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 #urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-pp = pprint.PrettyPrinter(indent=2)
 
 class AwardPropertyMissing(Exception):
   """
@@ -197,7 +194,7 @@ class Connection():
     Returns:
         list.
     """
-    record = self.lookup(ignore404=False,dcc_id=dcc_id)
+    record = self.get(ignore404=False,dcc_id=dcc_id)
     aliases = record["aliases"]
     for index in range(len(aliases)):
       alias = aliases[index]
@@ -269,7 +266,7 @@ class Connection():
     exists = encode_utils.utils.does_profile_exist(profile)
     if not exists:
       raise UnknownDccProfile(
-          "Invalid profile '{}' specified in the '@id' attribute.".format( profile))
+          "Invalid profile '{}' specified in the payload's {} key.".format(profile,self.ENCODE_PROFILE_KEY))
     return profile
 
   def get_lookup_ids_from_payload(self,payload):
@@ -306,8 +303,19 @@ class Connection():
             
     return lookup_ids
 
+  #def delete(self,rec_id):
+  #  """Not supported at present by the DCC - Only wranglers and delete objects.
+  #  """
+  #  url = os.path.join(self.dcc_url,rec_id)
+  #  self.logger.info(
+  #    (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
+  #  response = requests.delete(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
+  #  pdb.set_trace()
+  #  if response.ok:
+  #    return response.json()
+  #  response.raise_for_status() 
 
-  def lookup(self,rec_ids,ignore404=True,frame=None):
+  def get(self,rec_ids,ignore404=True,frame=None):
     """GET a record from the ENCODE Portal.
 
     Looks up a record in ENCODE and performs a GET request, returning the JSON serialization of 
@@ -357,6 +365,13 @@ class Connection():
     # Raise the error for last response we got:
     response.raise_for_status() 
 
+  def print_format_dict(self,dico):
+    """
+    Formats a dictionary for printing to a stream.
+    """
+    #Could use pprint, but that looks too ugly with dicts due to all the extra spacing. 
+    return json.dumps(dico,indent=2)
+
   def post(self,payload):
     """POST a record to the ENCODE Portal.
 
@@ -399,7 +414,7 @@ class Connection():
     alias = payload["aliases"][0]
     self.logger.info(
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
-         " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=pp.pformat(payload)))
+         " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=self.print_format_dict(payload)))
 
     response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
@@ -415,11 +430,11 @@ class Connection():
       self._log_post(alias=alias,dcc_id=response_dcc_accession)
       return response.json()
     elif status_code == requests.codes.CONFLICT:
-      self.logger.error("Will not post {} to DCC because it already exists.".format(alias))
-      rec_json = self.lookup(rec_ids=alias,ignore404=False)
+      self.logger.error("Will not post {} because it already exists.".format(alias))
+      rec_json = self.get(rec_ids=alias,ignore404=False)
       return rec_json
     else:
-      message = "Failed to POST {alias} to DCC".format(alias=alias)
+      message = "Failed to POST {alias}".format(alias=alias)
       self.logger.error(message)
       response.raise_for_status()
 
@@ -450,7 +465,7 @@ class Connection():
     json.loads(json.dumps(payload)) 
     self.logger.info("\nIN patch()")
     encode_id = payload[self.ENCODE_IDENTIFIER_KEY]
-    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=True) 
+    rec_json = self.get(rec_ids=lookup_ids,ignore404=True) 
         
     if extend_array_values:
       for key in payload:
@@ -467,7 +482,7 @@ class Connection():
     self.logger.info(
         ("<<<<<<Attempting to PATCH {encode_id} To DCC with URL"
          " {url} and this payload:\n\n{payload}\n\n").format(
-             encode_id=encode_id,url=url,payload=pp.pformat(payload)))
+             encode_id=encode_id,url=url,payload=self.print_format_dict(payload)))
 
     response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                               json=payload,verify=False)
@@ -481,7 +496,7 @@ class Connection():
       if not raise_403:
         return rec_json 
     else:
-      message = "Failed to PATCH {} to DCC".format(encode_id)
+      message = "Failed to PATCH {}".format(encode_id)
       self.logger.error(message)
       response.raise_for_status()
 
@@ -513,7 +528,7 @@ class Connection():
     """
     #Check wither record already exists on the portal
     lookup_ids = self.get_lookup_ids_from_payload(payload)
-    rec_json = self.lookup(rec_ids=lookup_ids,ignore404=not error_if_not_found) 
+    rec_json = self.get(rec_ids=lookup_ids,ignore404=not error_if_not_found) 
 
     if not rec_json:
       return self.post(payload=payload)
@@ -538,11 +553,11 @@ class Connection():
     Returns:
         dict. 
     """
-    exp_json = self.lookup(ignore404=False,rec_ids=dcc_exp_id)
+    exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
     dcc_file_ids = exp_json["original_files"]
     dico = {}
     for i in dcc_file_ids:
-      file_json = self.lookup(ignore404=False,rec_ids=i)
+      file_json = self.get(ignore404=False,rec_ids=i)
       if file_json["file_type"] != "fastq":
         continue #this is not a file object for a FASTQ file.
       brn,trn = file_json["replicate"]["biological_replicate_number"], file_json["replicate"]["technical_replicate_number"]
@@ -599,10 +614,10 @@ class Connection():
     # In addition, check on file's MD5 sum in case the former search doesn't return a hit, since 
     # if previously we only had part of the file by mistake (i.e incomplete downoad) then the 
     # uploaded file on DCC would have a different md5sum.
-    exists_on_dcc = self.lookup(ignore404=True,rec_ids=[md5_alias,alias])
+    exists_on_dcc = self.get(ignore404=True,rec_ids=[md5_alias,alias])
     if not patch and exists_on_dcc:
       self.logger.info(
-          ("Will not POST metadata for {filename} with alias {alias} to DCC"
+          ("Will not POST metadata for {filename} with alias {alias}"
            " because it already exists as {encff}.").format(
                filename=filename,alias=alias,encff=exists_on_dcc["accession"]))
       return exists_on_dcc
@@ -619,9 +634,9 @@ class Connection():
       encff_id= exists_on_dcc["accession"]
       self.logger.info(
           ("<<<<<<Attempting to PATCH {filename} metadata with alias {alias} and ENCFF ID"
-           " {encff_id} for replicate to DCC with URL {url} and this payload:"
+           " {encff_id} for replicate with URL {url} and this payload:"
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
-                                 url=url,payload=pp.pformat(payload)))
+                                 url=url,payload=self.print_format_dict(payload)))
 
       response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
@@ -631,7 +646,7 @@ class Connection():
       self.logger.debug(
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
-               filename=filename,url=url,payload=pp.pformat(payload)))
+               filename=filename,url=url,payload=self.print_format_dict(payload)))
       response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
@@ -725,7 +740,7 @@ class Connection():
     Returns:
         De-duplicated list of platforms seen on the experiment's FASTQ files. 
     """
-    exp_json = self.lookup(rec_ids=rec_id,frame=None)
+    exp_json = self.get(rec_ids=rec_id,frame=None)
     if "@graph" in exp_json:
       exp_json = exp_json["@graph"][0]
     files_json = exp_json["original_files"]
@@ -822,7 +837,7 @@ class Connection():
     if not mime_type:
       raise Exception("Couldn't guess MIME type for {}.".format(document_filename))
     
-    ## Post information to DCC
+    ## Post information
     payload = {} 
     payload["@id"] = "documents/"
     payload["aliases"] = [document_alias]
@@ -860,7 +875,7 @@ class Connection():
     Returns:
         The PATCH response form self.patch().
     """
-    rec_json = self.lookup(ignore404=False,rec_ids=rec_id)
+    rec_json = self.get(ignore404=False,rec_ids=rec_id)
     documents_json = rec_json["documents"]
     #Originally in form of [u'/documents/ba93f5cc-a470-41a2-842f-2cb3befbeb60/',
     #                       u'/documents/tg81g5aa-a580-01a2-842f-2cb5iegcea03, ...]

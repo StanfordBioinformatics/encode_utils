@@ -32,7 +32,7 @@ for line in fh:
 	if not rec or rec.startswith("#"):
 		fout.write(line)
 		continue
-	rec = conn.lookup(rec_ids=rec,ignore404=False)
+	rec = conn.get(rec_ids=rec,ignore404=False)
 	aliases = rec["aliases"]
 	for a in aliases:
 		line = [line.strip("\n")]
