@@ -397,7 +397,7 @@ class Connection():
     profile = self.validate_profile_in_payload(payload)
     payload.pop(self.ENCODE_PROFILE_KEY)
     url = os.path.join(self.dcc_url,profile)
-    if profile not in encode_utils.AWARDLESS_PROFILES: #No lab prop for these profiles either.
+    if profile not in eu.AWARDLESS_PROFILES: #No lab prop for these profiles either.
       if eu.AWARD_PROP_NAME not in payload:
         if not eu.AWARD:
           raise AwardPropertyMissing
@@ -460,7 +460,7 @@ class Connection():
     json.loads(json.dumps(payload)) 
     self.logger.info("\nIN patch()")
     encode_id = payload[self.ENCODE_IDENTIFIER_KEY]
-    rec_json = self.get(rec_ids=lookup_ids,ignore404=True) 
+    rec_json = self.get(rec_ids=encode_id,ignore404=True) 
         
     if extend_array_values:
       for key in payload:
@@ -529,9 +529,9 @@ class Connection():
       return self.post(payload=payload)
     else:
       #PATCH
-      #Set self.ENCODE_IDENTIFIER_KEY, even if already set.
-      encode_id = rec_json["@id"].split("/")[-1]
-      payload[self.ENCODE_IDENTIFIER_KEY] = encode_id
+      if self.ENCODE_IDENTIFIER_KEY not in payload:
+        encode_id = aliases[0]
+        payload[self.ENCODE_IDENTIFIER_KEY] = encode_id
       return self.patch(payload=payload,extend_array_values=extend_array_values,raise_403=raise_403)
 
   def get_fastqfile_replicate_hash(self,dcc_exp_id):
