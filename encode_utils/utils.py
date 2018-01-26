@@ -50,7 +50,7 @@ def parse_profile_from_id_prop(id_val):
     return ""
   return profile
 
-def print_format_dict(self,dico,indent=2):                                                           
+def print_format_dict(dico,indent=2):                                                           
   """                                                                                                
   Formats a dictionary for printing to a stream.                                                     
   """                                                                                                
