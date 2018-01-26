@@ -23,8 +23,8 @@ import urllib
 import urllib3
 
 #inhouse libraries
-import encode_utils as en
-import encode_utils.utils
+import encode_utils as eu
+import encode_utils.utils as euu
 
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -102,7 +102,7 @@ class Connection():
   #: Identifies the name of the key in the payload (dictionary) that stores a valid ENCODE-assigned
   #: identifier for a record, such as 'accession', 'uuid', 'md5sum', ... depending on the object 
   #: being submitted. 
-  #: This is not a valid attribute of any ENCOCE object schema, and is only used in the patch()
+  #: This is not a valid attribute of any ENCODE object schema, and is only used in the patch()
   #: instance method when you need to designate the record to update and don't have an alias you 
   #: can specify in the 'aliases' attribute. 
   ENCODE_IDENTIFIER_KEY = "_enc_id"
@@ -200,7 +200,7 @@ class Connection():
     for index in range(len(aliases)):
       alias = aliases[index]
       if strip_alias_prefix:
-        aliases[index] =  encode_utils.utils.strip_alias_prefix(alias)
+        aliases[index] =  euu.strip_alias_prefix(alias)
     return aliases
 
   def search_encode(self,search_args):
@@ -264,7 +264,7 @@ class Connection():
       raise ProfileNotSpecified(
         ("You need to specify the profile to submit to by using the '{}' key"
          " in the payload.").format(self.ENCODE_PROFILE_KEY))
-    exists = encode_utils.utils.does_profile_exist(profile)
+    exists = euu.does_profile_exist(profile)
     if not exists:
       raise UnknownDccProfile(
           "Invalid profile '{}' specified in the payload's {} key.".format(profile,self.ENCODE_PROFILE_KEY))
@@ -366,12 +366,6 @@ class Connection():
     # Raise the error for last response we got:
     response.raise_for_status() 
 
-  def print_format_dict(self,dico):
-    """
-    Formats a dictionary for printing to a stream.
-    """
-    #Could use pprint, but that looks too ugly with dicts due to all the extra spacing. 
-    return json.dumps(dico,indent=2)
 
   def post(self,payload):
     """POST a record to the ENCODE Portal.
@@ -404,23 +398,23 @@ class Connection():
     payload.pop(self.ENCODE_PROFILE_KEY)
     url = os.path.join(self.dcc_url,profile)
     if profile not in encode_utils.AWARDLESS_PROFILES: #No lab prop for these profiles either.
-      if en.AWARD_PROP_NAME not in payload:
-        if not en.AWARD:
+      if eu.AWARD_PROP_NAME not in payload:
+        if not eu.AWARD:
           raise AwardPropertyMissing
-        payload.update(en.AWARD)
-      if en.LAB_PROP_NAME not in payload:
-        if not en.LAB:
+        payload.update(eu.AWARD)
+      if eu.LAB_PROP_NAME not in payload:
+        if not eu.LAB:
           raise LabPropertyMissing
-        payload.update(en.LAB)
+        payload.update(eu.LAB)
     alias = payload["aliases"][0]
     self.logger.info(
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
-         " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=self.print_format_dict(payload)))
+         " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
 
     response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
     self.logger.debug("<<<<<<DCC POST RESPONSE: ")
-    self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
+    self.logger.debug(euu.print_format_dict(response.json()))
     status_code = response.status_code
     if response.ok:
       response_dcc_accession = ""
@@ -483,13 +477,13 @@ class Connection():
     self.logger.info(
         ("<<<<<<Attempting to PATCH {encode_id} To DCC with URL"
          " {url} and this payload:\n\n{payload}\n\n").format(
-             encode_id=encode_id,url=url,payload=self.print_format_dict(payload)))
+             encode_id=encode_id,url=url,payload=euu.print_format_dict(payload)))
 
     response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                               json=payload,verify=False)
 
     self.logger.debug("<<<<<<DCC PATCH RESPONSE: ")
-    self.logger.debug(json.dumps(response.json(), indent=4, sort_keys=True))
+    self.logger.debug(euu.print_format_dict(response.json()))
     if response.ok:
       return response.json()
     elif response.status_code == requests.codes.FORBIDDEN:
@@ -637,7 +631,7 @@ class Connection():
           ("<<<<<<Attempting to PATCH {filename} metadata with alias {alias} and ENCFF ID"
            " {encff_id} for replicate with URL {url} and this payload:"
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
-                                 url=url,payload=self.print_format_dict(payload)))
+                                 url=url,payload=euu.print_format_dict(payload)))
 
       response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
@@ -647,14 +641,14 @@ class Connection():
       self.logger.debug(
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
-               filename=filename,url=url,payload=self.print_format_dict(payload)))
+               filename=filename,url=url,payload=euu.print_format_dict(payload)))
       response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
     response_json = response.json()
     self.logger.debug(
         "<<<<<<DCC {httpMethod} RESPONSE: ".format(httpMethod=httpMethod))
-    self.logger.debug(json.dumps(response_json, indent=4, sort_keys=True))
+    self.logger.debug(euu.print_format_dict(response_json))
     if "code" in response_json and response_json["code"] == requests.codes.CONFLICT:
       #There was a conflict when trying to complete your request
       # i.e could be trying to post the same file again and there is thus a key
@@ -775,7 +769,7 @@ class Connection():
       encff = line[5].strip()
       encab = line[6].strip() 
       motif_analysis_file = line[8].strip()
-      alias = en.LAB + encff + "_" + encab + "_" + target
+      alias = eu.LAB + encff + "_" + encab + "_" + target
 
       caption = ("The motif for target {target} is represented by the attached position weight"
                  " matrix (PWM) derived from {encff}. Motif enrichment analysis was done by Dr."
@@ -833,7 +827,7 @@ class Connection():
         The DCC UUID of the new document. 
     """
     document_filename = os.path.basename(document)
-    document_alias = en.LAB + os.path.splitext(document_filename)[0]
+    document_alias = eu.LAB + os.path.splitext(document_filename)[0]
     mime_type = mimetypes.guess_type(document_filename)[0]
     if not mime_type:
       raise Exception("Couldn't guess MIME type for {}.".format(document_filename))
@@ -883,11 +877,11 @@ class Connection():
     #Strip off the /documents/ prefix from each document UUID:
     document_uuids = [x.strip("/").split("/")[-1] for x in documents_json]
     if document_uuids:
-      document_uuids = encode_utils.utils.add_to_set(entries=document_uuids,new=dcc_document_uuid)
+      document_uuids = euu.add_to_set(entries=document_uuids,new=dcc_document_uuid)
     else:
       document_uuids.append(dcc_document_uuid)
     payload = {}
-    payload["@id"] = encode_utils.utils.parse_profile_from_id_prop(rec_json["@id"])
+    payload["@id"] = euu.parse_profile_from_id_prop(rec_json["@id"])
     payload["documents"] = document_uuids
     self.patch(payload=payload,record_id=rec_id)
   

@@ -50,6 +50,13 @@ def parse_profile_from_id_prop(id_val):
     return ""
   return profile
 
+def print_format_dict(self,dico,indent=2):                                                           
+  """                                                                                                
+  Formats a dictionary for printing to a stream.                                                     
+  """                                                                                                
+  #Could use pprint, but that looks too ugly with dicts due to all the extra spacing.                
+  return json.dumps(dico,indent=indent,sort_keys=True)  
+
 def clean_alias_name(self,alias):
   """
   Removes unwanted characters from the alias name. Only the '/' character purportedly causes issues.

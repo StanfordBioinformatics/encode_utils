@@ -12,8 +12,8 @@ import argparse
 import requests
 import re
 
-import encode_utils.connection
-import encode_utils.utils
+import encode_utils.utils as euu
+import encode_utils.connection as euc
 from encode_utils.parent_argparser import dcc_login_parser
 
 
@@ -59,7 +59,7 @@ def create_payloads(profile,infile):
 	"""
 	STR_REGX = reg = re.compile(r'\'|"')
 	#Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
-	schema_url, schema = encode_utils.utils.get_profile_schema(profile)
+	schema_url, schema = euu.get_profile_schema(profile)
 	schema_props = schema["properties"]
 	START_COUNT = -1
 	field_index = {}
@@ -155,17 +155,18 @@ configuration file conf_data.json.""")
 	error_if_not_found = args.error_if_not_found
 	overwrite_array_values = args.overwrite_array_values
 
-	conn = encode_utils.connection.Connection(dcc_mode=dcc_mode)
+	conn = euc.Connection(dcc_mode=dcc_mode)
 
 	infile = args.infile
 	patch = args.patch
 	gen = create_payloads(profile=profile,infile=infile)
 	for payload in gen:
 		if not patch:
-			conn.post(payload=payload)
+			conn.post(payload)
 		else:
 			record_id = payload.get(RECORD_ID_FIELD,False)
 			if not record_id:
-				raise Exception("Can't patch payload {} since there isn't a record_id field indiciating the ID of the record to patch.".format(payload))
+				raise Exception("Can't patch payload {} since there isn't a '{}' field indiciating an identifer for the record to be PATCHED.".format(euu.print_format_dict(payload),RECORD_ID_FIELD))
 			payload.pop(RECORD_ID_FIELD)
-			conn.patch(record_id=record_id,payload=payload,error_if_not_found=error_if_not_found,extend_array_values=not overwrite_array_values)
+      payload.update({conn.ENCODE_IDENTIFIER_KEY: record_id})
+			conn.send(payload=payload,error_if_not_found=error_if_not_found,extend_array_values=not overwrite_array_values)
