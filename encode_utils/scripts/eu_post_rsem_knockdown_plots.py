@@ -1,7 +1,7 @@
 #!/bin/env python3
 
 ###                                                                                                    
-# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
+# 2018 The Board of Trustees of the Leland Stanford Junior University                              
 # Nathaniel Watson                                                                                      
 # nathankw@stanford.edu                                                                                 
 ### 
