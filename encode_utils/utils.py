@@ -7,7 +7,7 @@
 ### 
 
 """
-Contains utilities that don't require authorization on the ENCODE Servers. 
+Contains utilities that don't require authorization on the DCC servers. 
 """
 
 import json
@@ -44,7 +44,7 @@ def parse_profile_from_id_prop(id_val):
       id_val: str. The value of the '@id' key in a record's JSON.
 
   Returns: 
-      str. Will be empty if no profile could be extracted.
+      str: Will be empty if no profile could be extracted.
   """
   #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
   profile = id_val.strip("/").split("/")[0].rstrip("s").lower()
@@ -53,8 +53,7 @@ def parse_profile_from_id_prop(id_val):
   return profile
 
 def print_format_dict(dico,indent=2):                                                           
-  """                                                                                                
-  Formats a dictionary for printing to a stream.                                                     
+  """Formats a dictionary for printing to a stream.                                                     
   """                                                                                                
   #Could use pprint, but that looks too ugly with dicts due to all the extra spacing.                
   return json.dumps(dico,indent=indent,sort_keys=True)  
@@ -65,21 +64,21 @@ def clean_alias_name(self,alias):
   This function replaces both '/' and '\' with '_'.
 
   Args:
-      alias - str. 
+      alias: str. 
 
   Returns: 
-      str.
+      str:
   """
   alias = alias.replace("/","_")
   alias = alias.replace("\\","_")
   return alias
 
-def create_subprocess(cmd,checkRetcode=True):
+def create_subprocess(cmd,check_retcode=True):
   """Runs a command in a subprocess and checks for any errors.
 
   Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes 
   stdout and stderr. Stderr is always piped; stdout if off by default. If the argument 
-  'checkRetcode' is True, which it is by defualt, then for any non-zero return code, an Exception 
+  'check_retcode' is True, which it is by defualt, then for any non-zero return code, an Exception 
   is raised that will print out the the command, stdout, stderr, and the returncode.  Otherwise, 
   the Popen instance will be returned, in which case the caller must call the instance's 
   communicate() method (and not it's wait() method!!) in order to get the return code to see if the 
@@ -89,25 +88,27 @@ def create_subprocess(cmd,checkRetcode=True):
   Args: 
       cmd: str. The command line for the subprocess wrapped in the subprocess.Popen instance. If 
           given, will be printed to stdout when there is an error in the subprocess.
-      checkRetcode: bool. Default is True. See documentation in the description above for specifics.
+      check_retcode: bool. Default is True. See documentation in the description above for specifics.
 
   Returns: 
-      A two-item tuple containing stdout and stderr if 'checkRetCode' is set to True and the 
+      Two-item tuple being stdout and stderr if 'checkRetCode' is set to True and the 
       command has a 0 exit status. If 'checkRetCode' is False, then a subprocess.Popen() 
-      instance is returned. 
+      instance is instead returned. 
+
+  Raises:
+      subprocess.SubprocessError: There is a non-zero return code and check_retcode=True.
   """
   popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-  if checkRetcode:
+  if check_retcode:
     stdout,stderr = popen.communicate()
     stdout = stdout.strip()
     stderr = stderr.strip()
     retcode = popen.returncode
     if retcode:
-      #below, I'd like to raise a subprocess.SubprocessError, but that doesn't exist until Python 3.3.
-      raise Exception(
-          ("subprocess command '{cmd}' failed with returncode '{returncode}'.\n\nstdout is:"
-           " '{stdout}'.\n\nstderr is: '{stderr}'.").format(
-               cmd=cmd,returncode=retcode,stdout=stdout,stderr=stderr))
+      #subprocess.SubprocessError was introduced in Python 3.3.
+      raise subprocess.SubprocessError(
+        ("subprocess command '{cmd}' failed with returncode '{returncode}'.\n\nstdout is:"
+         " '{stdout}'.\n\nstderr is: '{stderr}'.").format(cmd=cmd,returncode=retcode,stdout=stdout,stderr=stderr))
     return stdout,stderr
   else:
     return popen
@@ -115,18 +116,19 @@ def create_subprocess(cmd,checkRetcode=True):
 def get_profile_schema(profile):
   """Retrieves the JSON schema of the specified profile from the ENCODE Portal.
 
-  Raises: 
-      requests.exceptions.HTTPError if the status code is something other than 200 or 404. 
+  Returns: 
+      tuple: Two-item tuple where the first item is the URL used to fetch the schema, and the
+          second item is a dict representing the profile's JSON schema.
 
-  Returns  : 404 (int) if profile not found, otherwise a two-item tuple where item 1 is the URL
-             used to fetch the schema, and item 2 is a dict representing the profile's JSON schema.
+  Raises: 
+      UnknownENCODEProfile: The response status code is 404.
+      requests.exceptions.HTTPError: The status code is not okay and not 404.
   """
   url = os.path.join(eu.PROFILES_URL,profile + ".json?format=json")
-  print(url)
   res = requests.get(url,headers={"content-type": "application/json"},timeout=eu.TIMEOUT)
   status_code = res.status_code
-  if status_code == 404:
-    raise UnknownENCODEProfile("Please verify the profile name that you specifed.")
+  if status_code == requests.codes.NOT_FOUND:
+    raise UnknownENCODEProfile("Please verify the profile name '{}' that you specifed.".format(profile))
   res.raise_for_status()
   return url, res.json()
 
@@ -136,8 +138,11 @@ def strip_alias_prefix(self,alias):
   The ':' is the seperator between prefix and the rest of the alias, and can't appear elsewhere in 
   the alias. 
 
+  Args:
+      alias: str. The alias.
+
   Returns:
-      str.
+      str:
   """
   return name.split(":")[-1]
  
@@ -149,7 +154,7 @@ def add_to_set(self,entries,new):
       new: A new member to add to the list.
 
   Returns:
-      list.
+      list:
   """
   entries.append(new)
   unique_list = list(set(entries))
