@@ -21,7 +21,7 @@ import encode_utils as eu
 #: GET request to the URL encode_utils.PROFILES_URL. Note that profile names are not hyphenated.
 #: For example, the profile listed in the response as GeneticModification becomes 
 #: geneticmodification in this resulting list.
-PROFILE_NAMES = sorted([x.lower() for x in requests.get(en.PROFILES_URL + "?format=json",timeout=eu.TIMEOUT,headers={"content-type": "application/json"}).json().keys()])
+PROFILE_NAMES = sorted([x.lower() for x in requests.get(eu.PROFILES_URL + "?format=json",timeout=eu.TIMEOUT,headers={"content-type": "application/json"}).json().keys()])
 
 def does_profile_exist(profile):
   """
@@ -121,7 +121,7 @@ def get_profile_schema(profile):
   Returns  : 404 (int) if profile not found, otherwise a two-item tuple where item 1 is the URL
              used to fetch the schema, and item 2 is a dict representing the profile's JSON schema.
   """
-  url = os.path.join(en.PROFILES_URL,profile + ".json?format=json")
+  url = os.path.join(eu.PROFILES_URL,profile + ".json?format=json")
   print(url)
   res = requests.get(url,headers={"content-type": "application/json"},timeout=eu.TIMEOUT)
   status_code = res.status_code
