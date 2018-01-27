@@ -31,29 +31,36 @@ def does_profile_exist(profile):
   Args: 
       profile: str. The profile name. Will be converted to all lower-case, and any '_' 
           will be removed before the lookup. 
+
+  Returns:
+      bool:
   
   """
   profile = profile.lower().replace("_","")
   return profile in PROFILE_NAMES
 
 def parse_profile_from_id_prop(id_val):
-  """Figures out what profile a record belongs to by looking at it's '@id' property.
+  """Extracts the profile of a record from the record's '@id' property.
 
-  Given the value of the '@id' property of any schema that supports it (all I think?), extracts
-  the profile out of it. On the portal, a record stores its ID in this field also, following the 
-  profile. For example, given the file object identified by ENCFF859CWS, the value its '@id' 
-  property as shown on the Portal is '/files/ENCFF859CWS/'. The profile can be extracted out of 
+  The extracted value can be tested for inclustion in encode_utils.utils.PROFILE_NAMES.
+  The record ID is also stored in the '@id' property.
+  For example, given the file object identified by the accession ENCFF859CWS, the value of its '@id' 
+  property as shown on the Portal is '/files/ENCFF859CWS/'. The profile can be extracted from 
   this and singularized in order match the name of a profile listed in 
-  https://www.encodeproject.org/profiles/.
+  encode_utils.utils.PROFILE_NAMES. 
 
   Args: 
-      id_val: str. The value of the '@id' key in a record's JSON.
+      id_val: str. The value of the '@id' key in a record's JSON. 
 
   Returns: 
-      str: Will be empty if no profile could be extracted.
+      str: The profile, or the empty string if the profile is not present in
+      encode_utils.utils.PROFILE_NAMES.
   """
   #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
   profile = id_val.strip("/").split("/")[0].rstrip("s").lower()
+  #Multi-word profile names are hypen-separated, i.e. genetic-modifications. But as detailed 
+  # in encode_utils.utils.PROFILE_NAMES, only alphabetical characters are given and stored. 
+  profile = profile.replace("-","")
   if not profile in PROFILE_NAMES:
     return ""
   return profile
