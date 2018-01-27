@@ -25,7 +25,13 @@ PROFILE_NAMES = sorted([x.lower() for x in requests.get(eu.PROFILES_URL + "?form
 
 def does_profile_exist(profile):
   """
-  Indicates whether the specified profile exists on the Portal.  
+  Indicates whether the specified profile exists on the Portal by checking for presence in the 
+  list encode_utils.utils.PROFILE_NAMES.
+
+  Args: 
+      profile: str. The profile name. Will be converted to all lower-case, and any '_' 
+          will be removed before the lookup. 
+  
   """
   profile = profile.lower().replace("_","")
   return profile in PROFILE_NAMES
@@ -53,7 +59,13 @@ def parse_profile_from_id_prop(id_val):
   return profile
 
 def print_format_dict(dico,indent=2):                                                           
-  """Formats a dictionary for printing to a stream.                                                     
+  """Formats a dictionary for printing purposes to ease visual inspection.
+
+  Wraps the json.dumps() function.
+
+  Args:
+      indent: int. The number of spaces to indent each level of nesting. Passed directly
+          to the json.dumps() method.
   """                                                                                                
   #Could use pprint, but that looks too ugly with dicts due to all the extra spacing.                
   return json.dumps(dico,indent=indent,sort_keys=True)  
