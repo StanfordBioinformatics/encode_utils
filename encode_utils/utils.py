@@ -15,14 +15,13 @@ import os
 import requests
 import subprocess
 
-import pdb
+import encode_utils as eu
 
-#: The timeout in seconds when making HTTP requests via the 'requests' module.
-TIMEOUT = 20
-PROFILES_URL = "https://www.encodeproject.org/profiles"
-#PROFILE_NAMES are lower case.
-url = PROFILES_URL + "/?format=json"
-PROFILE_NAMES = sorted([x.lower() for x in requests.get(PROFILES_URL + "/?format=json",timeout=TIMEOUT,headers={"content-type": "application/json"}).json().keys()])
+#: The lower-cased names of all ENCODE object profiles, dynamically parsed out of the result of a
+#: GET request to the URL encode_utils.PROFILES_URL. Note that profile names are not hyphenated.
+#: For example, the profile listed in the response as GeneticModification becomes 
+#: geneticmodification in this resulting list.
+PROFILE_NAMES = sorted([x.lower() for x in requests.get(en.PROFILES_URL + "?format=json",timeout=eu.TIMEOUT,headers={"content-type": "application/json"}).json().keys()])
 
 def does_profile_exist(profile):
   """
@@ -122,9 +121,9 @@ def get_profile_schema(profile):
   Returns  : 404 (int) if profile not found, otherwise a two-item tuple where item 1 is the URL
              used to fetch the schema, and item 2 is a dict representing the profile's JSON schema.
   """
-  url = os.path.join(PROFILES_URL,profile + ".json?format=json")
+  url = os.path.join(en.PROFILES_URL,profile + ".json?format=json")
   print(url)
-  res = requests.get(url,headers={"content-type": "application/json"},timeout=TIMEOUT)
+  res = requests.get(url,headers={"content-type": "application/json"},timeout=eu.TIMEOUT)
   status_code = res.status_code
   if status_code == 404:
     raise UnknownENCODEProfile("Please verify the profile name that you specifed.")
@@ -156,37 +155,34 @@ def add_to_set(self,entries,new):
   unique_list = list(set(entries))
   return unique_list
  
-def does_replicate_exist(library_alias,biologicial_replicate_number,technical_replicate_number,replicates_json_from_dcc):
+def does_lib_replicate_exist(lib_accession,exp_accession,biologicial_replicate_number=False,technical_replicate_number=False):
   """
-  Checks if a replicate exists for a specified library alias with the given biological replicate
-  number and technical replicate number. Note that this method only works on a library alias
-  and not any other form of identifier. 
+  Regarding the replicates on the specified experiment, determines whether the specified library
+  belongs_to any of the replicates.  Optional constraints are the biologicial_replicate_number and 
+  the technical_replicate_number props of the replicates.
 
   Args:
-      library_alias: str. Any of the associated library's aliases. i.e. michael-snyder:L-208.
+      lib_accession: str. The value of a library object's 'accession' property.
+      exp_accession: str. The value of an experiment object's accession. The lib_accession
+        should belong to a replicate on this experiment. 
       biologicial_replicate_number: int. The biological replicate number. 
       technical_replicate_number: int. The technical replicate number. 
-      replicates_json_from_dcc: dict. The value of the "replicates" key in the JSON of a DCC 
-          experiment.
         
   Returns: 
-      False if the 'library_alias' doesn't exist in the nested library object of any of the 
-      replicates. If the 'library_alias' is present, then True if both 
-      'biologicial_replicate_number' and 'technical_replicate_number'
-      match for the given keys by the same name in the repliate, False otherwise. 
+      list: The replicates that pass the search constraints.
   """
   biologicial_replicate_number = int(biologicial_replicate_number)
   technical_replicate_number = int(technical_replicate_number)
+  results = []
   for rep in replicates_json_from_dcc:
-    try:
-      rep_alias = rep["aliases"][0]
-    except IndexError: #replicate may not have any aliases
+    rep_id = rep["uuid"]
+    if not lib_accession == rep["library"]["accession"]:
       continue
-    rep_lib_aliases = rep_lib["library"]["aliases"]
-    if not rep_lib_aliases: #library may not have any aliases
-      continue
-    rep_bio_rep_number = rep["biological_replicate_number"]
-    rep_tech_rep_number = rep["technical_replicate_number"]
-    if (library_alias in rep_lib_aliases) and (biologicial_replicate_number == rep_bio_rep_number) and (technical_replicate_number == rep_tech_rep_number):
-      return rep_alias
-  return False
+    if biologicial_replicate_number:
+      if biologicial_replicate_number != rep["biological_replicate_number"]:
+        continue 
+    if technical_replicate_number:
+      if technical_replicate_number != rep["technical_replicate_number"]:
+        continue
+    results.append(rep)
+  return results

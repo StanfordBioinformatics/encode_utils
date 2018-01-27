@@ -15,6 +15,11 @@ import json
 #see to it that only upper-case vars get exported
 package_path = __path__[0]
 
+#: THE ENCODE Portal URL that contains all the profiles (schemas).                                     
+PROFILES_URL = "https://www.encodeproject.org/profiles/"
+
+#: The timeout in seconds when making HTTP requests via the 'requests' module.                         
+TIMEOUT = 20 
 
 #: Define constants for a few properties that are common to all ENCODE profiles:
 #: The award property name that is common to all ENCODE Portal object profiles.

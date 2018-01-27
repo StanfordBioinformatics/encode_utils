@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ###
-#© 2018 The Board of Trustees of the Leland Stanford Junior University
-#Nathaniel Watson
-#nathankw@stanford.edu
+# © 2018 The Board of Trustees of the Leland Stanford Junior University
+# Nathaniel Watson
+# nathankw@stanford.edu
 ###
 
 import base64
@@ -89,8 +89,6 @@ class Connection():
   ${dcc_mode}_posted.txt and ${dcc_mode}_error.txt.
   """
   REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
-  #: The timeout in seconds when making HTTP requests via the 'requests' module.
-  TIMEOUT = 20
   
   DCC_PROD_MODE = "prod"
   DCC_DEV_MODE = "dev"
@@ -235,7 +233,7 @@ class Connection():
     query = urllib.parse.urlencode(search_args)
     url = os.path.join(self.dcc_url,"search/?",query)
     self.logger.info("Searching DCC with query {url}.".format(url=url))
-    response = requests.get(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,verify=False)
+    response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,verify=False)
     if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
@@ -310,7 +308,7 @@ class Connection():
   #  url = os.path.join(self.dcc_url,rec_id)
   #  self.logger.info(
   #    (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
-  #  response = requests.delete(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
+  #  response = requests.delete(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
   #  pdb.set_trace()
   #  if response.ok:
   #    return response.json()
@@ -351,7 +349,7 @@ class Connection():
         url += "&frame={frame}".format(frame=frame)
       self.logger.info(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
           rec_id=r,url=url))
-      response = requests.get(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
+      response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
       if response.ok:
         return response.json()
       status_codes[response.status_code] = r
@@ -411,7 +409,7 @@ class Connection():
         ("<<<<<<Attempting to POST {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+    response = requests.post(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
     self.logger.debug("<<<<<<DCC POST RESPONSE: ")
     self.logger.debug(euu.print_format_dict(response.json()))
@@ -479,7 +477,7 @@ class Connection():
          " {url} and this payload:\n\n{payload}\n\n").format(
              encode_id=encode_id,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+    response = requests.patch(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                               json=payload,verify=False)
 
     self.logger.debug("<<<<<<DCC PATCH RESPONSE: ")
@@ -633,7 +631,7 @@ class Connection():
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
                                  url=url,payload=euu.print_format_dict(payload)))
 
-      response = requests.patch(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+      response = requests.patch(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
     else:
       httpMethod = "POST"
@@ -642,7 +640,7 @@ class Connection():
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
                filename=filename,url=url,payload=euu.print_format_dict(payload)))
-      response = requests.post(url,auth=self.auth,timeout=self.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+      response = requests.post(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
     response_json = response.json()
