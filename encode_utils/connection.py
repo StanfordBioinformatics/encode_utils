@@ -167,8 +167,8 @@ class Connection():
     Retrieves the API key and secret key based on the environment variables DCC_API_KEY and 
     DCC_SECRET_KEY.
 
-    Args: 
-        Returns: Tuple containing the (API Key, Secret Key)
+    Returns: 
+        Tuple containing the (API Key, Secret Key)
     """
     api_key = os.environ["DCC_API_KEY"]
     secret_key = os.environ["DCC_SECRET_KEY"]
@@ -191,7 +191,7 @@ class Connection():
         strip_alias_prefix: bool. True means to remove the alias prefix if all return aliases. 
 
     Returns:
-        list.
+        list: The aliases.
     """
     record = self.get(ignore404=False,dcc_id=dcc_id)
     aliases = record["aliases"]
@@ -210,7 +210,7 @@ class Connection():
         search_args - dict. of key and value query parameters. 
 
     Returns:
-        list of search results. 
+        list: The search results. 
 
     Raises:
         requests.exceptions.HTTPError: If the status code is not in the set [200,404].
@@ -249,11 +249,11 @@ class Connection():
         payload: dict. The intended object data to POST.
 
     Returns:
-        The name of the profile if all validations pass, otherwise.
+        str: The name of the profile if all validations pass, otherwise.
 
     Raises:
-        connection.ProfileNotSpecified: The key self.ENCODE_PROFILE_KEY is missing in the payload.
-        connection.UnknownDccProfile: The profile isn't recognized.
+        encode_utils.connection.ProfileNotSpecified: The key self.ENCODE_PROFILE_KEY is missing in the payload.
+        encode_utils.connection.UnknownDccProfile: The profile isn't recognized.
     """
 
     #profile = encode_utls.utils.parse_profile_from_id_prop(payload)
@@ -281,7 +281,7 @@ class Connection():
         payload: dict. The data to submit.
 
     Returns:
-        list of possible lookup identifiers.
+        list: The possible lookup identifiers.
     """
     lookup_ids = []
     if self.ENCODE_IDENTIFIER_KEY in payload:
@@ -331,8 +331,7 @@ class Connection():
            
 
     Returns:
-        dict. containing the JSON response. Will be an empty dict if no record was found 
-          and ignore404=True.
+        dict: The JSON response. Will be empty if no record was found AND ignore404=True.
 
     Raises:
         requests.exceptions.HTTPError: The status code is not okay (in the 200 range), and the 
@@ -379,8 +378,7 @@ class Connection():
         payload: dict. The data to submit.
 
     Returns: 
-        The object's JSON sererialization from the DCC when the POST succeeds, or when the object
-        already exists on the DCC. 
+        dict: The JSON response from the POST operation.
 
     Raises:
         AwardPropertyMissing: The 'award' property isn't present in the payload and there isn't a
@@ -446,7 +444,7 @@ class Connection():
             extend the corresponding value on the Portal with what's specified in the payload. 
             False means to replace the value on the Portal with what's in the payload. 
     Returns: 
-        The PATCH response. 
+        dict: The JSON response from the PATCH operation.
 
     Raises: 
         KeyError: The payload doesn't have the key self.ENCODE_IDENTIFIER_KEY set AND there aren't 
@@ -544,7 +542,7 @@ class Connection():
         dcc_exp_id - list of DCC file IDs or aliases 
 
     Returns:
-        dict. 
+        dict:
     """
     exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
     dcc_file_ids = exp_json["original_files"]
@@ -574,7 +572,7 @@ class Connection():
     key 'upload_credentials'. 
 
     Returns:
-        dict.
+        dict:
     """
     if "@graph" in response:
       response = response["@graph"][0]
@@ -731,7 +729,7 @@ class Connection():
     Args:
         rec_id: str. DCC identifier for an experiment. 
     Returns:
-        De-duplicated list of platforms seen on the experiment's FASTQ files. 
+        list: The de-duplicated list of platforms seen on the experiment's FASTQ files. 
     """
     exp_json = self.get(rec_ids=rec_id,frame=None)
     if "@graph" in exp_json:
@@ -822,7 +820,7 @@ class Connection():
         document - str. Local filepath to the document to be submitted.
 
     Returns: 
-        The DCC UUID of the new document. 
+        str: The DCC UUID of the new document. 
     """
     document_filename = os.path.basename(document)
     document_alias = eu.LAB + os.path.splitext(document_filename)[0]
@@ -866,7 +864,7 @@ class Connection():
          dcc_document_uuid: The value of the document's 'uuid' attribute.
 
     Returns:
-        The PATCH response form self.patch().
+        dict: The response form self.patch().
     """
     rec_json = self.get(ignore404=False,rec_ids=rec_id)
     documents_json = rec_json["documents"]
