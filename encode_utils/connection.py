@@ -39,6 +39,12 @@ class AwardPropertyMissing(Exception):
              " store a default, set the DCC_AWARD environment variable.")
      
 
+class FileUploadFailed(Exception):
+  """
+  Raised when the AWS CLI returns a non-zero exit status.
+  """
+
+
 class LabPropertyMissing(Exception):
   """
   Raised when the 'lab' property isn't set in the payload when doing a POST, and a default isn't
@@ -47,10 +53,6 @@ class LabPropertyMissing(Exception):
   message = ("The property '{}' is missing from the payload and a default isn't set either. To"
              " store a default, set the DCC_LAB environment variable.")
 
-class FileUploadFailed(Exception):
-  """
-  Raised when the AWS CLI returns a non-zero exit status.
-  """
 
 class ProfileNotSpecified(Exception):
   """
@@ -59,17 +61,17 @@ class ProfileNotSpecified(Exception):
   pass
 
 
-class RecordNotFound(Exception):
-  """
-  Raised when a record that should exist on the Portal can't be retrieved via a GET request.
-  """
-  pass
-
-
 class RecordIdNotPresent(Exception):
   """
   Raised when a payload to submit to the Portal doesn't have any record identifier (either 
   a pre-existing ENCODE assigned identifier or an alias.
+  """
+  pass
+
+
+class RecordNotFound(Exception):
+  """
+  Raised when a record that should exist on the Portal can't be retrieved via a GET request.
   """
   pass
 
@@ -223,7 +225,7 @@ class Connection():
     parameters will be first URL encoded. 
 
     Args:
-        search_args - dict. of key and value query parameters. 
+        search_args: dict. of key and value query parameters. 
 
     Returns:
         list: The search results. 
@@ -231,7 +233,7 @@ class Connection():
     Raises:
         requests.exceptions.HTTPError: If the status code is not in the set [200,404].
 
-    Example
+    Example:
         Given we have the following dictionary *d* of key and value pairs::
 
             {"type": "experiment",
@@ -398,11 +400,11 @@ class Connection():
 
     Raises:
         AwardPropertyMissing: The 'award' property isn't present in the payload and there isn't a
-          defualt set by the environment variable DCC_AWARD.
+            defualt set by the environment variable DCC_AWARD.
         LabPropertyMissing: The 'lab' property isn't present in the payload and there isn't a
-          default set by the environment variable DCC_AWARD.
+            default set by the environment variable DCC_AWARD.
         requests.exceptions.HTTPError: The return status is not okay (not in the 200 range), with
-          the exception of a conflict (409), which is only logged.
+            the exception of a conflict (409), which is only logged.
     """
     self.debug_logger.debug("\nIN post().")
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
@@ -555,17 +557,19 @@ class Connection():
 
   def get_fastqfile_replicate_hash(self,dcc_exp_id):
     """
-    Given a DCC experiment ID, finds the original FASTQ files that were submitted and creates a 
-    dictionary with keys being the biological_replicate_number. The value of each key is another 
-    dictionary having the technical_replicate_number as the single key. The value of this is 
-    another dictionary with keys being file read numbers, i.e. 1 for forward reads, 2 for reverse 
-    reads.  The value for a given key of this most inner dictionary is the file JSON. 
+    Given a DCC experiment ID, looks in the 'original' property to find FASTQ file objects and 
+    creates a dict organized by replicate numbers. Keying through the dict by replicate numbers, 
+    you can get to a particular file object's JSON serialization.  
 
     Args:
         dcc_exp_id: list of DCC file IDs or aliases 
 
     Returns:
-        dict:
+        dict: dict where each key is a biological_replicate_number. 
+            The value of each key is another dict where each key is a technical_replicate_number. 
+            The value of this is yet another dictionary with keys being file read numbers, i.e. 
+            1 for forward reads, 2 for reverse reads.  The value 
+            for a given key of this most inner dictionary is the file object's JSON serialization. 
     """
     exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
     dcc_file_ids = exp_json["original_files"]
@@ -707,8 +711,8 @@ class Connection():
 
     Returns:
         dict: dict containing the value of the 'upload_credentials' key in the JSON serialization
-              of the file object represented by file_id. Will be empty if new upload credentials
-              could not be issued.
+            of the file object represented by file_id. Will be empty if new upload credentials
+            could not be issued.
     """
     self.debug_logger.debug("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
