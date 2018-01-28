@@ -47,6 +47,10 @@ class LabPropertyMissing(Exception):
   message = ("The property '{}' is missing from the payload and a default isn't set either. To"
              " store a default, set the DCC_LAB environment variable.")
 
+class FileUploadFailed(Exception):
+  """
+  Raised when the AWS S3 agent returns a non-zero exit status.
+  """
 
 class ProfileNotSpecified(Exception):
   """
@@ -255,7 +259,7 @@ class Connection():
     """
     Useful to call when doing a POST (and self.post() does call this). Ensures that the profile key
     identified by self.ENCODE_PROFILE_KEY exists in the passed-in payload and that the value is 
-    a recognized ENCODE objece profile (schema).
+    a recognized ENCODE object profile (schema).
 
     Args:
         payload: dict. The intended object data to POST.
@@ -558,7 +562,7 @@ class Connection():
     reads.  The value for a given key of this most inner dictionary is the file JSON. 
 
     Args:
-        dcc_exp_id - list of DCC file IDs or aliases 
+        dcc_exp_id: list of DCC file IDs or aliases 
 
     Returns:
         dict:
@@ -580,27 +584,38 @@ class Connection():
     return dico
 
 
-  def _set_aws_upload_creds_from_response(self,upload_credentials):
+  def set_aws_upload_config(self,file_id):
     """
-    After posting the metadata for a file object to ENCODE, the response will contain the key 
-    'upload_credentials'. This method parses the document pointed to by this key, constructing a 
-    dictionary of keys that will be exported as environment variables that can be used by the aws 
-    CL agent.  That is what self.post_file() does, indirectly. self.post_file() has an 
-    argument 'aws_creds' that expects a value generated from this method.  This method is also 
-    called from self.regenerate_aws_upload_creds(), which produces a JSON document also containing the
-    key 'upload_credentials'. 
+    Sets the AWS security credentials needed to upload a file to AWS S3 using the 
+    AWS CL agent for a specific file object. See self.upload_file() for an example
+    of how this is used.
 
+    Args:
+        file_id: str. A file object identifier (i.e. accession, uuid, alias, md5sum).
+        
     Returns:
-        dict:
+        dict: dict that sets the keys AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and 
+          AWS_SECURITY_TOKEN. These can be set as environment variables for use with the AWS CL 
+          agent. Will be empty if new upload credentials could not be generated (i.e. forbidden).
     """
-    if "@graph" in response:
-      response = response["@graph"][0]
-    creds = graph["upload_credentials"]
+    file_json = self.get(file_id,ignore404=False)
+    try:
+      creds = file_json["upload_credentials"]
+    except KeyError:
+      creds = self._regenerate_aws_upload_creds(file_id)
+      #Will be None if forbidden.
+     
+    if not creds:
+      return {}
+
     aws_creds = {}
     aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
     aws_creds["AWS_SECRET_ACCESS_KEY"] = creds["secret_key"]
     aws_creds["AWS_SECURITY_TOKEN"] = creds["session_token"]
     aws_creds["UPLOAD_URL"] = creds["upload_url"]
+    #URL example from dev Portal:
+    #  s3://encoded-files-dev/2018/01/28/7c5c6d58-c98a-48b4-9d4b-3296b4126b89/TSTFF334203.fastq.gz"
+    #  That's the uuid after the date.
     return aws_creds
   
   def post_file_metadata(self,payload,patch):
@@ -684,59 +699,82 @@ class Connection():
     return response_json
 
 
-  def regenerate_aws_upload_creds(self,encff_number):
+  def _regenerate_aws_upload_creds(self,file_id):
+    """Reissues AWS S3 upload credentials for the specified file object.
+
+    Args:
+        file_id: str. An identifier for a file object on the Portal.
+
+    Returns:
+        dict: dict containing the value of the 'upload_credentials' key in the JSON serialization
+              of the file object represented by file_id. Will be empty if new upload credentials
+              could not be issued.
+    """
     self.debug_logger.debug("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
-           " https://{api_key}:{secret_key}@www.encodeproject.org/files/{encff_number}/upload -d '{{}}' | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,encff_number=encff_number)
+           " https://{api_key}:{secret_key}@www.encodeproject.org/files/{file_id}/upload -d '{{}}' | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,file_id=file_id)
     self.debug_logger.debug("curl command: '{}'".format(cmd))
     popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate()
     retcode = popen.returncode
     if retcode:
       raise Exception(("Command {cmd} failed with return code {retcode}. stdout is {stdout} and"
-                       " stderr is {stderr}.").format(cmd=cmd,retcode=retcode,stdout=stdout,
-                                                     stderr=stderr))
+                       " stderr is {stderr}.").format(cmd=cmd,retcode=retcode,stdout=stdout, stderr=stderr))
     response = json.loads(stdout)
     self.debug_logger.debug(response)
     if "code" in response:
+      #Then problem occurred.
       code = response["code"]
-      if code == requests.codes.FORBIDDEN:
-        #Access was denied to this resource. File already uploaded fine.
-        return
-    graph = response["@graph"][0]
-    aws_creds = self._set_aws_upload_creds_from_response(graph["upload_credentials"])
-    return aws_creds
+      self.error_logger.info("Unable to reissue upload credentials for {}: Code {}.".format(file_id,code))
+      return {}
 
-  def post_file(self,filepath,encff_number,aws_creds=None):
-    """
+      # For ex, response would look like this for a 404.
+
+      # {
+      #     "@type": [
+      #         "HTTPNotFound",
+      #         "Error"
+      #     ],
+      #     "code": 404,
+      #     "description": "The resource could not be found.",
+      #     "detail": "/files/michael-snyder:test_file_1/upload",
+      #     "status": "error",
+      #     "title": "Not Found"
+      # }
+
+      # You get a 403 when the 'status' of the file object isn't set to 'uploading'. 
+      # You also get this when the file object no-longer has read access (was archived by wranglers).
+
+    graph = response["@graph"][0]
+    return response["@graph"][0]["upload_credentials"]
+
+  def upload_file(self,file_id,file_path):
+    """Uploads a file to AWS S3 for the specified file object on the Portal.
+
     Args:
         filepath: The local path to the file to upload.
         upload_url: The AWS upload address (i.e. S3 bucket address).
-        aws_creds: dict. with keys AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SECURITY_TOKEN.
-    Returns:
     """
-    self.debug_logger.debug("\nIN post_file()\n")
+    self.debug_logger.debug("\nIN upload_file()\n")
+    aws_creds = self.set_aws_upload_config(file_id)
     if not aws_creds:
-      aws_creds = self.regenerate_aws_upload_creds(encff_number=encff_number)
-      if not aws_creds:
-        return
+      msg = "Cannot upload file for {} since upload credentials could not be generated.".format(file_id))
+      self.debug_logger.debug(msg)
+      self.error_logger.error(msg)
     cmd = "aws s3 cp {filepath} {upload_url}".format(filepath=filepath,upload_url=aws_creds["UPLOAD_URL"])
     self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
     popen = subprocess.Popen(cmd,shell=True, env=os.environ.update(aws_creds),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate()
-    #print("STDOUT: {stdout}.".format(stdout=stdout))
-    #print("STDERR: {stderr}.".format(stderr=stderr))
     retcode = popen.returncode
     if retcode:
-      if retcode == requests.codes.FORBIDDEN:
-        #HTTPForbidden; now allowed to update.
-        debug_logger.debug(("Will not upload file {filepath} to s3. Attempt failed with status code HTTP"
-                    " 403 (Forbidden). Normally, this means we shouldn't be editing this object"
-                    " and that all is fine.").format(filepath=filepath))
-      else:
-        raise Exception(
-            ("Subprocess command {cmd} failed with returncode {retcode}. Stdout is {stdout}."
-             " Stderr is {stderr}.").format(cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr))
+      error_msg = "Failed to upload file for {}.".format(file_id)
+      debug_logger.debug(error_msg)
+      error_logger.error(error_msg)
+      error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
+                    " Stdout is '{stdout}'.  Stderr is {stderr}.").format(
+                      cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr))
+      debug_logger.debug(error_msg)
+      raise FileUploadFailed(msg)
       
 
   def get_platforms_on_experiment(self,rec_id):
