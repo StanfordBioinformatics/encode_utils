@@ -567,9 +567,9 @@ class Connection():
     Returns:
         dict: dict where each key is a biological_replicate_number. 
             The value of each key is another dict where each key is a technical_replicate_number. 
-            The value of this is yet another dictionary with keys being file read numbers, i.e. 
+            The value of this is yet another dict with keys being file read numbers -
             1 for forward reads, 2 for reverse reads.  The value 
-            for a given key of this most inner dictionary is the file object's JSON serialization. 
+            for a given key of this most inner dictionary is a list of file objects.
     """
     exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
     dcc_file_ids = exp_json["original_files"]
@@ -584,7 +584,9 @@ class Connection():
         dico[brn] = {}
       if trn not in dico[brn]:
         dico[brn][trn] = {}
-      dico[brn][trn][read_num] = file_json
+      if read_num not in dico[brn][trn]:
+        dico[brn][trn][read_num] = []
+      dico[brn][trn][read_num].append(file_json)
     return dico
 
 
