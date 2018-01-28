@@ -172,8 +172,8 @@ def add_to_set(self,entries,new):
       entries: list.
       new: A new member to add to the list.
 
-  Returns:
-      list:
+  Returns: 
+      list: A deduplicated list.
   """
   entries.append(new)
   unique_list = list(set(entries))
