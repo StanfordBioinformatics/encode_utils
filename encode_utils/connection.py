@@ -49,7 +49,7 @@ class LabPropertyMissing(Exception):
 
 class FileUploadFailed(Exception):
   """
-  Raised when the AWS S3 agent returns a non-zero exit status.
+  Raised when the AWS CLI returns a non-zero exit status.
   """
 
 class ProfileNotSpecified(Exception):
@@ -587,7 +587,7 @@ class Connection():
   def set_aws_upload_config(self,file_id):
     """
     Sets the AWS security credentials needed to upload a file to AWS S3 using the 
-    AWS CL agent for a specific file object. See self.upload_file() for an example
+    AWS CLI agent for a specific file object. See self.upload_file() for an example
     of how this is used.
 
     Args:
@@ -595,8 +595,8 @@ class Connection():
         
     Returns:
         dict: dict that sets the keys AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and 
-          AWS_SECURITY_TOKEN. These can be set as environment variables for use with the AWS CL 
-          agent. Will be empty if new upload credentials could not be generated (i.e. forbidden).
+            AWS_SECURITY_TOKEN. These can be set as environment variables for use with the AWS CLI 
+            agent. Will be empty if new upload credentials could not be generated (i.e. forbidden).
     """
     file_json = self.get(file_id,ignore404=False)
     try:
@@ -749,11 +749,18 @@ class Connection():
     return response["@graph"][0]["upload_credentials"]
 
   def upload_file(self,file_id,file_path):
-    """Uploads a file to AWS S3 for the specified file object on the Portal.
+    """Uses the AWS CLI to upload a local file or S3 object to the Portal for the indicated file object.
+
+    Unfortunately, it doesn't appear that pulling a file into S3 is supported through the AWS API;
+    only existing S3 objects or local files can be copied to a S3 bucket. External files must first
+    be downloaded and then pushed to the S3 bucket. 
 
     Args:
-        filepath: The local path to the file to upload.
+        filepath: The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
         upload_url: The AWS upload address (i.e. S3 bucket address).
+
+    Raises: 
+        FileUploadFailed: The return code of the AWS upload command was non-zero. 
     """
     self.debug_logger.debug("\nIN upload_file()\n")
     aws_creds = self.set_aws_upload_config(file_id)
