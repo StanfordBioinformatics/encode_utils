@@ -758,7 +758,7 @@ class Connection():
     self.debug_logger.debug("\nIN upload_file()\n")
     aws_creds = self.set_aws_upload_config(file_id)
     if not aws_creds:
-      msg = "Cannot upload file for {} since upload credentials could not be generated.".format(file_id))
+      msg = "Cannot upload file for {} since upload credentials could not be generated.".format(file_id)
       self.debug_logger.debug(msg)
       self.error_logger.error(msg)
     cmd = "aws s3 cp {filepath} {upload_url}".format(filepath=filepath,upload_url=aws_creds["UPLOAD_URL"])
@@ -772,7 +772,7 @@ class Connection():
       error_logger.error(error_msg)
       error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
                     " Stdout is '{stdout}'.  Stderr is {stderr}.").format(
-                      cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr))
+                      cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
       debug_logger.debug(error_msg)
       raise FileUploadFailed(msg)
       
