@@ -602,7 +602,7 @@ class Connection():
     try:
       creds = file_json["upload_credentials"]
     except KeyError:
-      creds = self._regenerate_aws_upload_creds(file_id)
+      creds = self.regenerate_aws_upload_creds(file_id)
       #Will be None if forbidden.
      
     if not creds:
@@ -699,7 +699,7 @@ class Connection():
     return response_json
 
 
-  def _regenerate_aws_upload_creds(self,file_id):
+  def regenerate_aws_upload_creds(self,file_id):
     """Reissues AWS S3 upload credentials for the specified file object.
 
     Args:
@@ -806,70 +806,6 @@ class Connection():
       platforms.extend(f["platform"]["aliases"])
     return list(set(platforms))
         
-  def post_motif_enrichments_from_textfile(self,infile,patch=False):
-    """
-    Submits motif enrichment metadata organized in a text file to the DCC.
-
-    Args: 
-        The tab-delimited text file describing the motif enrichments.
-    """
-    fh = open(infile,'r')
-    for line in fh: 
-      line = line.strip("\n")
-      if not line: 
-        continue
-      if line.startswith("#"):
-        continue
-      line = line.split("\t")
-      target = line[0].strip()
-      accept_prob = line[1].strip()
-      pos_bias_zscore = line[2].strip()
-      peak_rank_bias_zscore = line[3].strip()
-      global_enrichment_zscore = line[4].strip()
-      encff = line[5].strip()
-      encab = line[6].strip() 
-      motif_analysis_file = line[8].strip()
-      alias = eu.LAB + encff + "_" + encab + "_" + target
-
-      caption = ("The motif for target {target} is represented by the attached position weight"
-                 " matrix (PWM) derived from {encff}. Motif enrichment analysis was done by Dr."
-                 " Zhizhuo Zhang (Broad Institute, Kellis Lab). Accept probability score:"
-                 " {accept_prob}; Global enrichment Z-score: {global_enrichment_zscore};"
-                 " Positional bias Z-score: {pos_bias_zscore}; Peak rank bias Z-score:"
-                 " {peak_rank_bias_zscore}; Enrichment rank: 1.0.").format(
-                     target=target,encff=encff,accept_prob=accept_prob,
-                     global_enrichment_zscore=global_enrichment_zscore,
-                     pos_bias_zscore=pos_bias_zscore,peak_rank_bias_zscore=peak_rank_bias_zscore)
-      
-    
-      payload = {} #payload will hold the secondary char submission
-      payload["@id"] = "antibody_characterization/"
-      payload["secondary_characterization_method"] = "motif enrichment"
-      payload["aliases"] = [alias]
-      payload["characterizes"] = encab
-      payload["target"] = target + "-human"
-      payload["status"] = "pending dcc review"
-      payload["caption"] = caption
-
-      motif_analysis_basename= os.path.basename(motif_analysis_file)
-      motif_analysis_file_mime_type = str(mimetypes.guess_type(motif_analysis_basename)[0])
-      contents = str(base64.b64encode(open(motif_analysis_file,"rb").read()),"utf-8")
-      motif_analysis_temp_uri = 'data:' + motif_analysis_file_mime_type + ';base64,' + contents
-      attachment_properties = {}
-      attachment_properties["download"] = motif_analysis_basename
-      attachment_properties["href"] = motif_analysis_temp_uri
-      attachment_properties["type"] = motif_analysis_file_mime_type
-      
-      payload["attachment"] = attachment_properties
-      payload["documents"] = [
-          "encode:motif_enrichment_method",
-          "encode:TF_Antibody_Characterization_ENCODE3_May2016.pdf"]
-
-      response = self.post(payload=payload,patch=patch)  
-      if "@graph" in response:
-        response = response["@graph"][0]
-      self._log_post(alias=alias,dcc_id=response["uuid"])
-
   def post_document(self,download_filename,document,document_type,document_description):
     """
     The alias for the document will be the lab prefix plus the file name (minus the file extension).
