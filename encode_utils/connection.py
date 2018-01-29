@@ -403,17 +403,17 @@ class Connection():
     attachment["href"] = href
     return attachment
 
-  def check_for_attachment_shortcut(payload):
-    """
-    Checks the payload for presence of the 'attachment' property used by certain profiles, i.e.
+  def hook_presubmit_attachment(payload):
+    """A POST and PATCH pre-submit hook used to simplify the createion of an attachment in profiles that support it.
+
+    Checks the payload for presence of the 'attachment' property that is used by certain profiles, i.e.
     document and antibody_characterization, and then checks to see if a particular shortcut is
-    being used to indicate the attachment. That shortcut works as follows: If the dictionary value
-    of the attachment property has a key named 'path' in it (case-sensitive), then the value
+    being employed to indicate the attachment. That shortcut works as follows: If the dictionary value
+    of the 'attachment' key has a key named 'path' in it (case-sensitive), then the value
     is taken to be the path to a local file. Then, the actual attachment object is constructed, 
     as defined in the document schema by calling self.set_attachment(). Note that this shortcut
-    is particular to this module, and when used the 'path' key should be the only key in the dict.
-
-    Both self.post() and self.patch() call this method.
+    is particular to this Connection class, and when used the 'path' key should be the only key 
+    in the attachment dictionary.
 
     Args:
         payload: dict. The payload to submit to the Portal.
@@ -431,6 +431,25 @@ class Connection():
         attachment = self.set_attachment(document=val[path])
         payload[attachment_prop] = attachment
     return payload
+
+
+  def pre_submit_hooks(payload,method=""):
+    """Calls pre-submission hooks for POST and PATCH operations.
+
+    Some hooks only run if you are doing a PATCH, others if you are only doing a POST. Then there
+    are some that run if you are doing either operation. Each pre-submission hook that is called
+    can potentially modify the payload.
+    
+    Args:
+        payload: dict. The payload to POST or PATCH.
+        method: str. One of "post" or "patch", or the empty string to indicate which registered hooks to look through.
+    Returns:
+           dict: The potentially modified payload that has been passed through all applicable 
+               pre-submit hooks.
+    """
+    payload = self.hook_presubmit_attachment(payload)
+    return payload
+     
         
   def post(self,payload):
     """POST a record to the ENCODE Portal.
@@ -473,7 +492,7 @@ class Connection():
         payload.update(eu.LAB)
     alias = payload["aliases"][0]
 
-    payload = self.check_for_attachment_shortcut(payload)
+    payload = self.pre_submit_hooks(payload)
 
     self.debug_logger.debug(
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
@@ -545,7 +564,7 @@ class Connection():
           # it won't be in the response.
           payload[key] = list(set(val))
 
-    payload = self.check_for_attachment_shortcut(payload)
+    payload = self.hook_presubmit_attachment(payload)
 
     url = os.path.join(self.dcc_url,encode_id)
     self.debug_logger.debug(
