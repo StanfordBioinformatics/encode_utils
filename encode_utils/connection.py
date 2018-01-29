@@ -382,6 +382,27 @@ class Connection():
     # Raise the error for last response we got:
     response.raise_for_status() 
 
+  def set_attachment(self,document):
+    """Sets the attachment property for any model that supports it, such as document or antibody_characterization.
+
+    Args:
+        document: str. A local file path. 
+   
+    Returns:
+        dict. The attachment propery value. 
+    """
+    download_filename = os.path.basename(document)
+    mime_type = mimetypes.guess_type(document_filename)[0]
+    data = base64.b64encode(open(document,'rb').read())
+    temp_uri = str(data,"utf-8")
+    href = "data:{mime_type};base64,{temp_uri}".format(mime_type=mime_type,temp_uri=temp_uri)
+    #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
+    attachment = {}
+    attachment["download"] = download_filename
+    attachment["type"] = meme_type
+    attachment["href"] = href
+    return attachment
+
   def check_for_attachment_shortcut(payload):
     """
     Checks the payload for presence of the 'attachment' property used by certain profiles, i.e.
@@ -883,27 +904,6 @@ class Connection():
     response = self.post(payload=payload)
     return response['uuid']
 
-  def set_attachment(self,document):
-    """Sets the attachment property for any model that supports it, such as document or antibody_characterization.
-
-    Args:
-        document: str. A local file path. 
-   
-    Returns:
-        dict. The attachment propery value. 
-    """
-    download_filename = os.path.basename(document)
-    mime_type = mimetypes.guess_type(document_filename)[0]
-    data = base64.b64encode(open(document,'rb').read())
-    temp_uri = str(data,"utf-8")
-    href = "data:{mime_type};base64,{temp_uri}".format(mime_type=mime_type,temp_uri=temp_uri)
-    #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
-    attachment = {}
-    attachment["download"] = download_filename
-    attachment["type"] = meme_type
-    attachment["href"] = href
-    return attachment
-    
   def link_document(self,rec_id,dcc_document_uuid):
     """
     Links an existing document on the ENCODE Portal to another existing object on the Portal via
