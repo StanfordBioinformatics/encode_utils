@@ -94,6 +94,7 @@ class Connection():
   Two log files will be opened in append mode in the calling directory, and named 
   ${dcc_mode}_posted.txt and ${dcc_mode}_error.txt.
   """
+
   REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
   
   DCC_PROD_MODE = "prod"
@@ -381,7 +382,35 @@ class Connection():
     # Raise the error for last response we got:
     response.raise_for_status() 
 
+  def check_for_attachment_shortcut(payload):
+    """
+    Checks the payload for presence of the 'attachment' property used by certain profiles, i.e.
+    document and antibody_characterization, and then checks to see if a particular shortcut is
+    being used to indicate the attachment. That shortcut works as follows: If the dictionary value
+    of the attachment property has a key named 'path' in it (case-sensitive), then the value
+    is taken to be the path to a local file. Then, the actual attachment object is constructed, 
+    as defined in the document schema by calling self.set_attachment(). Note that this shortcut
+    is particular to this module, and when used the 'path' key should be the only key in the dict.
 
+    Both self.post() and self.patch() call this method.
+
+    Args:
+        payload: dict. The payload to submit to the Portal.
+
+    Returns:
+        dict: The payload to submit to the Portal.
+    """
+    attachment_prop = "attachment"
+    path = "path"
+
+    if attachment_prop in payload:
+      val = payload[attachment_prop] #dict
+      if path in val:
+        #Then set the actual attachment object:
+        attachment = self.set_attachment(document=val[path])
+        payload[attachment_prop] = attachment
+    return payload
+        
   def post(self,payload):
     """POST a record to the ENCODE Portal.
 
@@ -422,6 +451,9 @@ class Connection():
           raise LabPropertyMissing
         payload.update(eu.LAB)
     alias = payload["aliases"][0]
+
+    payload = self.check_for_attachment_shortcut(payload)
+
     self.debug_logger.debug(
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
@@ -491,6 +523,8 @@ class Connection():
           # For ex, in a file object, if the controlled_by prop isn't set, then 
           # it won't be in the response.
           payload[key] = list(set(val))
+
+    payload = self.check_for_attachment_shortcut(payload)
 
     url = os.path.join(self.dcc_url,encode_id)
     self.debug_logger.debug(
@@ -812,7 +846,7 @@ class Connection():
       platforms.extend(f["platform"]["aliases"])
     return list(set(platforms))
         
-  def post_document(self,download_filename,document,document_type,document_description):
+  def post_document(self,download_filename,document,document_type,description):
     """
     The alias for the document will be the lab prefix plus the file name (minus the file extension).
 
@@ -822,7 +856,7 @@ class Connection():
         document_type: str. For possible values, see 
             https://www.encodeproject.org/profiles/document.json. It appears that one should use 
             "data QA" for analysis results documents. 
-        document_description - str. The description for the document.
+        description - str. The description for the document.
         document - str. Local filepath to the document to be submitted.
 
     Returns: 
@@ -841,24 +875,35 @@ class Connection():
     payload["document_type"] = document_type
     payload["description"] = document_description
   
+    #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
+    attachment = self.set_attachment(document)
+  
+    payload['attachment'] = attachment
+    
+    response = self.post(payload=payload)
+    return response['uuid']
+
+  def set_attachment(self,document):
+    """Sets the attachment property for any model that supports it, such as document or antibody_characterization.
+
+    Args:
+        document: str. A local file path. 
+   
+    Returns:
+        dict. The attachment propery value. 
+    """
+    download_filename = os.path.basename(document)
+    mime_type = mimetypes.guess_type(document_filename)[0]
     data = base64.b64encode(open(document,'rb').read())
     temp_uri = str(data,"utf-8")
     href = "data:{mime_type};base64,{temp_uri}".format(mime_type=mime_type,temp_uri=temp_uri)
     #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
-    attachment_properties = {} 
-    attachment_properties["download"] = download_filename
-    attachment_properties["href"] = href
-    attachment_properties["type"] = mime_type
-  
-    payload['attachment'] = attachment_properties
+    attachment = {}
+    attachment["download"] = download_filename
+    attachment["type"] = meme_type
+    attachment["href"] = href
+    return attachment
     
-    response = self.post(payload=payload)
-    if "@graph" in response:
-      response = response["@graph"][0]
-    dcc_uuid = response['uuid']
-    return dcc_uuid
-  
-  
   def link_document(self,rec_id,dcc_document_uuid):
     """
     Links an existing document on the ENCODE Portal to another existing object on the Portal via
