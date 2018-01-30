@@ -405,6 +405,32 @@ class Connection():
     attachment["href"] = href
     return attachment
 
+  def hook_postsubmit_file_cloud_upload(self,file_id):
+    """A POST post-submit hook for uploading files to AWS.
+
+    Some objects, such as Files (file.json profile) need to have a corresponding file in the cloud.
+    Where in the cloud the actual file should be uploaded to is indicated in File object's 
+    file.upload_credentials.upload_url property. Once the File object is posted, this hook can be
+    used to perform the actual cloud upload of the physical, local file reprented by the File object.
+
+    Args:
+        file_id: str. An identifier for the new File object on the Portal.
+
+    Returns:
+    """
+    SUBMITTED_FILE_NAME_PROP = "submitted_file_name"
+    rec = self.get(rec_ids=file_id,ignore404=False)
+    profile = euu.parse_profile_from_id_prop(rec["@id"])
+    if profile != euu.FILE_PROFILE_NAME:
+      return
+    if SUBMITTED_FILE_NAME_PROP in rec:
+      filename = rec[SUBMITTED_FILE_NAME_PROP]
+      if filename:
+        self.upload_file(file_id=file_id,file_path=filename)
+    
+    
+    
+
   def hook_presubmit_attachment(self,payload):
     """A POST and PATCH pre-submit hook used to simplify the creation of an attachment in profiles that support it.
 
@@ -512,7 +538,7 @@ class Connection():
     response_json = response.json()
 
     if response.ok:
-      self.debug_logger.debug("success")
+      self.debug_logger.debug("Success.")
       encid = ""
       try:
         encid = response_json["@graph"][0]["accession"]
@@ -591,7 +617,7 @@ class Connection():
     response_json = response.json()
 
     if response.ok:
-      self.debug_logger.debug("success")
+      self.debug_logger.debug("Success.")
       return response_json
     elif response.status_code == requests.codes.FORBIDDEN:
       #Don't have permission to PATCH this object.
@@ -877,6 +903,7 @@ class Connection():
                       cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
       debug_logger.debug(error_msg)
       raise FileUploadFailed(msg)
+    self.debug_logger("AWS upload successful.")
       
 
   def get_platforms_on_experiment(self,rec_id):
