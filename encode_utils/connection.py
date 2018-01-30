@@ -76,14 +76,6 @@ class RecordNotFound(Exception):
   pass
 
 
-class UnknownDccProfile(Exception):
-  """
-  Raised when the profile in question doesn't match any valid profile name present in 
-  encode_utils.utils.PROFILE_NAMES.
-  """
-  pass
-
-
 class Connection():
   """ENCODE Portal data submission and retrieval. 
 
@@ -95,8 +87,6 @@ class Connection():
   ${dcc_mode}_posted.txt and ${dcc_mode}_error.txt.
   """
 
-  REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
-  
   DCC_PROD_MODE = "prod"
   DCC_DEV_MODE = "dev"
   DCC_MODES = {
@@ -254,7 +244,7 @@ class Connection():
     query = urllib.parse.urlencode(search_args)
     url = os.path.join(self.dcc_url,"search/?",query)
     self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
-    response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,verify=False)
+    response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,verify=False)
     if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
@@ -274,7 +264,7 @@ class Connection():
 
     Raises:
         encode_utils.connection.ProfileNotSpecified: The key self.ENCODE_PROFILE_KEY is missing in the payload.
-        encode_utils.connection.UnknownDccProfile: The profile isn't recognized.
+        encode_utils.utils.UnknownProfile: The profile isn't recognized.
     """
 
     #profile = encode_utls.utils.parse_profile_from_id_prop(payload)
@@ -285,7 +275,7 @@ class Connection():
          " in the payload.").format(self.ENCODE_PROFILE_KEY))
     exists = euu.does_profile_exist(profile)
     if not exists:
-      raise UnknownDccProfile(
+      raise euu.UnknownDccProfile(
           "Invalid profile '{}' specified in the payload's {} key.".format(profile,self.ENCODE_PROFILE_KEY))
     return profile
 
@@ -329,7 +319,7 @@ class Connection():
   #  url = os.path.join(self.dcc_url,rec_id)
   #  self.logger.info(
   #    (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
-  #  response = requests.delete(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
+  #  response = requests.delete(url,auth=self.auth,timeout=en.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON, verify=False)
   #  pdb.set_trace()
   #  if response.ok:
   #    return response.json()
@@ -369,7 +359,7 @@ class Connection():
         url += "&frame={frame}".format(frame=frame)
       self.debug_logger.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
           rec_id=r,url=url))
-      response = requests.get(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
+      response = requests.get(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON, verify=False)
       if response.ok:
         return response.json()
       status_codes[response.status_code] = r
@@ -405,8 +395,8 @@ class Connection():
     attachment["href"] = href
     return attachment
 
-  def hook_postsubmit_file_cloud_upload(self,file_id):
-    """A POST post-submit hook for uploading files to AWS.
+  def after_submit_file_cloud_upload(self,rec_id,profile):
+    """An after-POST submit hook for uploading files to AWS.
 
     Some objects, such as Files (file.json profile) need to have a corresponding file in the cloud.
     Where in the cloud the actual file should be uploaded to is indicated in File object's 
@@ -414,24 +404,34 @@ class Connection():
     used to perform the actual cloud upload of the physical, local file reprented by the File object.
 
     Args:
-        file_id: str. An identifier for the new File object on the Portal.
+        rec_id: str. An identifier for the new File object on the Portal.
+        profile: str. The profile of the record 
 
     Returns:
     """
     SUBMITTED_FILE_NAME_PROP = "submitted_file_name"
-    rec = self.get(rec_ids=file_id,ignore404=False)
+    rec = self.get(rec_ids=rec_id,ignore404=False)
     profile = euu.parse_profile_from_id_prop(rec["@id"])
     if profile != euu.FILE_PROFILE_NAME:
       return
     if SUBMITTED_FILE_NAME_PROP in rec:
       filename = rec[SUBMITTED_FILE_NAME_PROP]
       if filename:
-        self.upload_file(file_id=file_id,file_path=filename)
+        self.upload_file(file_id=rec_id,file_path=filename)
     
+  def after_submit_hooks(self,rec_id,profile):
+    """
+    Calls after-submission hooks for POST and PATH operations.
+ 
+    Args:
+        rec_id: str. An identifier for a record on the Portal.
+        profile: str. The profile the record belongs to.
+        
+    """
     
     
 
-  def hook_presubmit_attachment(self,payload):
+  def before_submit_attachment(self,payload):
     """A POST and PATCH pre-submit hook used to simplify the creation of an attachment in profiles that support it.
 
     Checks the payload for the presence of the 'attachment' property that is used by certain profiles, i.e.
@@ -461,8 +461,8 @@ class Connection():
     return payload
 
 
-  def pre_submit_hooks(self,payload,method=""):
-    """Calls pre-submission hooks for POST and PATCH operations.
+  def before_submit_hooks(self,payload,method=""):
+    """Calls before-submission hooks for POST and PATCH operations.
 
     Some hooks only run if you are doing a PATCH, others if you are only doing a POST. Then there
     are some that run if you are doing either operation. Each pre-submission hook that is called
@@ -479,7 +479,7 @@ class Connection():
         dict: The potentially modified payload that has been passed through all applicable
             pre-submit hooks.
     """
-    payload = self.hook_presubmit_attachment(payload)
+    payload = self.before_submit_attachment(payload)
     return payload
      
         
@@ -494,7 +494,7 @@ class Connection():
     default will be set to the value of the DCC_AWARD environment variable.
 
     Before the POST is attempted, any pre-submit hooks are fist called (see the method 
-    `self.pre_submit_hooks`).
+    `self.before_submit_hooks`).
 
     Args:
         payload: dict. The data to submit.
@@ -527,25 +527,26 @@ class Connection():
         payload.update(eu.LAB)
     alias = payload["aliases"][0]
 
-    payload = self.pre_submit_hooks(payload)
+    payload = self.before_submit_hooks(payload)
 
     self.debug_logger.debug(
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+    response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
-    response_json = response.json()
+    response_json = response.json()["@graph"][0]
 
     if response.ok:
       self.debug_logger.debug("Success.")
       encid = ""
       try:
-        encid = response_json["@graph"][0]["accession"]
+        encid = response_json["accession"]
       except KeyError:
         #Some objects don't have an accession, i.e. replicates.
-        encid = response_json["@graph"][0]["uuid"]
+        encid = response_json["uuid"]
       self._log_post(alias=alias,dcc_id=encid)
+      self.after_submit_hooks(encid,profile)
       return response_json
     elif response.status_code == requests.codes.CONFLICT:
       log_msg = "Will not post {} because it already exists.".format(alias)
@@ -565,7 +566,7 @@ class Connection():
     """PATCH a record on the ENCODE Portal.
 
     Before the PATCH is attempted, any pre-submit hooks are fist called (see the method 
-    `self.pre_submit_hooks`).
+    `self.before_submit_hooks`).
 
     Args: 
         payload: dict. containing the attribute key and value pairs to patch. Must contain the key
@@ -604,7 +605,7 @@ class Connection():
           # it won't be in the response.
           payload[key] = list(set(val))
 
-    payload = self.hook_presubmit_attachment(payload)
+    payload = self.before_submit_hooks(payload)
 
     url = os.path.join(self.dcc_url,encode_id)
     self.debug_logger.debug(
@@ -612,12 +613,15 @@ class Connection():
          " {url} and this payload:\n\n{payload}\n\n").format(
              encode_id=encode_id,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+    response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
                               json=payload,verify=False)
     response_json = response.json()
 
     if response.ok:
       self.debug_logger.debug("Success.")
+      uuid = response_json["uuid"]
+      profile = self.parse_profile_from_id_prop(response_json["@id"])
+      self.after_submit_hooks(uuid,profile)
       return response_json
     elif response.status_code == requests.codes.FORBIDDEN:
       #Don't have permission to PATCH this object.
@@ -784,7 +788,7 @@ class Connection():
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
                                  url=url,payload=euu.print_format_dict(payload)))
 
-      response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+      response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
     else:
       httpMethod = "POST"
@@ -793,7 +797,7 @@ class Connection():
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
                filename=filename,url=url,payload=euu.print_format_dict(payload)))
-      response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+      response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
     response_json = response.json()

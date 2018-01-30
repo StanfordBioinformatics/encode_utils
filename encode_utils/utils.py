@@ -14,56 +14,114 @@ import json
 import os
 import requests
 import subprocess
+import pdb
 
 import encode_utils as eu
 
-#: The lower-cased names of all ENCODE object profiles, dynamically parsed out of the result of a
-#: GET request to the URL encode_utils.PROFILES_URL. Note that profile names are not hyphenated.
-#: For example, the profile listed in the response as GeneticModification becomes 
-#: geneticmodification in this resulting list.
-PROFILE_NAMES = sorted([x.lower() for x in requests.get(eu.PROFILES_URL + "?format=json",timeout=eu.TIMEOUT,headers={"content-type": "application/json"}).json().keys()])
 
-def does_profile_exist(profile):
-  """
-  Indicates whether the specified profile exists on the Portal by checking for presence in the 
-  list encode_utils.utils.PROFILE_NAMES.
+REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
-  Args: 
-      profile: str. The profile name. Will be converted to all lower-case, and any '_' 
-          will be removed before the lookup. 
+
+class UnknownProfile(Exception):                                                                     
+  """                                                                                                   
+  Raised when the profile in question doesn't match any valid profile name present in                   
+  """                                                                                                   
+  pass
+
+def get_profile_ids():
+  """Creates a list of the profile IDs spanning all public profiles on the Portal.
+
+  The profile ID for a given profile is extracted from the 'id' key. The 'profiles' prefix
+  is stripped off, and the '.json' suffix is also removed. For example, the value of the 'id' 
+  property for the genetic modification profile is `/profiles/genetic_modification.json`. The
+  value that gets inserted into the list returned by this function is `genetic_modification`.
 
   Returns:
-      bool:
+      list: list of profile IDs.
+  """
+  profiles = requests.get(eu.PROFILES_URL + "?format=json",
+                          timeout=eu.TIMEOUT,
+                          headers=REQUEST_HEADERS_JSON)
+  profiles = profiles.json()
+  profile_ids = []
+  for profile_name in profiles:
+     if profile_name.startswith("_"):
+       #i.e. _subtypes
+       continue
+     print(profile_name)
+     profile_id = profiles[profile_name]["id"].split("/")[-1].split(".json")[0]
+     profile_ids.append(profile_id)
+  return profile_ids
+
+
+class Profile:
+  """
+  Encapsulates knowledge about the existing profiles on the Portal and contains useful methods
+  for working with a given profile.
+   
+  The user supplies a profile name, typically the value of a record's '@id' attribute. It will be
+  normalized to match the syntax of the profile IDs in list returned by the function 
+  `get_profile_ids()`.
+  """
+ 
+  #: The list of the profile IDs spanning all public profiles on the Portal, as returned by
+  #: `get_profile_ids()`.
+  PROFILE_IDS = get_profile_ids()
+
+  FILE_PROFILE_NAME = "file"
+  try:
+    assert(FILE_PROFILE_NAME in PROFILE_IDS)
+  except AssertionError:
+    print("WARNING: The profile for file.json has underwent a name change apparently and is no longer known to this package.")
+
+  def __init__(self,profile_id):
+    """
+    Args:
+        profile_id: str. Typically the value of a record's '@id' property.
+    """
+
+    #: The profile_id after it has become internally normalized to match the format used in
+    #: Profile.PROFILE_IDS.
+    self.profile_id = self.set_profile_id(profile_id)
+
+  def _set_profile_id(self,profile_id):
+    """
+    Normalizes profile_id so that it matches the format of the profile IDs in the list 
+    Profile.PROFILE_IDS, and ensures that the normalized profile ID is a member of this list.
+
+    Args: 
+        profile_id: str. Typeically the value of a record's '@id' property.
+
+    Returns:
+        str: The normalized profile ID.
+    Raises: 
+        UnknownProfile: The normalized profile ID is not a member of the list Profile.PROFILE_IDS.
+    """
+    orig_profile = profile_id
+    profile_id = profile_id.strip("/").split("/")[0].lower()
+    #Multi-word profile names are hypen-separated, i.e. genetic-modifications.
+    profile_id = profile_id.replace("-","")
+    if not profile_id in PROFILE_IDS:
+      profile_id = profile_id.rstrip("s")
+      if not profile_id in PROFILE_IDS:
+        raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
+    return profile_id
+
+  def get_schema(self):
+    """Retrieves the JSON schema of the profile from the Portal.
   
-  """
-  profile = profile.lower().replace("_","")
-  return profile in PROFILE_NAMES
-
-def parse_profile_from_id_prop(id_val):
-  """Extracts the profile of a record from the record's '@id' property.
-
-  The extracted value can be tested for inclustion in encode_utils.utils.PROFILE_NAMES.
-  The record ID is also stored in the '@id' property.
-  For example, given the file object identified by the accession ENCFF859CWS, the value of its '@id' 
-  property as shown on the Portal is '/files/ENCFF859CWS/'. The profile can be extracted from 
-  this and singularized in order match the name of a profile listed in 
-  encode_utils.utils.PROFILE_NAMES. 
-
-  Args: 
-      id_val: str. The value of the '@id' key in a record's JSON. 
-
-  Returns: 
-      str: The profile, or the empty string if the profile is not present in
-      encode_utils.utils.PROFILE_NAMES.
-  """
-  #i.e. /documents/ if it doesn't have an ID, /documents/docid if it has an ID.
-  profile = id_val.strip("/").split("/")[0].rstrip("s").lower()
-  #Multi-word profile names are hypen-separated, i.e. genetic-modifications. But as detailed 
-  # in encode_utils.utils.PROFILE_NAMES, only alphabetical characters are given and stored. 
-  profile = profile.replace("-","")
-  if not profile in PROFILE_NAMES:
-    return ""
-  return profile
+    Returns: 
+        tuple: Two-item tuple where the first item is the URL used to fetch the schema, and the
+            second item is a dict representing the profile's JSON schema.
+  
+    Raises: 
+        requests.exceptions.HTTPError: The status code is not okay.
+    """
+    url = os.path.join(eu.PROFILES_URL,self.profile_id + ".json?format=json")
+    res = requests.get(url,headers=REQUEST_HEADERS_JSON,timeout=eu.TIMEOUT)
+    res.raise_for_status()
+    return url, res.json()
+  
 
 def print_format_dict(dico,indent=2):                                                           
   """Formats a dictionary for printing purposes to ease visual inspection.
@@ -131,25 +189,6 @@ def create_subprocess(cmd,check_retcode=True):
     return stdout,stderr
   else:
     return popen
-
-def get_profile_schema(profile):
-  """Retrieves the JSON schema of the specified profile from the ENCODE Portal.
-
-  Returns: 
-      tuple: Two-item tuple where the first item is the URL used to fetch the schema, and the
-          second item is a dict representing the profile's JSON schema.
-
-  Raises: 
-      UnknownENCODEProfile: The response status code is 404.
-      requests.exceptions.HTTPError: The status code is not okay and not 404.
-  """
-  url = os.path.join(eu.PROFILES_URL,profile + ".json?format=json")
-  res = requests.get(url,headers={"content-type": "application/json"},timeout=eu.TIMEOUT)
-  status_code = res.status_code
-  if status_code == requests.codes.NOT_FOUND:
-    raise UnknownENCODEProfile("Please verify the profile name '{}' that you specifed.".format(profile))
-  res.raise_for_status()
-  return url, res.json()
 
 def strip_alias_prefix(self,alias):
   """

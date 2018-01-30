@@ -80,7 +80,7 @@ def create_payloads(profile,infile):
   """
   STR_REGX = reg = re.compile(r'\'|"')
   #Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
-  schema_url, schema = euu.get_profile_schema(profile)
+  schema_url, schema = euu.get_schema(profile)
   schema_props = schema["properties"]
   schema_props.update({RECORD_ID_FIELD:1}) #Not an actual schema property.
   field_index = {}
