@@ -59,8 +59,8 @@ class Profile:
   Encapsulates knowledge about the existing profiles on the Portal and contains useful methods
   for working with a given profile.
    
-  The user supplies a profile name, typically the value of a record's '@id' attribute. It will be
-  normalized to match the syntax of the profile IDs in list returned by the function 
+  The user supplies a profile name, typically the value of a record's `@id` attribute. It will be
+  normalized to match the syntax of the profile IDs in the list returned by the function 
   `get_profile_ids()`.
   """
  
