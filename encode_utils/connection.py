@@ -394,14 +394,14 @@ class Connection():
         dict. The attachment propery value. 
     """
     download_filename = os.path.basename(document)
-    mime_type = mimetypes.guess_type(document_filename)[0]
+    mime_type = mimetypes.guess_type(download_filename)[0]
     data = base64.b64encode(open(document,'rb').read())
     temp_uri = str(data,"utf-8")
     href = "data:{mime_type};base64,{temp_uri}".format(mime_type=mime_type,temp_uri=temp_uri)
     #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
     attachment = {}
     attachment["download"] = download_filename
-    attachment["type"] = meme_type
+    attachment["type"] = mime_type
     attachment["href"] = href
     return attachment
 

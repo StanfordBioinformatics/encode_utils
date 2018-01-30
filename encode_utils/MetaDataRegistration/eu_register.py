@@ -22,12 +22,14 @@ from encode_utils.parent_argparser import dcc_login_parser
 #: It is used when patching objects to indicate the identifier of the record to patch. 
 RECORD_ID_FIELD = "record_id" 
 
-def check_valid_json(val):
+def check_valid_json(prop,val,row_count):
   """
   Runs json.loads(val) to ensure valid JSON.
  
   Args:
       val: str. A string load as JSON.
+      prop: str. Name of the schema property/field that stores the passed in val. 
+      row_count: int. The line number from the input file that is currently being processed.
   
   Raises:
       ValueError: The input is malformed JSON.
@@ -39,7 +41,7 @@ def check_valid_json(val):
   try:
     json_val = json.loads(val)
   except ValueError:
-    print("Error: Invalid JSON in field {}, row {}".format(field,fi_count))
+    print("Error: Invalid JSON in field '{}', row '{}'".format(prop,row_count))
     raise
   return json_val
 
@@ -95,7 +97,7 @@ def create_payloads(profile,infile):
       raise Exception("Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(field,schema_url.split("?")[0]))  
     field_index[fi_count] = field
 
-  line_count = -1 #already read header line
+  line_count = 1 #already read header line
   for line in fh:
     line_count += 1
     line = line.strip("\n").split("\t")
@@ -120,7 +122,7 @@ def create_payloads(profile,infile):
       schema_val_type = schema_props[field]["type"]
       if schema_val_type == "object":
         #Must be proper JSON
-        val = check_valid_json(val)
+        val = check_valid_json(field,val,line_count)
       elif schema_val_type == "array":
         item_val_type = schema_props[field]["items"]["type"]
         if item_val_type == "object":
@@ -130,7 +132,7 @@ def create_payloads(profile,infile):
             val = "[" + val
           if not val.endswith("]"):
             val+= "]"
-          val = check_valid_json(val)
+          val = check_valid_json(field,val,line_count)
         else:
           #User is allowed to enter values in string literals. I'll remove them if I find them,
           # since I'm splitting on the ',' to create a list of strings anyway:
