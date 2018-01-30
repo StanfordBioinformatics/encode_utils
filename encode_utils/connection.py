@@ -385,7 +385,7 @@ class Connection():
     response.raise_for_status() 
 
   def set_attachment(self,document):
-    """Sets the attachment property for any model that supports it, such as document or antibody_characterization.
+    """Sets the attachment property for any profile that supports it, such as document or antibody_characterization.
 
     Args:
         document: str. A local file path. 
@@ -406,16 +406,16 @@ class Connection():
     return attachment
 
   def hook_presubmit_attachment(self,payload):
-    """A POST and PATCH pre-submit hook used to simplify the createion of an attachment in profiles that support it.
+    """A POST and PATCH pre-submit hook used to simplify the creation of an attachment in profiles that support it.
 
-    Checks the payload for presence of the 'attachment' property that is used by certain profiles, i.e.
+    Checks the payload for the presence of the 'attachment' property that is used by certain profiles, i.e.
     document and antibody_characterization, and then checks to see if a particular shortcut is
     being employed to indicate the attachment. That shortcut works as follows: If the dictionary value
     of the 'attachment' key has a key named 'path' in it (case-sensitive), then the value
     is taken to be the path to a local file. Then, the actual attachment object is constructed, 
-    as defined in the document schema by calling self.set_attachment(). Note that this shortcut
-    is particular to this Connection class, and when used the 'path' key should be the only key 
-    in the attachment dictionary.
+    as defined in the document profile, by calling self.set_attachment(). Note that this shortcut
+    is particular to this `Connection` class, and when used the 'path' key should be the only key 
+    in the attachment dictionary as any others would be ignored.
 
     Args:
         payload: dict. The payload to submit to the Portal.
@@ -441,6 +441,8 @@ class Connection():
     Some hooks only run if you are doing a PATCH, others if you are only doing a POST. Then there
     are some that run if you are doing either operation. Each pre-submission hook that is called
     can potentially modify the payload.
+ 
+    Both self.post() and self.patch() call this method.
     
     Args:
         payload: dict. The payload to POST or PATCH.
@@ -462,6 +464,9 @@ class Connection():
     If the 'lab' property isn't present in the payload, then the default will be set to the value
     of the DCC_LAB environment variable. Similarly, if the 'award' property isn't present, then the
     default will be set to the value of the DCC_AWARD environment variable.
+
+    Before the POST is attempted, any pre-submit hooks are fist called (see the method 
+    `self.pre_submit_hooks`).
 
     Args:
         payload: dict. The data to submit.
@@ -530,6 +535,9 @@ class Connection():
 
   def patch(self,payload,raise_403=True, extend_array_values=True):
     """PATCH a record on the ENCODE Portal.
+
+    Before the PATCH is attempted, any pre-submit hooks are fist called (see the method 
+    `self.pre_submit_hooks`).
 
     Args: 
         payload: dict. containing the attribute key and value pairs to patch. Must contain the key
