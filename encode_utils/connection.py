@@ -446,10 +446,12 @@ class Connection():
     
     Args:
         payload: dict. The payload to POST or PATCH.
-        method: str. One of "post" or "patch", or the empty string to indicate which registered hooks to look through.
+        method: str. One of "post" or "patch", or the empty string to indicate which registered 
+            hooks to look through.
+
     Returns:
-           dict: The potentially modified payload that has been passed through all applicable 
-               pre-submit hooks.
+        dict: The potentially modified payload that has been passed through all applicable
+            pre-submit hooks.
     """
     payload = self.hook_presubmit_attachment(payload)
     return payload
