@@ -193,13 +193,15 @@ class Connection():
     secret_key = os.environ["DCC_SECRET_KEY"]
     return api_key,secret_key
     
-  def _log_post(self,alias,dcc_id=None):
-    """Uses self.post_logger to log the submitted object's alias and dcc_id. 
+  def _log_post(self,alias,dcc_id):
+    """Uses the self.post_logger to log the submitted object's alias and dcc_id.
+    
+    Each message is written in a two column format delimted by a tab character. The columns are:
+      1) alias (the first that appeared in the 'aliases' key in the payload), and
+      2) DCC identifier
     """
-    txt = alias
-    if dcc_id:
-      txt += " -> {dcc_id}".format(dcc_id=dcc_id)
-    self.post_logger.info(txt)
+    entry = alias + "\t" + dcc_id
+    self.post_logger.info(entry)
 
   def get_aliases(self,dcc_id,strip_alias_prefix=False):
     """
@@ -367,7 +369,7 @@ class Connection():
         url += "&frame={frame}".format(frame=frame)
       self.debug_logger.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
           rec_id=r,url=url))
-      response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
+      response = requests.get(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON, verify=False)
       if response.ok:
         return response.json()
       status_codes[response.status_code] = r
@@ -403,7 +405,7 @@ class Connection():
     attachment["href"] = href
     return attachment
 
-  def hook_presubmit_attachment(payload):
+  def hook_presubmit_attachment(self,payload):
     """A POST and PATCH pre-submit hook used to simplify the createion of an attachment in profiles that support it.
 
     Checks the payload for presence of the 'attachment' property that is used by certain profiles, i.e.
@@ -433,7 +435,7 @@ class Connection():
     return payload
 
 
-  def pre_submit_hooks(payload,method=""):
+  def pre_submit_hooks(self,payload,method=""):
     """Calls pre-submission hooks for POST and PATCH operations.
 
     Some hooks only run if you are doing a PATCH, others if you are only doing a POST. Then there
@@ -498,10 +500,12 @@ class Connection():
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.post(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+    response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
     response_json = response.json()
+
     if response.ok:
+      self.debug_logger.debug("success")
       encid = ""
       try:
         encid = response_json["@graph"][0]["accession"]
@@ -572,11 +576,12 @@ class Connection():
          " {url} and this payload:\n\n{payload}\n\n").format(
              encode_id=encode_id,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.patch(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+    response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                               json=payload,verify=False)
     response_json = response.json()
 
     if response.ok:
+      self.debug_logger.debug("success")
       return response_json
     elif response.status_code == requests.codes.FORBIDDEN:
       #Don't have permission to PATCH this object.
@@ -743,7 +748,7 @@ class Connection():
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
                                  url=url,payload=euu.print_format_dict(payload)))
 
-      response = requests.patch(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+      response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
     else:
       httpMethod = "POST"
@@ -752,7 +757,7 @@ class Connection():
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
                filename=filename,url=url,payload=euu.print_format_dict(payload)))
-      response = requests.post(url,auth=self.auth,timeout=en.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
+      response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=self.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
     response_json = response.json()

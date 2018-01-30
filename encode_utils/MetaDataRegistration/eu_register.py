@@ -80,16 +80,16 @@ def create_payloads(profile,infile):
   #Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
   schema_url, schema = euu.get_profile_schema(profile)
   schema_props = schema["properties"]
-  schema_props.append(RECORD_ID_FIELD) #Not an actual schema property.
+  schema_props.update({RECORD_ID_FIELD:1}) #Not an actual schema property.
   field_index = {}
   fh = open(infile,'r')
   header_fields = fh.readline().strip("\n").split("\t")
-  fi_count = -1 #field index count
   skip_field_indices = []
+  fi_count = -1 #field index count
   for field in header_fields:
     fi_count += 1
     if field.startswith("#"): #non-schema field
-      skip_field_indices.append(count)
+      skip_field_indices.append(fi_count)
       continue
     if field not in schema_props:
       raise Exception("Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(field,schema_url.split("?")[0]))  
@@ -109,6 +109,10 @@ def create_payloads(profile,infile):
       if fi_count in skip_field_indices:
         continue
       val = val.strip()
+      if not val:
+        #Then skip. For ex., the biosample schema has a 'date_obtained' property, and if that is 
+        # empty it'll be treated as a formatting error, and the Portal will return a a 422.
+        continue
       field = field_index[fi_count]
       if field == RECORD_ID_FIELD:
         payload[field] = val
