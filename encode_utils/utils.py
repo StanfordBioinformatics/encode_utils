@@ -22,11 +22,46 @@ import encode_utils as eu
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
 
+class MD5SumError(Exception):                                                                           
+  """Raised when there is a non-zero exit status from the md5sum utility from GNU coreutils.            
+  """ 
+
 class UnknownProfile(Exception):                                                                     
   """                                                                                                   
   Raised when the profile in question doesn't match any valid profile name present in                   
   """                                                                                                   
   pass
+
+def calculate_md5sum(file_path):                                                                 
+  """"Calculates the md5sum for a file using the md5sum utility from GNU coreutils.                   
+                                                                                                      
+  Args:                                                                                               
+      file_path: str. The path to a local file.                                                       
+                                                                                                      
+  Returns:                                                                                            
+      str: The md5sum.                                                                                
+                                                                                                      
+  Raises:                                                                                             
+      MD5SumError: There was a non-zero exit status from the md5sum command.                          
+  """                                                                                                 
+  cmd = "md5sum {}".format(file_path)                                                                 
+  self.debug_logger.debug("Calculating md5sum for '{}' with command '{}'.".format(file_path,cmd)) 
+  popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)              
+  stdout,stderr = popen.communicate()                                                                 
+  stdout = stdout.decode("utf-8")                                                                     
+  stderr = stderr.decode("utf-8")                                                                     
+  retcode = popen.returncode                                                                          
+  if retcode:                                                                                         
+    error_msg = "Failed to calculate md5sum for file '{}'.".format(file_path)                         
+    self.debug_logger.debug(error_msg)                                                                
+    self.error_logger.error(error_msg)                                                                
+    error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."                  
+                  " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(                            
+                    cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)                              
+    self.debug_logger.debug(error_msg)                                                                
+    raise MD5SumError(error_msg)                                                                      
+  self.debug_logger.debug(stdout)                                                                     
+  return stdout
 
 def get_profiles():
   """Creates a list of the profile IDs spanning all public profiles on the Portal.

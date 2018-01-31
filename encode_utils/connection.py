@@ -53,7 +53,6 @@ class LabPropertyMissing(Exception):
   message = ("The property '{}' is missing from the payload and a default isn't set either. To"
              " store a default, set the DCC_LAB environment variable.")
 
-
 class ProfileNotSpecified(Exception):
   """
   Raised when the profile (object schema) to submit to isn't specifed in a payload.
