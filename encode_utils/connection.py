@@ -90,8 +90,8 @@ class Connection():
   DCC_PROD_MODE = "prod"
   DCC_DEV_MODE = "dev"
   DCC_MODES = {
-    DCC_PROD_MODE: "https://www.encodeproject.org/",
-    DCC_DEV_MODE: "https://test.encodedcc.org/"
+    DCC_PROD_MODE: {"host": "www.encodeproject.org","url": "https://www.encodeproject.org"},
+    DCC_DEV_MODE: {"host": "test.encodedcc.org","url": "https://test.encodedcc.org"}
     }
 
   #: Identifies the name of the key in the payload (dictionary) that stores a valid ENCODE-assigned
@@ -117,6 +117,10 @@ class Connection():
 
     #: dcc_mode: The environment of the ENCODE Portal site ("prod" or "dev") to connect to. 
     self.dcc_mode = dcc_mode
+    #: The prod or dev host name, determined by the value of the dcc_mode instance attribute.
+    self.dcc_host = self.DCC_MODES[self.dcc_mode]["host"]
+    #: The prod or dev DCC URL, determined by the value of the dcc_mode instance attribute.
+    self.dcc_url = self.DCC_MODES[self.dcc_mode]["url"]
 
     f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:\t%(message)s')
     #: A logging instance with a STDOUT stream handler and a debug file handler. 
@@ -161,8 +165,6 @@ class Connection():
     self.error_logger = error_logger
     self.post_logger = post_logger
 
-    #: The prod or dev DCC URL, determined by the value of the dcc_mode instance attribute.
-    self.dcc_url = self._set_dcc_url()
 
     #: The API key to use when authenticating with the DCC servers. This is set automatically
     #: to the value of the DCC_API_KEY environment variable in the _set_dcc_url() private method. 
@@ -248,7 +250,7 @@ class Connection():
     query = urllib.parse.urlencode(search_args)
     url = os.path.join(self.dcc_url,"search/?",query)
     self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
-    response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,verify=False)
+    response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,verify=False)
     if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
@@ -319,7 +321,7 @@ class Connection():
   #  url = os.path.join(self.dcc_url,rec_id)
   #  self.logger.info(
   #    (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
-  #  response = requests.delete(url,auth=self.auth,timeout=en.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON, verify=False)
+  #  response = requests.delete(url,auth=self.auth,timeout=en.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
   #  pdb.set_trace()
   #  if response.ok:
   #    return response.json()
@@ -359,7 +361,7 @@ class Connection():
         url += "&frame={frame}".format(frame=frame)
       self.debug_logger.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
           rec_id=r,url=url))
-      response = requests.get(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON, verify=False)
+      response = requests.get(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
       if response.ok:
         return response.json()
       status_codes[response.status_code] = r
@@ -409,11 +411,11 @@ class Connection():
 
     Returns:
     """
-    if profile_id != euu.FILE_PROFILE_NAME:
+    if profile_id != euu.Profile.FILE_PROFILE_NAME:
       return
-    SUBMITTED_FILE_NAME_PROP = "submitted_file_name"
+    submitted_file_name_prop = "submitted_file_name"
     rec = self.get(rec_ids=rec_id,ignore404=False)
-    if SUBMITTED_FILE_NAME_PROP in rec:
+    if submitted_file_name_prop in rec:
       filename = rec[SUBMITTED_FILE_NAME_PROP]
       if filename:
         self.upload_file(file_id=rec_id,file_path=filename)
@@ -428,11 +430,21 @@ class Connection():
         method: str. One of self.POST or self.PATCH, or the empty string to indicate which registered 
             hooks to look through.
     """
+    #Check allowed_methods. Will matter later when there are POST-specific 
+    # and PATCH-specific hooks.
     allowed_methods = [self.POST,self.PATCH,""]
     if not method in allowed_methods:
       raise Exception("Unknown method '{}': must be one of {}.".format(method,allowed_methods))
+
+    #Call agnostic hooks
+    #... None yet.
+    
+    #Call POST-specific hooks if POST:
     if method == self.POST:
       self.after_submit_file_cloud_upload(rec_id,profile_id) 
+
+    #Call PATCH-specific hooks if PATCH:
+    #... None yet.
     
   
     
@@ -485,7 +497,21 @@ class Connection():
         dict: The potentially modified payload that has been passed through all applicable
             pre-submit hooks.
     """
+    #Check allowed_methods. Will matter later when there are POST-specific 
+    # and PATCH-specific hooks.
+    allowed_methods = [self.POST,self.PATCH,""]
+    if not method in allowed_methods:
+      raise Exception("Unknown method '{}': must be one of {}.".format(method,allowed_methods))
+
+    #Call agnostic hooks
     payload = self.before_submit_attachment(payload)
+    
+    #Call POST-specific hooks if POST:
+    #... None yet.
+
+    #Call PATCH-specific hooks if PATCH:
+    #... None yet.
+
     return payload
      
         
@@ -539,9 +565,10 @@ class Connection():
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
+    response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
-    response_json = response.json()["@graph"][0]
+    #response_json = response.json()["@graph"][0]
+    response_json = response.json()
 
     if response.ok:
       self.debug_logger.debug("Success.")
@@ -619,7 +646,7 @@ class Connection():
          " {url} and this payload:\n\n{payload}\n\n").format(
              encode_id=encode_id,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
+    response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,
                               json=payload,verify=False)
     response_json = response.json()
 
@@ -794,7 +821,7 @@ class Connection():
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
                                  url=url,payload=euu.print_format_dict(payload)))
 
-      response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
+      response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
     else:
       httpMethod = "POST"
@@ -803,7 +830,7 @@ class Connection():
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
                filename=filename,url=url,payload=euu.print_format_dict(payload)))
-      response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=eu.REQUEST_HEADERS_JSON,
+      response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,
                                data=json.dumps(payload), verify=False)
 
     response_json = response.json()
@@ -843,10 +870,12 @@ class Connection():
     """
     self.debug_logger.debug("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
-           " https://{api_key}:{secret_key}@www.encodeproject.org/files/{file_id}/upload -d '{{}}' | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,file_id=file_id)
+           " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}' | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,host=self.dcc_host,file_id=file_id)
     self.debug_logger.debug("curl command: '{}'".format(cmd))
     popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout,stderr = popen.communicate()
+    stdout,stderr = popen.communicate() #each is a bytes object.
+    stdout = stdout.decode("utf-8")
+    stderr = stderr.decode("utf-8")
     retcode = popen.returncode
     if retcode:
       raise Exception(("Command {cmd} failed with return code {retcode}. stdout is {stdout} and"
@@ -887,7 +916,7 @@ class Connection():
     be downloaded and then pushed to the S3 bucket. 
 
     Args:
-        filepath: The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
+        file_path: The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
         upload_url: The AWS upload address (i.e. S3 bucket address).
 
     Raises: 
@@ -899,21 +928,22 @@ class Connection():
       msg = "Cannot upload file for {} since upload credentials could not be generated.".format(file_id)
       self.debug_logger.debug(msg)
       self.error_logger.error(msg)
-    cmd = "aws s3 cp {filepath} {upload_url}".format(filepath=filepath,upload_url=aws_creds["UPLOAD_URL"])
+      return
+    cmd = "aws s3 cp {file_path} {upload_url}".format(file_path=file_path,upload_url=aws_creds["UPLOAD_URL"])
     self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
     popen = subprocess.Popen(cmd,shell=True, env=os.environ.update(aws_creds),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate()
     retcode = popen.returncode
     if retcode:
       error_msg = "Failed to upload file for {}.".format(file_id)
-      debug_logger.debug(error_msg)
-      error_logger.error(error_msg)
+      self.debug_logger.debug(error_msg)
+      self.error_logger.error(error_msg)
       error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
                     " Stdout is '{stdout}'.  Stderr is {stderr}.").format(
                       cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
-      debug_logger.debug(error_msg)
-      raise FileUploadFailed(msg)
-    self.debug_logger("AWS upload successful.")
+      self.debug_logger.debug(error_msg)
+      raise FileUploadFailed(error_msg)
+    self.debug_logger.debug("AWS upload successful.")
       
 
   def get_platforms_on_experiment(self,rec_id):
@@ -949,7 +979,7 @@ class Connection():
             https://www.encodeproject.org/profiles/document.json. It appears that one should use 
             "data QA" for analysis results documents. 
         description - str. The description for the document.
-        document - str. Local filepath to the document to be submitted.
+        document - str. Local file path to the document to be submitted.
 
     Returns: 
         str: The DCC UUID of the new document. 
