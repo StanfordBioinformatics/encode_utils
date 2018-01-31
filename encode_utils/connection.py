@@ -933,13 +933,15 @@ class Connection():
     self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
     popen = subprocess.Popen(cmd,shell=True, env=os.environ.update(aws_creds),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate()
+    stdout = stdout.decode("utf-8")
+    stderr = stderr.decode("utf-8")
     retcode = popen.returncode
     if retcode:
-      error_msg = "Failed to upload file for {}.".format(file_id)
+      error_msg = "Failed to upload file '{}' for {}.".format(file_path,file_id)
       self.debug_logger.debug(error_msg)
       self.error_logger.error(error_msg)
       error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
-                    " Stdout is '{stdout}'.  Stderr is {stderr}.").format(
+                    " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
                       cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
       self.debug_logger.debug(error_msg)
       raise FileUploadFailed(error_msg)
