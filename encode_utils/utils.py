@@ -28,13 +28,14 @@ class UnknownProfile(Exception):
   """                                                                                                   
   pass
 
-def get_profile_ids():
+def get_profiles():
   """Creates a list of the profile IDs spanning all public profiles on the Portal.
 
-  The profile ID for a given profile is extracted from the 'id' key. The 'profiles' prefix
-  is stripped off, and the '.json' suffix is also removed. For example, the value of the 'id' 
-  property for the genetic modification profile is `/profiles/genetic_modification.json`. The
-  value that gets inserted into the list returned by this function is `genetic_modification`.
+  The profile ID for a given profile is extracted from the profile's `id` property, after a little
+  formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
+  For example, the value of the 'id' property for the genetic modification profile is 
+  `/profiles/genetic_modification.json`. The value that gets inserted into the list returned by 
+  this function is `genetic_modification`.
 
   Returns:
       list: list of profile IDs.
@@ -43,6 +44,21 @@ def get_profile_ids():
                           timeout=eu.TIMEOUT,
                           headers=REQUEST_HEADERS_JSON)
   profiles = profiles.json()
+  return profiles
+
+def get_profile_ids():
+  """Creates a list of the profile IDs spanning all public profiles on the Portal.
+
+  The profile ID for a given profile is extracted from the profile's `id` property, after a little
+  formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
+  For example, the value of the 'id' property for the genetic modification profile is 
+  `/profiles/genetic_modification.json`. The value that gets inserted into the list returned by 
+  this function is `genetic_modification`.
+
+  Returns:
+      list: list of profile IDs.
+  """
+  profiles = get_profiles()
   profile_ids = []
   for profile_name in profiles:
      if profile_name.startswith("_"):
@@ -53,20 +69,40 @@ def get_profile_ids():
      profile_ids.append(profile_id)
   return profile_ids
 
-
 class Profile:
   """
   Encapsulates knowledge about the existing profiles on the Portal and contains useful methods
   for working with a given profile.
    
-  The user supplies a profile name, typically the value of a record's `@id` attribute. It will be
+  The user supplies a profile name, typically the value of a record's `@id` property. It will be
   normalized to match the syntax of the profile IDs in the list returned by the function 
   `get_profile_ids()`.
   """
+  profiles = requests.get(eu.PROFILES_URL + "?format=json",
+                          timeout=eu.TIMEOUT,
+                          headers=REQUEST_HEADERS_JSON).json()
+  private_profile_names = [x for x in profiles if x.startswith("_")] #i.e. _subtypes.
+  for i in private_profile_names:
+    profiles.pop(i)
+  del private_profile_names
+
+  profile_ids = []
+  awardless_profile_ids = []
+  for profile_name in profiles:
+    profile = profiles[profile_name]
+    profile_id = profile["id"].split("/")[-1].split(".json")[0]
+    profile_ids.append(profile_id)
+    if eu.AWARD_PROP_NAME not in profile["properties"]:
+      awardless_profile_ids.append(profile_id)
  
   #: The list of the profile IDs spanning all public profiles on the Portal, as returned by
   #: `get_profile_ids()`.
-  PROFILE_IDS = get_profile_ids()
+  PROFILE_IDS = profile_ids
+  del profile_ids
+
+  #: List of profile IDs that don't have the 'award' and 'lab' properties. 
+  AWARDLESS_PROFILES = awardless_profile_ids
+  del awardless_profile_ids
 
   FILE_PROFILE_NAME = "file"
   try:
@@ -77,12 +113,12 @@ class Profile:
   def __init__(self,profile_id):
     """
     Args:
-        profile_id: str. Typically the value of a record's '@id' property.
+        profile_id: str. Typically the value of a record's `@id` property.
     """
 
-    #: The profile_id after it has become internally normalized to match the format used in
-    #: Profile.PROFILE_IDS.
-    self.profile_id = self.set_profile_id(profile_id)
+    #: The normalized version of the passed-in profile_id to the constructor. The normalization
+    #: is neccessary in order to match the format of the profile IDs in the list Profile.PROFILE_IDS.
+    self.profile_id = self._set_profile_id(profile_id)
 
   def _set_profile_id(self,profile_id):
     """
@@ -90,7 +126,7 @@ class Profile:
     Profile.PROFILE_IDS, and ensures that the normalized profile ID is a member of this list.
 
     Args: 
-        profile_id: str. Typeically the value of a record's '@id' property.
+        profile_id: str. Typeically the value of a record's `@id` property.
 
     Returns:
         str: The normalized profile ID.
@@ -101,9 +137,9 @@ class Profile:
     profile_id = profile_id.strip("/").split("/")[0].lower()
     #Multi-word profile names are hypen-separated, i.e. genetic-modifications.
     profile_id = profile_id.replace("-","")
-    if not profile_id in PROFILE_IDS:
+    if not profile_id in Profile.PROFILE_IDS:
       profile_id = profile_id.rstrip("s")
-      if not profile_id in PROFILE_IDS:
+      if not profile_id in Profile.PROFILE_IDS:
         raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
     return profile_id
 

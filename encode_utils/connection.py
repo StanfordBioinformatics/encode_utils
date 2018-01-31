@@ -102,8 +102,12 @@ class Connection():
   #: can specify in the 'aliases' attribute. 
   ENCODE_IDENTIFIER_KEY = "_enc_id"
 
-  #: Identifies the name of the key in the payload (dictionary) that stores
-  ENCODE_PROFILE_KEY = "_profile"
+  #: Identifies the name of the key in the payload (dictionary) that stores the ID of the profile
+  #: to submit to.
+  PROFILE_KEY = "_profile"
+
+  POST = "post"
+  PATCH = "patch"
 
   def __init__(self,dcc_mode):
     if dcc_mode not in self.DCC_MODES:
@@ -253,31 +257,27 @@ class Connection():
   def validate_profile_in_payload(self,payload):
     """
     Useful to call when doing a POST (and self.post() does call this). Ensures that the profile key
-    identified by self.ENCODE_PROFILE_KEY exists in the passed-in payload and that the value is 
+    identified by self.PROFILE_KEY exists in the passed-in payload and that the value is 
     a recognized ENCODE object profile (schema).
 
     Args:
         payload: dict. The intended object data to POST.
 
     Returns:
-        str: The name of the profile if all validations pass, otherwise.
+        str: The ID of the profile if all validations pass, otherwise.
 
     Raises:
-        encode_utils.connection.ProfileNotSpecified: The key self.ENCODE_PROFILE_KEY is missing in the payload.
+        encode_utils.connection.ProfileNotSpecified: The key self.PROFILE_KEY is missing in the payload.
         encode_utils.utils.UnknownProfile: The profile isn't recognized.
     """
 
-    #profile = encode_utls.utils.parse_profile_from_id_prop(payload)
-    profile = payload.get(self.ENCODE_PROFILE_KEY)
-    if not profile:
+    profile_id = payload.get(self.PROFILE_KEY)
+    if not profile_id:
       raise ProfileNotSpecified(
-        ("You need to specify the profile to submit to by using the '{}' key"
-         " in the payload.").format(self.ENCODE_PROFILE_KEY))
-    exists = euu.does_profile_exist(profile)
-    if not exists:
-      raise euu.UnknownDccProfile(
-          "Invalid profile '{}' specified in the payload's {} key.".format(profile,self.ENCODE_PROFILE_KEY))
-    return profile
+        ("You need to specify the ID of the profile to submit to by using the '{}' key"
+         " in the payload.").format(self.PROFILE_KEY))
+    profile = euu.Profile(profile_id) #raises euu.UnknownProfile if unknown profile ID.
+    return profile.profile_id
 
   def get_lookup_ids_from_payload(self,payload):
     """
@@ -395,7 +395,7 @@ class Connection():
     attachment["href"] = href
     return attachment
 
-  def after_submit_file_cloud_upload(self,rec_id,profile):
+  def after_submit_file_cloud_upload(self,rec_id,profile_id):
     """An after-POST submit hook for uploading files to AWS.
 
     Some objects, such as Files (file.json profile) need to have a corresponding file in the cloud.
@@ -405,30 +405,36 @@ class Connection():
 
     Args:
         rec_id: str. An identifier for the new File object on the Portal.
-        profile: str. The profile of the record 
+        profile_id: str. The ID of the profile that the record belongs to.
 
     Returns:
     """
+    if profile_id != euu.FILE_PROFILE_NAME:
+      return
     SUBMITTED_FILE_NAME_PROP = "submitted_file_name"
     rec = self.get(rec_ids=rec_id,ignore404=False)
-    profile = euu.parse_profile_from_id_prop(rec["@id"])
-    if profile != euu.FILE_PROFILE_NAME:
-      return
     if SUBMITTED_FILE_NAME_PROP in rec:
       filename = rec[SUBMITTED_FILE_NAME_PROP]
       if filename:
         self.upload_file(file_id=rec_id,file_path=filename)
     
-  def after_submit_hooks(self,rec_id,profile):
+  def after_submit_hooks(self,rec_id,profile_id,method=""):
     """
     Calls after-submission hooks for POST and PATH operations.
  
     Args:
         rec_id: str. An identifier for a record on the Portal.
-        profile: str. The profile the record belongs to.
-        
+        profile_id: str. The profile the record belongs to.
+        method: str. One of self.POST or self.PATCH, or the empty string to indicate which registered 
+            hooks to look through.
     """
+    allowed_methods = [self.POST,self.PATCH,""]
+    if not method in allowed_methods:
+      raise Exception("Unknown method '{}': must be one of {}.".format(method,allowed_methods))
+    if method == self.POST:
+      self.after_submit_file_cloud_upload(rec_id,profile_id) 
     
+  
     
 
   def before_submit_attachment(self,payload):
@@ -486,7 +492,7 @@ class Connection():
   def post(self,payload):
     """POST a record to the ENCODE Portal.
 
-    Requires that you include in the payload the non-schematic key self.ENCODE_PROFILE_KEY to
+    Requires that you include in the payload the non-schematic key self.PROFILE_KEY to
     designate the name of the ENCODE object profile that you are submitting against.
 
     If the 'lab' property isn't present in the payload, then the default will be set to the value
@@ -513,10 +519,10 @@ class Connection():
     self.debug_logger.debug("\nIN post().")
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json.loads(json.dumps(payload)) 
-    profile = self.validate_profile_in_payload(payload)
-    payload.pop(self.ENCODE_PROFILE_KEY)
-    url = os.path.join(self.dcc_url,profile)
-    if profile not in eu.AWARDLESS_PROFILES: #No lab prop for these profiles either.
+    profile_id = self.validate_profile_in_payload(payload)
+    payload.pop(self.PROFILE_KEY)
+    url = os.path.join(self.dcc_url,profile_id)
+    if profile_id not in euu.Profile.AWARDLESS_PROFILES: #No lab prop for these profiles either.
       if eu.AWARD_PROP_NAME not in payload:
         if not eu.AWARD:
           raise AwardPropertyMissing
@@ -546,7 +552,7 @@ class Connection():
         #Some objects don't have an accession, i.e. replicates.
         encid = response_json["uuid"]
       self._log_post(alias=alias,dcc_id=encid)
-      self.after_submit_hooks(encid,profile)
+      self.after_submit_hooks(encid,profile_id)
       return response_json
     elif response.status_code == requests.codes.CONFLICT:
       log_msg = "Will not post {} because it already exists.".format(alias)
@@ -620,8 +626,8 @@ class Connection():
     if response.ok:
       self.debug_logger.debug("Success.")
       uuid = response_json["uuid"]
-      profile = self.parse_profile_from_id_prop(response_json["@id"])
-      self.after_submit_hooks(uuid,profile)
+      profile = euu.Profile(response_json["@id"])
+      self.after_submit_hooks(uuid,profile.profile_id)
       return response_json
     elif response.status_code == requests.codes.FORBIDDEN:
       #Don't have permission to PATCH this object.

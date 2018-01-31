@@ -52,35 +52,21 @@ def typecast(value,value_type):
     return int(value)
   return value
 
-def create_payloads(profile,infile):
+def create_payloads(profile_id,infile):
   """
-  Function : Given a tab-delimited input file containing records belonging to one of the profiles listed on the ENCODE Portal 
-             (such as https://www.encodeproject.org/profiles/biosample.json), generates the payload that can be used to either 
-             register or patch the metadata for each row. This is a generator function. Note that all profiles are given at 
-             https://www.encodeproject.org/profiles/, and that the lower-case name of the profile should be used here. 
-  Args     : profile - The profile to submit to (lower-case). See details above.  
-             infile  - The tab-delimited input file with a field-header line as the first line. The field names must be exactly equal
-                       to the corresponding names in the profile given on the ENCODE Portal. For fields containing an array as the value,
-                       values within the array must be comma-delimited and should not themselves be wrapped in brackets. 
-  
-                       Non-scematic fields are allowed as long as they begin with a '#'. Such fields will be skipped. 
-                       Any lines after the header line that start with a '#' will be skipped, as well as any empty lines. 
+  Generates the payload for each row in 'infile'.
 
-                       When patching objects, you must specify the 'record_id' field to indicate the identifier of the record. 
-                       Note that this a special field that is not present in the ENCODE schema, and doesn't use the '#' prefix to mark it 
-                       as non-schematic. Here you can specify any valid record identifier (i.e. UUID, accession, alias). If this 
-                       special field is present, it will not be skipped. 
-
-
-                       Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set as fields in the
-                       input file, or can be left out, in which case the default values for these attributes will be pulled from the
-                       environment variables DCC_AWARD and DCC_LAB, respectively.
+  Args:
+      profile_id: str. The identifier for a profile on the Portal. For example, use 
+        genetic_modificaiton for the profile https://www.encodeproject.org/profiles/genetic_modification.json.
+      infile - str. Path to input file.
 
   Yields  : dict. The payload that can be used to either register or patch the metadata for each row.
   """
   STR_REGX = reg = re.compile(r'\'|"')
+  profile = euu.Profile(profile_id)
   #Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
-  schema_url, schema = euu.get_schema(profile)
+  schema_url, schema = profile.get_schema()
   schema_props = schema["properties"]
   schema_props.update({RECORD_ID_FIELD:1}) #Not an actual schema property.
   field_index = {}
@@ -104,7 +90,7 @@ def create_payloads(profile,infile):
     if not line or line[0].startswith("#"):
       continue
     payload = {}
-    payload[conn.ENCODE_PROFILE_KEY] = profile
+    payload[conn.PROFILE_KEY] = profile.profile_id
     fi_count = -1 
     for val in line:
       fi_count += 1
@@ -171,17 +157,17 @@ defined in the schema, simply use a single-key object containing 'path', i.e.
 """
   parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
 
-  parser.add_argument("-p","--profile",required=True,help="""
-The profile to submit to, i.e. put 'biosample' for 
-https://www.encodeproject.org/profiles/biosample.json. The profile will be pulled down for 
+  parser.add_argument("-p","--profile_id",required=True,help="""
+The ID of the profile to submit to, i.e. put 'genetic_modification' for 
+https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for 
 type-checking in order to type-cast any values in the input file to the proper type (i.e. some 
 values need to be submitted as integers, not strings).""")
 
   parser.add_argument("-i","--infile",help="""
 The tab-delimited input file with a field-header line as the first line. The field names must be 
-exactly equal to the corresponding property names in the specified profile. Non-scematic fields 
+exactly equal to the corresponding property names in the corresponding profile. Non-scematic fields 
 are allowed as long as they begin with a '#'. Such fields will be skipped. If a property has an 
-array value (as indicated in the profile documentation on the Portal), the array literals 
+array value (as indicated in the profile's documentation on the Portal), the array literals 
 '[' and ']' are optional. Values within the array must be comma-delimited. For example, if a 
 property takes an array of strings, then you can use either of these as the value:
 
@@ -222,7 +208,7 @@ to patch. The default action is to extend the array value with the patch value a
 any duplicates.""")
 
   args = parser.parse_args()
-  profile = args.profile
+  profile_id = args.profile_id
   dcc_mode = args.dcc_mode
   error_if_not_found = args.error_if_not_found
   overwrite_array_values = args.overwrite_array_values
@@ -231,7 +217,7 @@ any duplicates.""")
 
   infile = args.infile
   patch = args.patch
-  gen = create_payloads(profile=profile,infile=infile)
+  gen = create_payloads(profile_id=profile_id,infile=infile)
   for payload in gen:
     if not patch:
       conn.post(payload)

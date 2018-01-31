@@ -15,21 +15,12 @@ import json
 #see to it that only upper-case vars get exported
 package_path = __path__[0]
 
-#: THE ENCODE Portal URL that contains all the profiles (schemas).                                     
-PROFILES_URL = "https://www.encodeproject.org/profiles/"
-
-#: The timeout in seconds when making HTTP requests via the 'requests' module.                         
-TIMEOUT = 20 
-
 #: Define constants for a few properties that are common to all ENCODE profiles:
 #: The award property name that is common to all ENCODE Portal object profiles.
 AWARD_PROP_NAME = "award"
 
 #: The lab property name that is common to all ENCODE Portal object profiles.
 LAB_PROP_NAME = "lab"
-
-#: List of profiles that we track which doesn't  have the 'award' and 'lab' properties.
-AWARDLESS_PROFILES = ["replicate"] #these profiles don't have the 'award' and 'lab' properties.
 
 #: dict. Stores the 'lab' property to the value of the environment variable DCC_LAB to act as 
 #: the default lab when submitting an object to the Portal. 
@@ -53,11 +44,18 @@ if LAB:
 #: dict. Stores the 'award' property to the value of the environment variable DCC_AWARD to act as 
 #: the default award when submiting an object to the Portal.
 #: encode_utils.connection.Connection.post() will use this default if this property doesn't appear
-#: in the payload, and the profile at hand isn't a member of the list AWARDLESS_PROFILES.
+#: in the payload, and the profile at hand isn't a member of the list 
+#: `encode_utils.utils.Profile.AWARDLESS_PROFILES`.
 AWARD = {}
 try:
   AWARD = {AWARD_PROP_NAME: os.environ["DCC_AWARD"]}
 except KeyError:
   pass
+
+#: THE ENCODE Portal URL that contains all the profiles (schemas).                                     
+PROFILES_URL = "https://www.encodeproject.org/profiles/"
+
+#: The timeout in seconds when making HTTP requests via the 'requests' module.                         
+TIMEOUT = 20 
 
 del package_path

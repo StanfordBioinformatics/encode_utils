@@ -77,9 +77,9 @@ for lib_id in dico:
 	line.append(dcc_uuid)
 	log_fh.write("\t".join(line) + "\n")
 	#link document to library
-	conn.linkDocument(rec_profile="library",rec_id=lib_id,dcc_document_uuid=dcc_uuid)
+	conn.link_document(rec_id=lib_id,dcc_document_uuid=dcc_uuid)
 log_fh.close()
 
 print("Linking RSEM analysis and plotting protocol document to each experiment")
 for exp in exp_encids:
-	conn.link_document(rec_profile="experiment",rec_id=exp,dcc_document_uuid=protocol_uuid)
+	conn.link_document(rec_id=exp,dcc_document_uuid=protocol_uuid)
