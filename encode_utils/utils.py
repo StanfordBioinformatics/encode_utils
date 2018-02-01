@@ -93,11 +93,20 @@ class Profile:
   normalized to match the syntax of the profile IDs in the list returned by the function
   `get_profile_ids()`.
   """
-  profiles = get_profiles()
+  #: Howdy
+  PROFILES = requests.get(eu.PROFILES_URL + "?format=json",
+                          timeout=eu.TIMEOUT,
+                          headers=REQUEST_HEADERS_JSON).json()
+  #Remove the "private" profiles, since thiese have differing semantics.
+  private_profiles = [x for x in PROFILES if x.startswith("_")] #i.e. _subtypes
+  for i in private_profiles:
+    PROFILES.pop(i)
+  del private_profiles
+
   profile_ids = []
   awardless_profile_ids = []
-  for profile_name in profiles:
-    profile = profiles[profile_name]
+  for name in PROFILES:
+    profile = PROFILES[name]
     profile_id = profile["id"].split("/")[-1].split(".json")[0]
     profile_ids.append(profile_id)
     if eu.AWARD_PROP_NAME not in profile["properties"]:
