@@ -212,7 +212,11 @@ class Connection():
     query = urllib.parse.urlencode(search_args)
     url = os.path.join(eu.DCC_URL,"search/?",query)
     DEBUG_LOGGER.debug("Searching DCC with query {url}.".format(url=url))
-    response = requests.get(url,auth=self.auth,timeout=en.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,verify=False)
+    response = requests.get(url,
+                            auth=self.auth,
+                            timeout=en.TIMEOUT,
+                            headers=euu.REQUEST_HEADERS_JSON,
+                            verify=False)
     if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
@@ -323,7 +327,11 @@ class Connection():
         url += "&frame={frame}".format(frame=frame)
       DEBUG_LOGGER.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
           rec_id=r,url=url))
-      response = requests.get(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
+      response = requests.get(url,
+                              auth=self.auth,
+                              timeout=eu.TIMEOUT,
+                              headers=euu.REQUEST_HEADERS_JSON,
+                              verify=False)
       if response.ok:
         return response.json()
       status_codes[response.status_code] = r
@@ -339,7 +347,9 @@ class Connection():
     response.raise_for_status()
 
   def set_attachment(self,document):
-    """Sets the attachment property for any profile that supports it, such as document or antibody_characterization.
+    """
+    Sets the attachment property for any profile that supports it, such as document or 
+    antibody_characterization.
 
     Args:
         document: str. A local file path.
@@ -389,8 +399,8 @@ class Connection():
     Args:
         rec_id: str. An identifier for a record on the Portal.
         profile_id: str. The profile the record belongs to.
-        method: str. One of self.POST or self.PATCH, or the empty string to indicate which registered
-            hooks to look through.
+        method: str. One of self.POST or self.PATCH, or the empty string to indicate which 
+            registered hooks to look through.
     """
     #Check allowed_methods. Will matter later when there are POST-specific
     # and PATCH-specific hooks.
@@ -412,16 +422,18 @@ class Connection():
 
 
   def before_submit_attachment(self,payload):
-    """A POST and PATCH pre-submit hook used to simplify the creation of an attachment in profiles that support it.
+    """
+    A POST and PATCH pre-submit hook used to simplify the creation of an attachment in profiles 
+    that support it.
 
-    Checks the payload for the presence of the 'attachment' property that is used by certain profiles, i.e.
-    document and antibody_characterization, and then checks to see if a particular shortcut is
-    being employed to indicate the attachment. That shortcut works as follows: If the dictionary value
-    of the 'attachment' key has a key named 'path' in it (case-sensitive), then the value
-    is taken to be the path to a local file. Then, the actual attachment object is constructed,
-    as defined in the document profile, by calling self.set_attachment(). Note that this shortcut
-    is particular to this `Connection` class, and when used the 'path' key should be the only key
-    in the attachment dictionary as any others would be ignored.
+    Checks the payload for the presence of the 'attachment' property that is used by certain 
+    profiles, i.e. document and antibody_characterization, and then checks to see if a particular
+    shortcut is being employed to indicate the attachment. That shortcut works as follows: If the 
+    dictionary value of the 'attachment' key has a key named 'path' in it (case-sensitive), then 
+    the value is taken to be the path to a local file. Then, the actual attachment object is 
+    constructed, as defined in the document profile, by calling self.set_attachment(). Note that 
+    this shortcut is particular to this `Connection` class, and when used the 'path' key should be 
+    the only key in the attachment dictionary as any others would be ignored.
 
     Args:
         payload: dict. The payload to submit to the Portal.
@@ -527,7 +539,10 @@ class Connection():
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
 
-    response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,
+    response = requests.post(url,
+                             auth=self.auth,
+                             timeout=eu.TIMEOUT,
+                             headers=euu.REQUEST_HEADERS_JSON,
                              json=payload, verify=False)
     #response_json = response.json()["@graph"][0]
     response_json = response.json()
@@ -692,7 +707,8 @@ class Connection():
       file_json = self.get(ignore404=False,rec_ids=i)
       if file_json["file_type"] != "fastq":
         continue #this is not a file object for a FASTQ file.
-      brn,trn = file_json["replicate"]["biological_replicate_number"], file_json["replicate"]["technical_replicate_number"]
+      brn = file_json["replicate"]["biological_replicate_number"]
+      trn = file_json["replicate"]["technical_replicate_number"]
       read_num = file_json["paired_end"] #string
       if brn not in dico:
         dico[brn] = {}
@@ -783,7 +799,10 @@ class Connection():
            "\n{payload}").format(filename=filename,alias=alias,encff_id=encff_id,
                                  url=url,payload=euu.print_format_dict(payload)))
 
-      response = requests.patch(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,
+      response = requests.patch(url,
+                                auth=self.auth,
+                                timeout=eu.TIMEOUT,
+                                headers=euu.REQUEST_HEADERS_JSON,
                                 data=json.dumps(payload),verify=False)
     else:
       httpMethod = "POST"
@@ -792,8 +811,12 @@ class Connection():
           ("<<<<<<Attempting to POST file {filename} metadata for replicate to"
            " DCC with URL {url} and this payload:\n{payload}").format(
                filename=filename,url=url,payload=euu.print_format_dict(payload)))
-      response = requests.post(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON,
-                               data=json.dumps(payload), verify=False)
+      response = requests.post(url,
+                               auth=self.auth,
+                               timeout=eu.TIMEOUT,
+                               headers=euu.REQUEST_HEADERS_JSON,
+                               data=json.dumps(payload),
+                               verify=False)
 
     response_json = response.json()
     DEBUG_LOGGER.debug(
@@ -832,7 +855,8 @@ class Connection():
     """
     DEBUG_LOGGER.debug("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
-           " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}' | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,host=eu.DCC_HOST,file_id=file_id)
+           " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
+           " | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,host=eu.DCC_HOST,file_id=file_id)
     DEBUG_LOGGER.debug("curl command: '{}'".format(cmd))
     popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate() #each is a bytes object.
@@ -871,7 +895,7 @@ class Connection():
     return response["@graph"][0]["upload_credentials"]
 
   def upload_file(self,file_id,file_path):
-    """Uses the AWS CLI to upload a local file or S3 object to the Portal for the indicated file object.
+    """Uses AWS CLI to upload a local file or S3 object to the Portal for the indicated file object.
 
     Unfortunately, it doesn't appear that pulling a file into S3 is supported through the AWS API;
     only existing S3 objects or local files can be copied to a S3 bucket. External files must first
@@ -893,7 +917,11 @@ class Connection():
       return
     cmd = "aws s3 cp {file_path} {upload_url}".format(file_path=file_path,upload_url=aws_creds["UPLOAD_URL"])
     DEBUG_LOGGER.debug("Running command {cmd}.".format(cmd=cmd))
-    popen = subprocess.Popen(cmd,shell=True, env=os.environ.update(aws_creds),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    popen = subprocess.Popen(cmd,
+                             shell=True,
+                             env=os.environ.update(aws_creds),
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate()
     stdout = stdout.decode("utf-8")
     stderr = stderr.decode("utf-8")
