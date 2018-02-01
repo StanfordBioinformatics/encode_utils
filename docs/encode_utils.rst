@@ -5,4 +5,3 @@ encode\_utils
    :members:
    :private-members:
    :undoc-members:
-   :show-inheritance:
