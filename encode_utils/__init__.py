@@ -92,9 +92,9 @@ def get_logfile_name(log_level):
   return filename
 
 #: The name of the debug logging instance.
-DEBUG_LOGGER_NAME="debug"
+DEBUG_LOGGER_NAME = "debug"
 #: The name of the error logging instance.
-ERROR_LOGGER_NAME="error"
+ERROR_LOGGER_NAME = "error"
 
 def _create_debug_logger():
   """

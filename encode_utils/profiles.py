@@ -16,6 +16,7 @@ import os
 import requests
 
 import encode_utils as eu
+import encode_utils.utils as euu
 
 
 #: A descendent logger of the debug logger created in `encode_utils`
@@ -40,13 +41,13 @@ def get_profiles():
   """
   profiles = requests.get(eu.PROFILES_URL + "?format=json",
                           timeout=eu.TIMEOUT,
-                          headers=REQUEST_HEADERS_JSON).json()
+                          headers=euu.REQUEST_HEADERS_JSON).json()
   #Remove the "private" profiles, since thiese have differing semantics.
   private_profiles = [x for x in profiles if x.startswith("_")] #i.e. _subtypes
   for i in private_profiles:
     profiles.pop(i)
 
-  profile_id_hash = [] #Instead of name as key, profile ID is key.
+  profile_id_hash = {} #Instead of name as key, profile ID is key.
   for name in profiles: #i.e. name=GeneticModification
     profile_id = profiles[name]["id"].split("/")[-1].split(".json")[0]
     profile_id_hash[profile_id] = profiles[name]
@@ -73,7 +74,7 @@ class Profile:
   AWARDLESS_PROFILE_IDS = []
   for profile_id in _PROFILES:
     if eu.AWARD_PROP_NAME not in _PROFILES[profile_id]["properties"]:
-      awardless_profile_ids.append(profile_id)
+      AWARDLESS_PROFILE_IDS.append(profile_id)
 
   FILE_PROFILE_ID = "file"
   try:
@@ -83,9 +84,9 @@ class Profile:
 
   SUBMITTED_FILE_NAME_PROP = "submitted_file_name"
   try:
-    assert(SUBMITTED_FILE_NAME_PROP) in _PROFILES[FILE_PROFILE_ID])
+    assert(SUBMITTED_FILE_NAME_PROP in _PROFILES[FILE_PROFILE_ID]["properties"])
   except AssertionError:
-    raise Exception("Error: The profile for file.json no longer includes the property {}.".format(FILE_PROFILE_NAME))
+    raise Exception("Error: The profile for file.json no longer includes the property {}.".format(FILE_PROFILE_ID))
 
   def __init__(self,profile_id):
     """
