@@ -67,12 +67,11 @@ DCC_MODES = {
 
 #: Indicates the mode of the Portal to use, being either prod or dev, which in turn determines
 #: which host to make HTTP requests to.
-DCC_MODE = ""
+DCC_MODE = DCC_DEV_MODE
 try:
   DCC_MODE = os.environ["DCC_MODE"]
 except KeyError:
-  print("Error: You must set the DCC_MODE environment variable to either {} or {} to indicate which Portal instance to use in HTTP requests.".format(DCC_DEV_MODE,DCC_PROD_MODE))
-  sys.exit(1) 
+  pass
 
 try:
   assert(DCC_MODE in DCC_MODES)
