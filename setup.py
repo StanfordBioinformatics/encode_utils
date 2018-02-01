@@ -1,5 +1,8 @@
 
-#https://docs.python.org/2/distutils/setupscript.html
+# For some usefule documentation, see
+# https://docs.python.org/2/distutils/setupscript.html.
+# This page is useful for dependencies: 
+# http://python-packaging.readthedocs.io/en/latest/dependencies.html.
 
 from distutils.core import setup
 

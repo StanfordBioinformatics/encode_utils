@@ -52,7 +52,7 @@ def calculate_md5sum(file_path):
       MD5SumError: There was a non-zero exit status from the md5sum command.
   """
   cmd = "md5sum {}".format(file_path)
-  self.debug_logger.debug("Calculating md5sum for '{}' with command '{}'.".format(file_path,cmd))
+  DEBUG_LOGGER.debug("Calculating md5sum for '{}' with command '{}'.".format(file_path,cmd))
   popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   stdout,stderr = popen.communicate()
   stdout = stdout.decode("utf-8")
@@ -60,14 +60,14 @@ def calculate_md5sum(file_path):
   retcode = popen.returncode
   if retcode:
     error_msg = "Failed to calculate md5sum for file '{}'.".format(file_path)
-    self.debug_logger.debug(error_msg)
-    self.error_logger.error(error_msg)
+    DEBUG_LOGGER.debug(error_msg)
+    ERROR_LOGGER.error(error_msg)
     error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
                   " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
                     cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
-    self.debug_logger.debug(error_msg)
+    DEBUG_LOGGER.debug(error_msg)
     raise MD5SumError(error_msg)
-  self.debug_logger.debug(stdout)
+  DEBUG_LOGGER.debug(stdout)
   return stdout
 
 def get_profiles():
