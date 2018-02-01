@@ -11,6 +11,7 @@ Contains utilities that don't require authorization on the DCC servers.
 """
 
 import json
+import logging
 import os
 import requests
 import subprocess
@@ -21,6 +22,12 @@ import encode_utils as eu
 
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
+#: A descendent logger of the debug logger created in `encode_utils`                                    
+#: (see the function description for `encode_utils.create_debug_logger`)                                
+DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)                                 
+#: A descendent logger of the error logger created in `encode_utils`                                    
+#: (see the function description for `encode_utils.create_error_logger`)                                
+ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)  
 
 class MD5SumError(Exception):                                                                           
   """Raised when there is a non-zero exit status from the md5sum utility from GNU coreutils.            
