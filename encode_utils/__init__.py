@@ -146,7 +146,5 @@ def _create_error_logger():
 #: is opened in append mode in the calling directory.
 #_create_error_logger()
 
-del _create_debug_logger
-del _create_error_logger
 del get_logfile_name
 del package_path
