@@ -33,12 +33,6 @@ class MD5SumError(Exception):
   """Raised when there is a non-zero exit status from the md5sum utility from GNU coreutils.
   """
 
-class UnknownProfile(Exception):
-  """
-  Raised when the profile in question doesn't match any valid profile name present in
-  """
-  pass
-
 def calculate_md5sum(file_path):
   """"Calculates the md5sum for a file using the md5sum utility from GNU coreutils.
 
@@ -69,116 +63,6 @@ def calculate_md5sum(file_path):
     raise MD5SumError(error_msg)
   DEBUG_LOGGER.debug(stdout)
   return stdout
-
-def get_profiles():
-  """Creates a list of all public profiles on the Portal.
-
-  Returns:
-      list: list of dicts (profiles).
-  """
-  profiles = requests.get(eu.PROFILES_URL + "?format=json",
-                          timeout=eu.TIMEOUT,
-                          headers=REQUEST_HEADERS_JSON).json()
-  private_profiles = [x for x in profiles if x.startswith("_")] #i.e. _subtypes
-  for i in private_profiles:
-    profiles.pop(i)
-  return profiles
-
-class Profile:
-  """
-  Encapsulates knowledge about the existing profiles on the Portal and contains useful methods
-  for working with a given profile.
-
-  The user supplies a profile name, typically the value of a record's `@id` property. It will be
-  normalized to match the syntax of the profile IDs in the list returned by the function
-  `get_profile_ids()`.
-  """
-  #: Howdy
-  PROFILES = requests.get(eu.PROFILES_URL + "?format=json",
-                          timeout=eu.TIMEOUT,
-                          headers=REQUEST_HEADERS_JSON).json()
-  #Remove the "private" profiles, since thiese have differing semantics.
-  private_profiles = [x for x in PROFILES if x.startswith("_")] #i.e. _subtypes
-  for i in private_profiles:
-    PROFILES.pop(i)
-  del private_profiles
-
-  profile_ids = []
-  awardless_profile_ids = []
-  for name in PROFILES:
-    profile = PROFILES[name]
-    profile_id = profile["id"].split("/")[-1].split(".json")[0]
-    profile_ids.append(profile_id)
-    if eu.AWARD_PROP_NAME not in profile["properties"]:
-      awardless_profile_ids.append(profile_id)
-
-  #: The list of the profile IDs spanning all public profiles on the Portal.
-  #: Each profile ID is extracted from the profile's `id` property, after a little
-  #: formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
-  #: For example, the value of the 'id' property for the genetic_modification profile is
-  #: `/profiles/genetic_modification.json`. The value that gets inserted into the list returned by
-  #: this function is `genetic_modification`.
-  PROFILE_IDS = profile_ids
-  del profile_ids
-
-  #: List of profile IDs that don't have the 'award' and 'lab' properties.
-  AWARDLESS_PROFILES = awardless_profile_ids
-  del awardless_profile_ids
-
-  FILE_PROFILE_NAME = "file"
-  try:
-    assert(FILE_PROFILE_NAME in PROFILE_IDS)
-  except AssertionError:
-    print("WARNING: The profile for file.json has underwent a name change apparently and is no longer known to this package.")
-
-  def __init__(self,profile_id):
-    """
-    Args:
-        profile_id: str. Typically the value of a record's `@id` property.
-    """
-
-    #: The normalized version of the passed-in profile_id to the constructor. The normalization
-    #: is neccessary in order to match the format of the profile IDs in the list Profile.PROFILE_IDS.
-    self.profile_id = self._set_profile_id(profile_id)
-
-  def _set_profile_id(self,profile_id):
-    """
-    Normalizes profile_id so that it matches the format of the profile IDs in the list
-    Profile.PROFILE_IDS, and ensures that the normalized profile ID is a member of this list.
-
-    Args:
-        profile_id: str. Typeically the value of a record's `@id` property.
-
-    Returns:
-        str: The normalized profile ID.
-    Raises:
-        UnknownProfile: The normalized profile ID is not a member of the list Profile.PROFILE_IDS.
-    """
-    orig_profile = profile_id
-    profile_id = profile_id.strip("/").split("/")[0].lower()
-    #Multi-word profile names are hypen-separated, i.e. genetic-modifications.
-    profile_id = profile_id.replace("-","")
-    if not profile_id in Profile.PROFILE_IDS:
-      profile_id = profile_id.rstrip("s")
-      if not profile_id in Profile.PROFILE_IDS:
-        raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
-    return profile_id
-
-  def get_schema(self):
-    """Retrieves the JSON schema of the profile from the Portal.
-
-    Returns:
-        tuple: Two-item tuple where the first item is the URL used to fetch the schema, and the
-            second item is a dict representing the profile's JSON schema.
-
-    Raises:
-        requests.exceptions.HTTPError: The status code is not okay.
-    """
-    url = os.path.join(eu.PROFILES_URL,self.profile_id + ".json?format=json")
-    res = requests.get(url,headers=REQUEST_HEADERS_JSON,timeout=eu.TIMEOUT)
-    res.raise_for_status()
-    return url, res.json()
-
 
 def print_format_dict(dico,indent=2):
   """Formats a dictionary for printing purposes to ease visual inspection.

@@ -24,6 +24,7 @@ import urllib3
 
 #inhouse libraries
 import encode_utils as eu
+import encode_utils.profiles as eup
 import encode_utils.utils as euu
 
 
@@ -236,7 +237,8 @@ class Connection():
 
     Raises:
         encode_utils.connection.ProfileNotSpecified: The key self.PROFILE_KEY is missing in the payload.
-        encode_utils.utils.UnknownProfile: The profile isn't recognized.
+        encode_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
+            `encode_utils.profiles.Profile`.
     """
 
     profile_id = payload.get(self.PROFILE_KEY)
@@ -244,7 +246,7 @@ class Connection():
       raise ProfileNotSpecified(
         ("You need to specify the ID of the profile to submit to by using the '{}' key"
          " in the payload.").format(self.PROFILE_KEY))
-    profile = euu.Profile(profile_id) #raises euu.UnknownProfile if unknown profile ID.
+    profile = eup.Profile(profile_id) #raises euu.UnknownProfile if unknown profile ID.
     return profile.profile_id
 
   def get_lookup_ids_from_payload(self,payload):
@@ -383,12 +385,11 @@ class Connection():
 
     Returns:
     """
-    if profile_id != euu.Profile.FILE_PROFILE_NAME:
+    if profile_id != eup.Profile.FILE_PROFILE_ID:
       return
-    submitted_file_name_prop = "submitted_file_name"
     rec = self.get(rec_ids=rec_id,ignore404=False)
-    if submitted_file_name_prop in rec:
-      filename = rec[SUBMITTED_FILE_NAME_PROP]
+    if eup.Profile.SUBMITTED_FILE_NAME_PROP in rec:
+      filename = rec[eup.Profile.SUBMITTED_FILE_NAME_PROP]
       if filename:
         self.upload_file(file_id=rec_id,file_path=filename)
 
@@ -417,9 +418,6 @@ class Connection():
 
     #Call PATCH-specific hooks if PATCH:
     #... None yet.
-
-
-
 
   def before_submit_attachment(self,payload):
     """
@@ -452,6 +450,29 @@ class Connection():
         payload[attachment_prop] = attachment
     return payload
 
+  def before_post_file(self,payload):
+    """
+    Args:
+        payload: dict. The payload to submit to the Portal.
+
+    Returns:
+        dict: The payload to submit to the Portal.
+
+    Raises:
+        encode_utils.utils.MD5SumError: Perculated through the function 
+          `encode_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
+    """
+    profile_id = payload[self.PROFILE_KEY]
+    if profile_id != eup.Profile.FILE_PROFILE_ID:
+      return payload
+    try:
+      file_name = payload[eup.Profile.SUBMITTED_FILE_NAME_PROP]
+    except KeyError:
+      return payload
+    md5sum = euu.calculate_md5sum(file_name)
+    payload["md5sum"] = md5sum
+    return payload
+
 
   def before_submit_hooks(self,payload,method=""):
     """Calls before-submission hooks for POST and PATCH operations.
@@ -481,7 +502,8 @@ class Connection():
     payload = self.before_submit_attachment(payload)
 
     #Call POST-specific hooks if POST:
-    #... None yet.
+    if method == self.POST:
+      payload = self.before_post_file(payload)
 
     #Call PATCH-specific hooks if PATCH:
     #... None yet.
@@ -520,9 +542,8 @@ class Connection():
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json.loads(json.dumps(payload))
     profile_id = self.validate_profile_in_payload(payload)
-    payload.pop(self.PROFILE_KEY)
     url = os.path.join(eu.DCC_URL,profile_id)
-    if profile_id not in euu.Profile.AWARDLESS_PROFILES: #No lab prop for these profiles either.
+    if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS: #No lab prop for these profiles either.
       if eu.AWARD_PROP_NAME not in payload:
         if not eu.AWARD:
           raise AwardPropertyMissing
@@ -534,6 +555,7 @@ class Connection():
     alias = payload["aliases"][0]
 
     payload = self.before_submit_hooks(payload)
+    payload.pop(self.PROFILE_KEY)
 
     DEBUG_LOGGER.debug(
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
@@ -630,7 +652,7 @@ class Connection():
     if response.ok:
       DEBUG_LOGGER.debug("Success.")
       uuid = response_json["uuid"]
-      profile = euu.Profile(response_json["@id"])
+      profile = eup.Profile(response_json["@id"])
       self.after_submit_hooks(uuid,profile.profile_id)
       return response_json
     elif response.status_code == requests.codes.FORBIDDEN:

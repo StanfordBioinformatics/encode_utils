@@ -16,6 +16,7 @@ import re
 import encode_utils.utils as euu
 import encode_utils.connection as euc
 from encode_utils.parent_argparser import dcc_login_parser
+import encode_utils.profiles as eup
 
 
 #: RECORD_ID_FIELD is a special field that won't be skipped in the create_payload() function.
@@ -64,9 +65,9 @@ def create_payloads(profile_id,infile):
   Yields  : dict. The payload that can be used to either register or patch the metadata for each row.
   """
   STR_REGX = reg = re.compile(r'\'|"')
-  profile = euu.Profile(profile_id)
+  profile = eup.Profile(profile_id)
   #Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
-  schema_url, schema = profile.get_schema()
+  schema = profile.get_profile()
   schema_props = schema["properties"]
   schema_props.update({RECORD_ID_FIELD:1}) #Not an actual schema property.
   field_index = {}
@@ -80,7 +81,7 @@ def create_payloads(profile_id,infile):
       skip_field_indices.append(fi_count)
       continue
     if field not in schema_props:
-      raise Exception("Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(field,schema_url.split("?")[0]))  
+      raise Exception("Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(field,profile.profile_id)  
     field_index[fi_count] = field
 
   line_count = 1 #already read header line
