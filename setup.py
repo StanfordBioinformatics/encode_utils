@@ -14,9 +14,11 @@ setup(
   author_email = "nathankw@stanford.edu",
   url = "https://github.com/StanfordBioinformatics/encode_utils/wiki",
   packages = ["encode_utils"],
-  install_requires = ["awscli",
-                      "requests",
-                      "urllib3"],
+  install_requires = [
+    "awscli",
+    "requests",
+    "urlib",
+    "urllib3"],
   scripts = ["encode_utils/MetaDataRegistration/eu_register.py"],
   package_data = {"encode_utils": ["conf_data.json"]}
 )
