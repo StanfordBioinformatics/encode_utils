@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-ENCODE Utils package                                                                                   
-======================================== 
+ENCODE Utils package
+========================================
 
 .. toctree::
    :maxdepth: 3
@@ -13,7 +13,7 @@ ENCODE Utils package
    encode_utils
    utils
    connection
-   
+
 
 Indices and tables
 ==================
