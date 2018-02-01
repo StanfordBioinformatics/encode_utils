@@ -139,12 +139,12 @@ def _create_error_logger():
 #: Both handlers log all messages sent to them.
 #: The file handler writes to a file named ${dcc_mode}_debug.txt, which is
 #: opened in append mode in the calling directory.
-_create_debug_logger()
+#_create_debug_logger()
 
 #: A logging instance with an error file handler.
 #: Messages >= logging.ERROR are logged to a file by the name of ${dcc_mode}_error.txt, which
 #: is opened in append mode in the calling directory.
-_create_error_logger()
+#_create_error_logger()
 
 del _create_debug_logger
 del _create_error_logger
