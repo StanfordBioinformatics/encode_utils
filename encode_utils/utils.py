@@ -71,45 +71,18 @@ def calculate_md5sum(file_path):
   return stdout
 
 def get_profiles():
-  """Creates a list of the profile IDs spanning all public profiles on the Portal.
-
-  The profile ID for a given profile is extracted from the profile's `id` property, after a little
-  formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
-  For example, the value of the 'id' property for the genetic modification profile is
-  `/profiles/genetic_modification.json`. The value that gets inserted into the list returned by
-  this function is `genetic_modification`.
+  """Creates a list of all public profiles on the Portal.
 
   Returns:
-      list: list of profile IDs.
+      list: list of dicts (profiles).
   """
   profiles = requests.get(eu.PROFILES_URL + "?format=json",
                           timeout=eu.TIMEOUT,
-                          headers=REQUEST_HEADERS_JSON)
-  profiles = profiles.json()
+                          headers=REQUEST_HEADERS_JSON).json()
+  private_profiles = [x for x in profiles if x.startswith("_")] #i.e. _subtypes
+  for i in private_profiles:
+    profiles.pop(i)
   return profiles
-
-def get_profile_ids():
-  """Creates a list of the profile IDs spanning all public profiles on the Portal.
-
-  The profile ID for a given profile is extracted from the profile's `id` property, after a little
-  formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
-  For example, the value of the 'id' property for the genetic modification profile is
-  `/profiles/genetic_modification.json`. The value that gets inserted into the list returned by
-  this function is `genetic_modification`.
-
-  Returns:
-      list: list of profile IDs.
-  """
-  profiles = get_profiles()
-  profile_ids = []
-  for profile_name in profiles:
-     if profile_name.startswith("_"):
-       #i.e. _subtypes
-       continue
-     print(profile_name)
-     profile_id = profiles[profile_name]["id"].split("/")[-1].split(".json")[0]
-     profile_ids.append(profile_id)
-  return profile_ids
 
 class Profile:
   """
@@ -120,14 +93,7 @@ class Profile:
   normalized to match the syntax of the profile IDs in the list returned by the function
   `get_profile_ids()`.
   """
-  profiles = requests.get(eu.PROFILES_URL + "?format=json",
-                          timeout=eu.TIMEOUT,
-                          headers=REQUEST_HEADERS_JSON).json()
-  private_profile_names = [x for x in profiles if x.startswith("_")] #i.e. _subtypes.
-  for i in private_profile_names:
-    profiles.pop(i)
-  del private_profile_names
-
+  profiles = get_profiles()
   profile_ids = []
   awardless_profile_ids = []
   for profile_name in profiles:
@@ -137,8 +103,12 @@ class Profile:
     if eu.AWARD_PROP_NAME not in profile["properties"]:
       awardless_profile_ids.append(profile_id)
 
-  #: The list of the profile IDs spanning all public profiles on the Portal, as returned by
-  #: `get_profile_ids()`.
+  #: The list of the profile IDs spanning all public profiles on the Portal.
+  #: Each profile ID is extracted from the profile's `id` property, after a little
+  #: formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
+  #: For example, the value of the 'id' property for the genetic_modification profile is
+  #: `/profiles/genetic_modification.json`. The value that gets inserted into the list returned by
+  #: this function is `genetic_modification`.
   PROFILE_IDS = profile_ids
   del profile_ids
 
