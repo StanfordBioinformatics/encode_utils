@@ -32,10 +32,10 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 #urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 #: A descendent logger of the debug logger created in `encode_utils`
-#: (see the function description for `encode_utils.create_debug_logger`)
+#: (see the function description for `encode_utils._create_debug_logger`)
 DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
 #: A descendent logger of the error logger created in `encode_utils`
-#: (see the function description for `encode_utils.create_error_logger`)
+#: (see the function description for `encode_utils._create_error_logger`)
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
 
 class AwardPropertyMissing(Exception):
@@ -146,7 +146,7 @@ class Connection():
     DCC_SECRET_KEY.
 
     Returns:
-        Tuple containing the (API Key, Secret Key)
+        `tuple`: Two item tuple containing the API Key and the Secret Key
     """
     api_key = os.environ["DCC_API_KEY"]
     secret_key = os.environ["DCC_SECRET_KEY"]
@@ -167,11 +167,11 @@ class Connection():
     Given an ENCODE identifier for an object, performs a GET request and extracts the aliases.
 
     Args:
-        dcc_id: The ENCODE ID for a given object, i.e ENCSR999EHG.
-        strip_alias_prefix: bool. True means to remove the alias prefix if all return aliases.
+        dcc_id: `str`. The ENCODE ID for a given object, i.e ENCSR999EHG.
+        strip_alias_prefix: `bool`. True means to remove the alias prefix if all return aliases.
 
     Returns:
-        list: The aliases.
+        `list`: The aliases.
     """
     record = self.get(ignore404=False,dcc_id=dcc_id)
     aliases = record["aliases"]
@@ -187,15 +187,15 @@ class Connection():
     parameters will be first URL encoded.
 
     Args:
-        search_args: dict. of key and value query parameters.
+        search_args: `dict`. The key and value query parameters.
 
     Returns:
-        list: The search results.
+        `list`: The search results.
 
     Raises:
         requests.exceptions.HTTPError: If the status code is not in the set [200,404].
 
-    Example:
+    **Example**:
         Given we have the following dictionary *d* of key and value pairs::
 
             {"type": "experiment",
@@ -230,10 +230,10 @@ class Connection():
     a recognized ENCODE object profile (schema).
 
     Args:
-        payload: dict. The intended object data to POST.
+        payload: `dict`. The intended object data to POST.
 
     Returns:
-        str: The ID of the profile if all validations pass, otherwise.
+        `str`: The ID of the profile if all validations pass, otherwise.
 
     Raises:
         encode_utils.connection.ProfileNotSpecified: The key self.PROFILE_KEY is missing in the payload.
@@ -259,10 +259,10 @@ class Connection():
     3) md5sum (in the case of a file object)
 
     Args:
-        payload: dict. The data to submit.
+        payload: `dict`. The data to submit.
 
     Returns:
-        list: The possible lookup identifiers.
+        `list`: The possible lookup identifiers.
     """
     lookup_ids = []
     if self.ENCODE_IDENTIFIER_KEY in payload:
@@ -304,15 +304,15 @@ class Connection():
     until one is either found or the list is exhaused.
 
     Args:
-        rec_ids: str. containing a single record identifier, or a list of identifiers for a
+        rec_ids: `str` containing a single record identifier, or a list of identifiers for a
             specific record.
-        ignore404: bool. Only matters when none of the passed in record IDs were found on the
+        ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
             ENCODE Portal. In this case, If set to True, then an empty dict will be returned.
             If set to False, then an E
 
 
     Returns:
-        dict: The JSON response. Will be empty if no record was found AND ignore404=True.
+        `dict`: The JSON response. Will be empty if no record was found AND ignore404=True.
 
     Raises:
         requests.exceptions.HTTPError: The status code is not okay (in the 200 range), and the
@@ -354,10 +354,10 @@ class Connection():
     antibody_characterization.
 
     Args:
-        document: str. A local file path.
+        document: `str`. A local file path.
 
     Returns:
-        dict. The attachment propery value.
+        `dict`. The attachment propery value.
     """
     download_filename = os.path.basename(document)
     mime_type = mimetypes.guess_type(download_filename)[0]
@@ -380,10 +380,8 @@ class Connection():
     used to perform the actual cloud upload of the physical, local file reprented by the File object.
 
     Args:
-        rec_id: str. An identifier for the new File object on the Portal.
-        profile_id: str. The ID of the profile that the record belongs to.
-
-    Returns:
+        rec_id: `str`. An identifier for the new File object on the Portal.
+        profile_id: `str`. The ID of the profile that the record belongs to.
     """
     if profile_id != eup.Profile.FILE_PROFILE_ID:
       return
@@ -398,8 +396,8 @@ class Connection():
     Calls after-submission hooks for POST and PATH operations.
 
     Args:
-        rec_id: str. An identifier for a record on the Portal.
-        profile_id: str. The profile the record belongs to.
+        rec_id: `str`. An identifier for a record on the Portal.
+        profile_id: `str`. The profile the record belongs to.
         method: str. One of self.POST or self.PATCH, or the empty string to indicate which 
             registered hooks to look through.
     """
@@ -434,10 +432,10 @@ class Connection():
     the only key in the attachment dictionary as any others would be ignored.
 
     Args:
-        payload: dict. The payload to submit to the Portal.
+        payload: `dict`. The payload to submit to the Portal.
 
     Returns:
-        dict: The payload to submit to the Portal.
+        `dict`: The payload to submit to the Portal.
     """
     attachment_prop = "attachment"
     path = "path"
@@ -453,10 +451,10 @@ class Connection():
   def before_post_file(self,payload):
     """
     Args:
-        payload: dict. The payload to submit to the Portal.
+        payload: `dict`. The payload to submit to the Portal.
 
     Returns:
-        dict: The payload to submit to the Portal.
+        `dict`: The payload to submit to the Portal.
 
     Raises:
         encode_utils.utils.MD5SumError: Perculated through the function 
@@ -488,12 +486,12 @@ class Connection():
     Both self.post() and self.patch() call this method.
 
     Args:
-        payload: dict. The payload to POST or PATCH.
-        method: str. One of "post" or "patch", or the empty string to indicate which registered
+        payload: `dict`. The payload to POST or PATCH.
+        method: `str`. One of "post" or "patch", or the empty string to indicate which registered
             hooks to look through.
 
     Returns:
-        dict: The potentially modified payload that has been passed through all applicable
+        `dict`: The potentially modified payload that has been passed through all applicable
             pre-submit hooks.
     """
     #Check allowed_methods. Will matter later when there are POST-specific
@@ -529,10 +527,10 @@ class Connection():
     `self.before_submit_hooks`).
 
     Args:
-        payload: dict. The data to submit.
+        payload: `dict`. The data to submit.
 
     Returns:
-        dict: The JSON response from the POST operation, or GET operation If the resource already
+        `dict`: The JSON response from the POST operation, or GET operation If the resource already
           exist on the Portal.
 
     Raises:
@@ -610,18 +608,18 @@ class Connection():
     `self.before_submit_hooks`).
 
     Args:
-        payload: dict. containing the attribute key and value pairs to patch. Must contain the key
+        payload: `dict`. containing the attribute key and value pairs to patch. Must contain the key
             self.ENCODE_IDENTIFIER_KEY in order to indicate which record to PATCH.
-        raise_403: bool. True means to raise a requests.exceptions.HTTPError if a 403 status
+        raise_403: `bool`. True means to raise a requests.exceptions.HTTPError if a 403 status
             (Forbidden) is returned.
             If set to False and there still is a 403 return status, then the object you were
             trying to PATCH will be fetched from the Portal in JSON format as this function's
             return value.
-        extend_array_values: bool. Only affects keys with array values. True (default) means to
+        extend_array_values: `bool`. Only affects keys with array values. True (default) means to
             extend the corresponding value on the Portal with what's specified in the payload.
             False means to replace the value on the Portal with what's in the payload.
     Returns:
-        dict: The JSON response from the PATCH operation.
+        `dict`: The JSON response from the PATCH operation.
 
     Raises:
         KeyError: The payload doesn't have the key self.ENCODE_IDENTIFIER_KEY set AND there aren't
@@ -687,14 +685,14 @@ class Connection():
     where some need to be POST'd and some PATCH'd.
 
     Args:
-        payload: dict. The data to submit.
-        error_if_not_found: bool. If set to True, then a PATCH will be attempted and a
+        payload: `dict`. The data to submit.
+        error_if_not_found: `bool`. If set to True, then a PATCH will be attempted and a
             requests.exceptions.HTTPError will be raised if the record doesn't exist on the Portal.
-        extend_array_values: bool. Only matters when doing a PATCH, and Only affects keys with
+        extend_array_values: `bool`. Only matters when doing a PATCH, and Only affects keys with
             array values. True (default) means to extend the corresponding value on the Portal
             with what's specified in the payload. False means to replace the value on the Portal
             with what's in the payload.
-        raise_403: bool. Only matters when doing a PATCH. True means to raise an
+        raise_403: `bool`. Only matters when doing a PATCH. True means to raise an
             requests.exceptions.HTTPError if a 403 status (Forbidden) is returned.
             If set to False and there still is a 403 return status, then the object you were
             trying to PATCH will be fetched from the Portal in JSON format as this function's
@@ -724,10 +722,10 @@ class Connection():
     you can get to a particular file object's JSON serialization.
 
     Args:
-        dcc_exp_id: list of DCC file IDs or aliases
+        dcc_exp_id: `list` of DCC file IDs or aliases
 
     Returns:
-        dict: dict where each key is a biological_replicate_number.
+        `dict`: `dict` where each key is a biological_replicate_number.
             The value of each key is another dict where each key is a technical_replicate_number.
             The value of this is yet another dict with keys being file read numbers -
             1 for forward reads, 2 for reverse reads.  The value
@@ -760,10 +758,10 @@ class Connection():
     of how this is used.
 
     Args:
-        file_id: str. A file object identifier (i.e. accession, uuid, alias, md5sum).
+        file_id: `str`. A file object identifier (i.e. accession, uuid, alias, md5sum).
 
     Returns:
-        dict: dict that sets the keys AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and
+        `dict`: `dict` that sets the keys AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and
             AWS_SECURITY_TOKEN. These can be set as environment variables for use with the AWS CLI
             agent. Will be empty if new upload credentials could not be generated (i.e. forbidden).
     """
@@ -794,8 +792,8 @@ class Connection():
     payload["aliases"][0].  If the GET request succeeds, nothing will be POST'd.
 
     Args:
-        payload: The data to submit.
-        patch: bool. True indicates to perform an HTTP PATCH operation rather than POST.
+        payload: `dict`. The data to submit.
+        patch: `bool`. True indicates to perform an HTTP PATCH operation rather than POST.
     """
     DEBUG_LOGGER.debug("\nIN post_file_metadata(), patch={patch}\n".format(patch=patch))
     objectType = payload.pop("@id") #should be /file/
@@ -879,10 +877,10 @@ class Connection():
     """Reissues AWS S3 upload credentials for the specified file object.
 
     Args:
-        file_id: str. An identifier for a file object on the Portal.
+        file_id: `str`. An identifier for a file object on the Portal.
 
     Returns:
-        dict: dict containing the value of the 'upload_credentials' key in the JSON serialization
+        `dict`: `dict` containing the value of the 'upload_credentials' key in the JSON serialization
             of the file object represented by file_id. Will be empty if new upload credentials
             could not be issued.
     """
@@ -935,10 +933,10 @@ class Connection():
     be downloaded and then pushed to the S3 bucket.
 
     Args:
-        file_path: str. the local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
+        file_id: 'str'. An identifier of a `file` record.
+        file_path: `str`. the local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
           If not set, defaults to None in which case the local file path will be extracted from the
           record's `submitted_file_name` property.
-        upload_url: The AWS upload address (i.e. S3 bucket address). 
 
     Raises:
         FileUploadFailed: The return code of the AWS upload command was non-zero.
@@ -983,9 +981,9 @@ class Connection():
     multiple different platforms present as normally all reads should come from the same platform.
 
     Args:
-        rec_id: str. DCC identifier for an experiment.
+        rec_id: `str`. DCC identifier for an experiment.
     Returns:
-        list: The de-duplicated list of platforms seen on the experiment's FASTQ files.
+        `list`: The de-duplicated list of platforms seen on the experiment's FASTQ files.
     """
     exp_json = self.get(rec_ids=rec_id,frame=None)
     if "@graph" in exp_json:
@@ -1003,16 +1001,16 @@ class Connection():
     The alias for the document will be the lab prefix plus the file name (minus the file extension).
 
     Args:
-        download_filename: str. The name to give the document when downloading it from the ENCODE
+        download_filename: `str`. The name to give the document when downloading it from the ENCODE
             portal.
-        document_type: str. For possible values, see
+        document_type: `str`. For possible values, see
             https://www.encodeproject.org/profiles/document.json. It appears that one should use
             "data QA" for analysis results documents.
-        description - str. The description for the document.
-        document - str. Local file path to the document to be submitted.
+        description: `str`. The description for the document.
+        document: `str`. Local file path to the document to be submitted.
 
     Returns:
-        str: The DCC UUID of the new document.
+        `str`: The DCC UUID of the new document.
     """
     document_filename = os.path.basename(document)
     document_alias = eu.LAB + os.path.splitext(document_filename)[0]
@@ -1041,12 +1039,12 @@ class Connection():
     the latter's "documents" property.
 
     Args:
-         rec_id: A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to link the
+         rec_id: `str`. A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to link the
              document to.
-         dcc_document_uuid: The value of the document's 'uuid' attribute.
+         dcc_document_uuid: `str`. The value of the document's 'uuid' attribute.
 
     Returns:
-        dict: The response form self.patch().
+        `dict`: The response form self.patch().
     """
     rec_json = self.get(ignore404=False,rec_ids=rec_id)
     documents_json = rec_json["documents"]

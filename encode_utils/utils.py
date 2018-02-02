@@ -20,13 +20,14 @@ import pdb
 import encode_utils as eu
 
 
+#: Stores the HTTP headers to indicate JSON content in a request. 
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
 #: A descendent logger of the debug logger created in `encode_utils`
-#: (see the function description for `encode_utils.create_debug_logger`)
+#: (see the function description for `encode_utils._create_debug_logger`)
 DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
 #: A descendent logger of the error logger created in `encode_utils`
-#: (see the function description for `encode_utils.create_error_logger`)
+#: (see the function description for `encode_utils._create_error_logger`)
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
 
 class MD5SumError(Exception):
@@ -37,10 +38,10 @@ def calculate_md5sum(file_path):
   """"Calculates the md5sum for a file using the md5sum utility from GNU coreutils.
 
   Args:
-      file_path: str. The path to a local file.
+      file_path: `str`. The path to a local file.
 
   Returns:
-      str: The md5sum.
+      `str`: The md5sum.
 
   Raises:
       MD5SumError: There was a non-zero exit status from the md5sum command.
@@ -71,22 +72,24 @@ def print_format_dict(dico,indent=2):
   Wraps the json.dumps() function.
 
   Args:
-      indent: int. The number of spaces to indent each level of nesting. Passed directly
+      indent: `int`. The number of spaces to indent each level of nesting. Passed directly
           to the json.dumps() method.
   """
   #Could use pprint, but that looks too ugly with dicts due to all the extra spacing.
   return json.dumps(dico,indent=indent,sort_keys=True)
 
 def clean_alias_name(self,alias):
-  """
+  r"""
   Removes unwanted characters from the alias name. Only the '/' character purportedly causes issues.
-  This function replaces both '/' and '\' with '_'.
+  This function replaces both '/' and '\\\\' with '_'. Can be called prior to registering a new
+  alias if you know it may contain such unwanted characters. You would then need to update 
+  your payload with the new alias to submit.
 
   Args:
-      alias: str.
+      alias: `str`. A alias that you want to submit.
 
   Returns:
-      str:
+      `str`: The cleaned alias.
   """
   alias = alias.replace("/","_")
   alias = alias.replace("\\","_")
@@ -96,26 +99,23 @@ def create_subprocess(cmd,check_retcode=True):
   """Runs a command in a subprocess and checks for any errors.
 
   Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes
-  stdout and stderr. Stderr is always piped; stdout if off by default. If the argument
-  'check_retcode' is True, which it is by defualt, then for any non-zero return code, an Exception
-  is raised that will print out the the command, stdout, stderr, and the returncode.  Otherwise,
-  the Popen instance will be returned, in which case the caller must call the instance's
-  communicate() method (and not it's wait() method!!) in order to get the return code to see if the
-  command was successful. communicate() will return a tuple containing (stdout, stderr), after
-  that you can then check the return code with Popen instance's 'returncode' attribute.
+  stdout and stderr.  
 
   Args:
-      cmd: str. The command line for the subprocess wrapped in the subprocess.Popen instance. If
-          given, will be printed to stdout when there is an error in the subprocess.
-      check_retcode: bool. Default is True. See documentation in the description above for specifics.
+      cmd: `str`. The command to execute.
+      check_retcode: `bool`. When True, then an `subprocess.SubprocessError` is raised when the 
+        subprocess returns a non-zero return code. 
+        The error message will display the command that was executed along with its
+        actual return code,  as well as any messages that the subprocess sent to STDOUT and STDERR.
+        When False, the `subprocess.Popen` instance will be returned instead and it is expected 
+        that the caller will call the its `communicate` method.
 
   Returns:
-      Two-item tuple being stdout and stderr if 'checkRetCode' is set to True and the
-      command has a 0 exit status. If 'checkRetCode' is False, then a subprocess.Popen()
-      instance is instead returned.
+      Two-item tuple containing the subprocess's STDOUT and STDERR streams' content if 
+      `check_retcode=True`, otherwise a `subprocess.Popen` instance.
 
   Raises:
-      subprocess.SubprocessError: There is a non-zero return code and check_retcode=True.
+      subprocess.SubprocessError: There is a non-zero return code and `check_retcode=True`.
   """
   popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   if check_retcode:
@@ -134,15 +134,21 @@ def create_subprocess(cmd,check_retcode=True):
 
 def strip_alias_prefix(self,alias):
   """
-  Splits 'alias' on ':' to strip off any alias prefix. Aliases must have a lab-specific prefix.
-  The ':' is the seperator between prefix and the rest of the alias, and can't appear elsewhere in
-  the alias.
+  Splits 'alias' on ':' to strip off any alias prefix. Aliases have a lab-specific prefix with
+  ':' delimiting the lab name and the rest of the alias; this delimiter shouldn't appear
+  elsewhere in the alias.
 
   Args:
-      alias: str. The alias.
+      alias: `str`. The alias.
 
   Returns:
-      str:
+      `str`: The alias without the lab prefix.
+
+  **Example**:: 
+
+          strip_alias_prefix("michael-snyder:B-167")
+          # Returns "B-167"
+
   """
   return name.split(":")[-1]
 
@@ -150,11 +156,11 @@ def add_to_set(self,entries,new):
   """Adds an entry to a list and makes a set for uniqueness before returning the list.
 
   Args:
-      entries: list.
-      new: A new member to add to the list.
+      entries: `list`.
+      new: (any datatype) The new member to add to the list.
 
   Returns:
-      list: A deduplicated list.
+      `list`: A deduplicated list.
   """
   entries.append(new)
   unique_list = list(set(entries))
@@ -162,19 +168,19 @@ def add_to_set(self,entries,new):
 
 def does_lib_replicate_exist(lib_accession,exp_accession,biologicial_replicate_number=False,technical_replicate_number=False):
   """
-  Regarding the replicates on the specified experiment, determines whether the specified library
-  belongs_to any of the replicates.  Optional constraints are the biologicial_replicate_number and
+  Regarding the replicates on the specified experiment, determines whether any of them belong
+  to the specified library.  Optional constraints are the biologicial_replicate_number and
   the technical_replicate_number props of the replicates.
 
   Args:
-      lib_accession: str. The value of a library object's 'accession' property.
-      exp_accession: str. The value of an experiment object's accession. The lib_accession
+      lib_accession: `str`. The value of a library object's 'accession' property.
+      exp_accession: `str`. The value of an experiment object's accession. The lib_accession
         should belong to a replicate on this experiment.
       biologicial_replicate_number: int. The biological replicate number.
       technical_replicate_number: int. The technical replicate number.
 
   Returns:
-      list: The replicates that pass the search constraints.
+      `list`: The replicates that pass the search constraints.
   """
   biologicial_replicate_number = int(biologicial_replicate_number)
   technical_replicate_number = int(technical_replicate_number)
