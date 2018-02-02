@@ -305,7 +305,8 @@ class Connection():
 
     Args:
         rec_ids: `str` containing a single record identifier, or a list of identifiers for a
-            specific record.
+            specific record. For a few example identifiers, you can be a uuid, accession, ...,  
+            or even the value of a record's `@id` property.
         ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
             ENCODE Portal. In this case, If set to True, then an empty dict will be returned.
             If set to False, then an E
@@ -723,7 +724,6 @@ class Connection():
 
     Args:
         dcc_exp_id: `list` of DCC file IDs or aliases
-
     Returns:
         `dict`: `dict` where each key is a biological_replicate_number.
             The value of each key is another dict where each key is a technical_replicate_number.
@@ -986,8 +986,6 @@ class Connection():
         `list`: The de-duplicated list of platforms seen on the experiment's FASTQ files.
     """
     exp_json = self.get(rec_ids=rec_id,frame=None)
-    if "@graph" in exp_json:
-      exp_json = exp_json["@graph"][0]
     files_json = exp_json["original_files"]
     platforms = []
     for f in files_json:

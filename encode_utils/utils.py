@@ -10,6 +10,7 @@
 Contains utilities that don't require authorization on the DCC servers.
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -30,41 +31,19 @@ DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
 #: (see the function description for `encode_utils._create_error_logger`)
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
 
-class MD5SumError(Exception):
-  """Raised when there is a non-zero exit status from the md5sum utility from GNU coreutils.
-  """
 
 def calculate_md5sum(file_path):
-  """"Calculates the md5sum for a file using the md5sum utility from GNU coreutils.
+  """"Calculates the md5sum for a file.
 
   Args:
       file_path: `str`. The path to a local file.
 
   Returns:
       `str`: The md5sum.
-
-  Raises:
-      MD5SumError: There was a non-zero exit status from the md5sum command.
   """
-  cmd = "md5sum {}".format(file_path)
-  DEBUG_LOGGER.debug("Calculating md5sum for '{}' with command '{}'.".format(file_path,cmd))
-  popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-  stdout,stderr = popen.communicate()
-  stdout = stdout.decode("utf-8")
-  stderr = stderr.decode("utf-8")
-  retcode = popen.returncode
-  if retcode:
-    error_msg = "Failed to calculate md5sum for file '{}'.".format(file_path)
-    DEBUG_LOGGER.debug(error_msg)
-    ERROR_LOGGER.error(error_msg)
-    error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
-                  " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
-                    cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
-    DEBUG_LOGGER.debug(error_msg)
-    raise MD5SumError(error_msg)
-  DEBUG_LOGGER.debug(stdout)
-  #stdout currently equals the md5sum hash followed by a space and the name of the file.
-  return stdout.split()[0] 
+  m = hashlib.md5()
+  m.update(open(file_path,'rb').read())
+  return m.hexdigest()
 
 def print_format_dict(dico,indent=2):
   """Formats a dictionary for printing purposes to ease visual inspection.
