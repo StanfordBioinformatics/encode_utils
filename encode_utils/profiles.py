@@ -34,10 +34,16 @@ class UnknownProfile(Exception):
   pass
 
 def get_profiles():
-  """Creates a list of all public profiles on the Portal.
+  """Creates a dictionary storing all public profiles on the Portal.
 
   Returns:
-      list: list of dicts (profiles).
+      dict: dict where each key is the profile's ID, and each value is a given profile's 
+        JSON schema.  Each key is extracted from the profile's `id` property, after a 
+        little formatting first.  The formatting works by removing the 
+        'profiles' prefix and the '.json' suffix.  For example, the value of the 'id' property 
+        for the genetic_modification profile is
+        `/profiles/genetic_modification.json`. The corresponding key in this dict is 
+        `genetic_modification`.
   """
   profiles = requests.get(eu.PROFILES_URL + "?format=json",
                           timeout=eu.TIMEOUT,
@@ -59,15 +65,16 @@ class Profile:
   for working with a given profile.
 
   The user supplies a profile name, typically the value of a record's `@id` property. It will be
-  normalized to match the syntax of the profile IDs in the list returned by the function
-  `get_profile_ids()`.
+  normalized to match the syntax of the profile ID keys in the dict returned by the function
+  `get_profile_ids()`. The constant Profile._PROFILES stores the dict returned by that function.
   """
-  #: dict of the public profiles on the Portal. The key is the profile's ID.
-  #: The profile ID is extracted from the profile's `id` property, after a little
-  #: formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
-  #: For example, the value of the 'id' property for the genetic_modification profile is
-  #: `/profiles/genetic_modification.json`. The corresponding key in this dict is 
-  #: `genetic_modification`.
+  # dict of the public profiles on the Portal. The key is the profile's ID.
+  # The profile ID is extracted from the profile's `id` property, after a little
+  # formatting first.  The formatting works by removing the 'profiles' prefix and the '.json' suffix.
+  # For example, the value of the 'id' property for the genetic_modification profile is
+  # `/profiles/genetic_modification.json`. The corresponding key in this dict is 
+  # `genetic_modification`.
+  _PROFILES = ""
   _PROFILES = get_profiles()
 
   #: List of profile IDs that don't have the 'award' and 'lab' properties.
@@ -76,6 +83,8 @@ class Profile:
     if eu.AWARD_PROP_NAME not in _PROFILES[profile_id]["properties"]:
       AWARDLESS_PROFILE_IDS.append(profile_id)
 
+  #: Constant storing the `file` profile's parsed ID.
+  #: The stored `File` profile ID is asserted for inclusion in the Profile._PROFILES.
   FILE_PROFILE_ID = "file"
   try:
     assert(FILE_PROFILE_ID in _PROFILES)
@@ -83,12 +92,16 @@ class Profile:
     raise Exception("Error: The profile for file.json has underwent a name change apparently and is no longer known to this package.")
 
 
+  #: Constant storing a property name of the `file` profile.
+  #: The stored name is asserted for inclusion in the set of `File` properties.
   SUBMITTED_FILE_PROP_NAME = "submitted_file_name"
   try:
     assert(SUBMITTED_FILE_PROP_NAME in _PROFILES[FILE_PROFILE_ID]["properties"])
   except AssertionError:
     raise Exception("Error: The profile for file.json no longer includes the property {}.".format(FILE_PROFILE_ID))
 
+  #: Constant storing a property name of the `file` profile.
+  #: The stored name is asserted for inclusion in the set of `File` properties.
   MD5SUM_NAME_PROP_NAME = "md5sum"
   try:
     assert(MD5SUM_NAME_PROP_NAME in _PROFILES[FILE_PROFILE_ID]["properties"])
@@ -103,12 +116,12 @@ class Profile:
     """
 
     #: The normalized version of the passed-in profile_id to the constructor. The normalization
-    #: is neccessary in order to match the format of the profile IDs in the Profile._PROFILES.
+    #: is neccessary in order to match the format of the profile IDs in Profile._PROFILES.
     self.profile_id = self._set_profile_id(profile_id)
 
   def _set_profile_id(self,profile_id):
     """
-    Normalizes profile_id so that it matches the format of the profile IDs in the list
+    Normalizes the profile_id so that it matches the format of the profile IDs stored in 
     Profile._PROFILES, and ensures that the normalized profile ID is a member of this list.
 
     Args:
