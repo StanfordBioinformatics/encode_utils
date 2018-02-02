@@ -62,7 +62,8 @@ def calculate_md5sum(file_path):
     DEBUG_LOGGER.debug(error_msg)
     raise MD5SumError(error_msg)
   DEBUG_LOGGER.debug(stdout)
-  return stdout
+  #stdout currently equals the md5sum hash followed by a space and the name of the file.
+  return stdout.split()[0] 
 
 def print_format_dict(dico,indent=2):
   """Formats a dictionary for printing purposes to ease visual inspection.

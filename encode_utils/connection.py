@@ -388,8 +388,8 @@ class Connection():
     if profile_id != eup.Profile.FILE_PROFILE_ID:
       return
     rec = self.get(rec_ids=rec_id,ignore404=False)
-    if eup.Profile.SUBMITTED_FILE_NAME_PROP in rec:
-      filename = rec[eup.Profile.SUBMITTED_FILE_NAME_PROP]
+    if eup.Profile.SUBMITTED_FILE_PROP_NAME in rec:
+      filename = rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
       if filename:
         self.upload_file(file_id=rec_id,file_path=filename)
 
@@ -466,9 +466,13 @@ class Connection():
     if profile_id != eup.Profile.FILE_PROFILE_ID:
       return payload
     try:
-      file_name = payload[eup.Profile.SUBMITTED_FILE_NAME_PROP]
+      file_name = payload[eup.Profile.SUBMITTED_FILE_PROP_NAME]
     except KeyError:
       return payload
+    if eup.Profile.MD5SUM_NAME_PROP_NAME in payload:
+      if payload[eup.Profile.MD5SUM_NAME_PROP_NAME]:
+        #Already set; nothing to do.
+        return payload
     md5sum = euu.calculate_md5sum(file_name)
     payload["md5sum"] = md5sum
     return payload
@@ -528,7 +532,8 @@ class Connection():
         payload: dict. The data to submit.
 
     Returns:
-        dict: The JSON response from the POST operation.
+        dict: The JSON response from the POST operation, or GET operation If the resource already
+          exist on the Portal.
 
     Raises:
         AwardPropertyMissing: The 'award' property isn't present in the payload and there isn't a
@@ -543,6 +548,7 @@ class Connection():
     json.loads(json.dumps(payload))
     profile_id = self.validate_profile_in_payload(payload)
     url = os.path.join(eu.DCC_URL,profile_id)
+    #Check if we need to add defaults for 'award' and 'lab' properties:
     if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS: #No lab prop for these profiles either.
       if eu.AWARD_PROP_NAME not in payload:
         if not eu.AWARD:
@@ -554,7 +560,8 @@ class Connection():
         payload.update(eu.LAB)
     alias = payload["aliases"][0]
 
-    payload = self.before_submit_hooks(payload)
+    #Run 'before' hooks:
+    payload = self.before_submit_hooks(payload,method=self.POST)
     payload.pop(self.PROFILE_KEY)
 
     DEBUG_LOGGER.debug(
@@ -571,6 +578,7 @@ class Connection():
 
     if response.ok:
       DEBUG_LOGGER.debug("Success.")
+      response_json = response_json["@graph"][0]
       encid = ""
       try:
         encid = response_json["accession"]
@@ -578,7 +586,8 @@ class Connection():
         #Some objects don't have an accession, i.e. replicates.
         encid = response_json["uuid"]
       self._log_post(alias=alias,dcc_id=encid)
-      self.after_submit_hooks(encid,profile_id)
+      #Run 'after' hooks:
+      self.after_submit_hooks(encid,profile_id,method=self.POST)
       return response_json
     elif response.status_code == requests.codes.CONFLICT:
       log_msg = "Will not post {} because it already exists.".format(alias)
@@ -637,7 +646,8 @@ class Connection():
           # it won't be in the response.
           payload[key] = list(set(val))
 
-    payload = self.before_submit_hooks(payload)
+    #Run 'before' hooks:
+    payload = self.before_submit_hooks(payload,method=self.PATCH)
 
     url = os.path.join(eu.DCC_URL,encode_id)
     DEBUG_LOGGER.debug(
@@ -653,7 +663,8 @@ class Connection():
       DEBUG_LOGGER.debug("Success.")
       uuid = response_json["uuid"]
       profile = eup.Profile(response_json["@id"])
-      self.after_submit_hooks(uuid,profile.profile_id)
+      #Run 'after' hooks:
+      self.after_submit_hooks(uuid,profile.profile_id,method=self.PATCH)
       return response_json
     elif response.status_code == requests.codes.FORBIDDEN:
       #Don't have permission to PATCH this object.
@@ -916,7 +927,7 @@ class Connection():
     graph = response["@graph"][0]
     return response["@graph"][0]["upload_credentials"]
 
-  def upload_file(self,file_id,file_path):
+  def upload_file(self,file_id,file_path=None):
     """Uses AWS CLI to upload a local file or S3 object to the Portal for the indicated file object.
 
     Unfortunately, it doesn't appear that pulling a file into S3 is supported through the AWS API;
@@ -924,8 +935,10 @@ class Connection():
     be downloaded and then pushed to the S3 bucket.
 
     Args:
-        file_path: The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
-        upload_url: The AWS upload address (i.e. S3 bucket address).
+        file_path: str. the local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
+          If not set, defaults to None in which case the local file path will be extracted from the
+          record's `submitted_file_name` property.
+        upload_url: The AWS upload address (i.e. S3 bucket address). 
 
     Raises:
         FileUploadFailed: The return code of the AWS upload command was non-zero.
@@ -937,6 +950,9 @@ class Connection():
       DEBUG_LOGGER.debug(msg)
       ERROR_LOGGER.error(msg)
       return
+    if not file_path:
+      file_rec = self.get(rec_ids=file_id)
+    file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
     cmd = "aws s3 cp {file_path} {upload_url}".format(file_path=file_path,upload_url=aws_creds["UPLOAD_URL"])
     DEBUG_LOGGER.debug("Running command {cmd}.".format(cmd=cmd))
     popen = subprocess.Popen(cmd,

@@ -15,7 +15,7 @@ import re
 
 import encode_utils.utils as euu
 import encode_utils.connection as euc
-from encode_utils.parent_argparser import dcc_login_parser
+#from encode_utils.parent_argparser import dcc_login_parser
 import encode_utils.profiles as eup
 
 
@@ -81,7 +81,7 @@ def create_payloads(profile_id,infile):
       skip_field_indices.append(fi_count)
       continue
     if field not in schema_props:
-      raise Exception("Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(field,profile.profile_id)  
+      raise Exception("Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(field,profile.profile_id))
     field_index[fi_count] = field
 
   line_count = 1 #already read header line
@@ -156,7 +156,8 @@ defined in the schema, simply use a single-key object containing 'path', i.e.
  {"path": "/path/to/myfile"}, and it'll do the rest. 
 
 """
-  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
+  #parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
+  parser = argparse.ArgumentParser(description=description,formatter_class=argparse.RawTextHelpFormatter)
 
   parser.add_argument("-p","--profile_id",required=True,help="""
 The ID of the profile to submit to, i.e. put 'genetic_modification' for 
@@ -210,11 +211,12 @@ any duplicates.""")
 
   args = parser.parse_args()
   profile_id = args.profile_id
-  dcc_mode = args.dcc_mode
+  #dcc_mode = args.dcc_mode
   error_if_not_found = args.error_if_not_found
   overwrite_array_values = args.overwrite_array_values
 
-  conn = euc.Connection(dcc_mode=dcc_mode)
+  #conn = euc.Connection(dcc_mode=dcc_mode)
+  conn = euc.Connection()
 
   infile = args.infile
   patch = args.patch

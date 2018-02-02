@@ -82,11 +82,19 @@ class Profile:
   except AssertionError:
     raise Exception("Error: The profile for file.json has underwent a name change apparently and is no longer known to this package.")
 
-  SUBMITTED_FILE_NAME_PROP = "submitted_file_name"
+
+  SUBMITTED_FILE_PROP_NAME = "submitted_file_name"
   try:
-    assert(SUBMITTED_FILE_NAME_PROP in _PROFILES[FILE_PROFILE_ID]["properties"])
+    assert(SUBMITTED_FILE_PROP_NAME in _PROFILES[FILE_PROFILE_ID]["properties"])
   except AssertionError:
     raise Exception("Error: The profile for file.json no longer includes the property {}.".format(FILE_PROFILE_ID))
+
+  MD5SUM_NAME_PROP_NAME = "md5sum"
+  try:
+    assert(MD5SUM_NAME_PROP_NAME in _PROFILES[FILE_PROFILE_ID]["properties"])
+  except AssertionError:
+    raise Exception("Error: The profile for file.json no longer includes the property {}.".format(MD5SUM_NAME_PROP_NAME))
+  
 
   def __init__(self,profile_id):
     """
