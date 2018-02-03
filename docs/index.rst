@@ -16,7 +16,7 @@ Client API Modules
    utils
    connection
    profiles 
-   tests/utils
+   tests/test_utils
 
 Indices and tables
 ==================
