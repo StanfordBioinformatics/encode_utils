@@ -1,5 +1,5 @@
-test\_utils
--------------
+tests\.test\_utils
+------------------
 
 .. automodule:: tests.test_utils
    :members:
