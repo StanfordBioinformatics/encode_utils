@@ -16,6 +16,13 @@ Client API Modules
    utils
    connection
    profiles 
+
+Unit Tests
+----------
+
+.. toctree::
+   :maxdepth: 3
+
    tests/test_utils
 
 Indices and tables
