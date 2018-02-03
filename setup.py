@@ -13,7 +13,7 @@ setup(
   author = "Nathaniel Watson",
   author_email = "nathankw@stanford.edu",
   url = "https://github.com/StanfordBioinformatics/encode_utils/wiki",
-  packages = ["encode_utils"],
+  packages = ["encode_utils","tests"],
   install_requires = [
     "awscli",
     "requests",
