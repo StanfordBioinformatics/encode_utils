@@ -16,6 +16,7 @@ Client API Modules
    utils
    connection
    profiles 
+   tests/utils
 
 Unit test modules
 -----------------
