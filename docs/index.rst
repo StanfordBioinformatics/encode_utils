@@ -18,15 +18,6 @@ Client API Modules
    profiles 
    tests/utils
 
-Unit test modules
------------------
-
-.. toctree::
-   :maxdepth: 3
-
-   tests/utils
-
-
 Indices and tables
 ==================
 
