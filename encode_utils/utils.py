@@ -42,7 +42,9 @@ def calculate_md5sum(file_path):
       `str`: The md5sum.
   """
   m = hashlib.md5()
-  m.update(open(file_path,'rb').read())
+  fh = open(file_path,'rb')
+  m.update(fh.read())
+  fh.close()
   return m.hexdigest()
 
 def print_format_dict(dico,indent=2):
@@ -57,7 +59,7 @@ def print_format_dict(dico,indent=2):
   #Could use pprint, but that looks too ugly with dicts due to all the extra spacing.
   return json.dumps(dico,indent=indent,sort_keys=True)
 
-def clean_alias_name(self,alias):
+def clean_alias_name(alias):
   r"""
   Removes unwanted characters from the alias name. Only the '/' character purportedly causes issues.
   This function replaces both '/' and '\\\\' with '_'. Can be called prior to registering a new
@@ -65,10 +67,17 @@ def clean_alias_name(self,alias):
   your payload with the new alias to submit.
 
   Args:
-      alias: `str`. A alias that you want to submit.
+      alias: `str`. A alias that you want to submit. Should be a raw string (i.e. `r"some\alias"`)
+        or a string where any '\' character is already escaped (i.e. `"some\\alias"`). 
 
   Returns:
       `str`: The cleaned alias.
+
+  **Example**::
+        
+        clean_alias_name("michael-snyder:a/troublesome\alias")
+        # Returns michael-snyder:a_troublesome_alias
+   
   """
   alias = alias.replace("/","_")
   alias = alias.replace("\\","_")
@@ -125,8 +134,8 @@ def strip_alias_prefix(self,alias):
 
   **Example**:: 
 
-          strip_alias_prefix("michael-snyder:B-167")
-          # Returns "B-167"
+        strip_alias_prefix("michael-snyder:B-167")
+        # Returns "B-167"
 
   """
   return name.split(":")[-1]
