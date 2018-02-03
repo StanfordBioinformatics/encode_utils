@@ -42,9 +42,8 @@ def calculate_md5sum(file_path):
       `str`: The md5sum.
   """
   m = hashlib.md5()
-  fh = open(file_path,'rb')
-  m.update(fh.read())
-  fh.close()
+  with open(file_path,'rb') as fh:
+    m.update(fh.read())
   return m.hexdigest()
 
 def print_format_dict(dico,indent=2):
@@ -120,7 +119,7 @@ def create_subprocess(cmd,check_retcode=True):
   else:
     return popen
 
-def strip_alias_prefix(self,alias):
+def strip_alias_prefix(alias):
   """
   Splits 'alias' on ':' to strip off any alias prefix. Aliases have a lab-specific prefix with
   ':' delimiting the lab name and the rest of the alias; this delimiter shouldn't appear
@@ -138,9 +137,9 @@ def strip_alias_prefix(self,alias):
         # Returns "B-167"
 
   """
-  return name.split(":")[-1]
+  return alias.split(":")[-1]
 
-def add_to_set(self,entries,new):
+def add_to_set(entries,new):
   """Adds an entry to a list and makes a set for uniqueness before returning the list.
 
   Args:
@@ -154,26 +153,25 @@ def add_to_set(self,entries,new):
   unique_list = list(set(entries))
   return unique_list
 
-def does_lib_replicate_exist(lib_accession,exp_accession,biologicial_replicate_number=False,technical_replicate_number=False):
+def does_lib_replicate_exist(replicates_json,lib_accession,biologicial_replicate_number=False,technical_replicate_number=False):
   """
   Regarding the replicates on the specified experiment, determines whether any of them belong
   to the specified library.  Optional constraints are the biologicial_replicate_number and
   the technical_replicate_number props of the replicates.
 
   Args:
+      replicates_json: `list`. The value of the `replicates` property of an Experiment record.
       lib_accession: `str`. The value of a library object's 'accession' property.
-      exp_accession: `str`. The value of an experiment object's accession. The lib_accession
-        should belong to a replicate on this experiment.
       biologicial_replicate_number: int. The biological replicate number.
       technical_replicate_number: int. The technical replicate number.
 
   Returns:
-      `list`: The replicates that pass the search constraints.
+      `list`: The replicate UUIDs that pass the search constraints.
   """
   biologicial_replicate_number = int(biologicial_replicate_number)
   technical_replicate_number = int(technical_replicate_number)
-  results = []
-  for rep in replicates_json_from_dcc:
+  results = [] #list of replicate UUIDs.
+  for rep in replicates_json:
     rep_id = rep["uuid"]
     if not lib_accession == rep["library"]["accession"]:
       continue
@@ -183,5 +181,5 @@ def does_lib_replicate_exist(lib_accession,exp_accession,biologicial_replicate_n
     if technical_replicate_number:
       if technical_replicate_number != rep["technical_replicate_number"]:
         continue
-    results.append(rep)
+    results.append(rep["uuid"])
   return results

@@ -1,0 +1,570 @@
+[
+  {
+    "aliases": [
+      "michael-snyder:L-3525-1_ENCSR502NRF"
+    ],
+    "date_created": "2017-06-21T00:00:46.341623+00:00",
+    "@type": [
+      "Replicate",
+      "Item"
+    ],
+    "uuid": "37b3dabc-bbdc-4832-88a5-78c2a8369942",
+    "@id": "/replicates/37b3dabc-bbdc-4832-88a5-78c2a8369942/",
+    "technical_replicate_number": 1,
+    "submitted_by": "/users/51d0b8cb-6bb4-46a7-a167-8db20f23e562/",
+    "library": {
+      "aliases": [
+        "michael-snyder:L-3525"
+      ],
+      "biosample": {
+        "biosample_term_id": "EFO:0001203",
+        "biosample_type": "immortalized cell line",
+        "status": "released",
+        "applied_modifications": [],
+        "uuid": "4261a2e8-1afc-480e-b61a-95487b159908",
+        "references": [],
+        "schema_version": "19",
+        "accession": "ENCBS148TCA",
+        "date_created": "2017-06-20T22:58:51.277311+00:00",
+        "dbxrefs": [
+          "GEO:SAMN07790821"
+        ],
+        "source": {
+          "aliases": [],
+          "url": "http://www.atcc.org/",
+          "uuid": "eadabaf1-d5b6-4b48-8847-e86461f12101",
+          "@type": [
+            "Source",
+            "Item"
+          ],
+          "name": "atcc",
+          "@id": "/sources/atcc/",
+          "description": "American Type Culture Collection (ATCC)",
+          "title": "ATCC",
+          "schema_version": "5",
+          "status": "current"
+        },
+        "health_status": "breast cancer (adenocarcinoma)",
+        "submitted_by": {
+          "@id": "/users/51d0b8cb-6bb4-46a7-a167-8db20f23e562/",
+          "uuid": "51d0b8cb-6bb4-46a7-a167-8db20f23e562",
+          "@type": [
+            "User",
+            "Item"
+          ],
+          "title": "Nathaniel Watson",
+          "lab": "/labs/michael-snyder/"
+        },
+        "biosample_synonyms": [
+          "MCF7 cell",
+          "MCF-7 cell",
+          "MCF7"
+        ],
+        "system_slims": [],
+        "characterizations": [],
+        "organ_slims": [
+          "mammary gland"
+        ],
+        "developmental_slims": [],
+        "treatments": [],
+        "sex": "female",
+        "lab": "/labs/michael-snyder/",
+        "aliases": [
+          "michael-snyder:B-391"
+        ],
+        "culture_harvest_date": "2017-05-30",
+        "alternate_accessions": [],
+        "@type": [
+          "Biosample",
+          "Item"
+        ],
+        "internal_tags": [],
+        "summary": "Homo sapiens MCF-7 immortalized cell line",
+        "age": "69",
+        "age_display": "69 year",
+        "documents": [
+          "/documents/2a32df77-1325-4a2d-af71-2f2b68eb9830/"
+        ],
+        "parent_of": [],
+        "life_stage": "adult",
+        "organism": {
+          "uuid": "7745b647-ff15-4ff3-9ced-b897d4e2983c",
+          "@type": [
+            "Organism",
+            "Item"
+          ],
+          "status": "current",
+          "name": "human",
+          "@id": "/organisms/human/",
+          "taxon_id": "9606",
+          "schema_version": "4",
+          "scientific_name": "Homo sapiens"
+        },
+        "@id": "/biosamples/ENCBS148TCA/",
+        "genetic_modifications": [],
+        "donor": {
+          "uuid": "f9837098-f448-4910-b485-aa94b5f18553",
+          "siblings": [],
+          "accession": "ENCDO000AAE",
+          "date_created": "2013-10-04T09:10:06.721185-08:00",
+          "dbxrefs": [],
+          "ethnicity": "Caucasian",
+          "health_status": "breast cancer (adenocarcinoma)",
+          "submitted_by": "/users/81a6cc12-2847-4e2e-8f2c-f566699eb29e/",
+          "external_ids": [
+            "GEO:SAMN04284562"
+          ],
+          "schema_version": "11",
+          "children": [],
+          "sex": "female",
+          "lab": "/labs/encode-consortium/",
+          "aliases": [
+            "encode:donor of MCF-7",
+            "bradley-bernstein:Donor of MCF-7 cells"
+          ],
+          "alternate_accessions": [],
+          "@type": [
+            "HumanDonor",
+            "Donor",
+            "Item"
+          ],
+          "award": "/awards/U41HG006992/",
+          "@id": "/human-donors/ENCDO000AAE/",
+          "parents": [],
+          "age": "69",
+          "documents": [],
+          "age_units": "year",
+          "life_stage": "adult",
+          "status": "released",
+          "references": [
+            "/publications/2cbcb148-7858-430c-9951-a16850c2b7fa/"
+          ],
+          "organism": {
+            "uuid": "7745b647-ff15-4ff3-9ced-b897d4e2983c",
+            "@type": [
+              "Organism",
+              "Item"
+            ],
+            "status": "current",
+            "name": "human",
+            "@id": "/organisms/human/",
+            "taxon_id": "9606",
+            "schema_version": "4",
+            "scientific_name": "Homo sapiens"
+          },
+          "characterizations": []
+        },
+        "award": "/awards/U54HG006996/",
+        "age_units": "year",
+        "biosample_term_name": "MCF-7"
+      },
+      "alternate_accessions": [],
+      "@type": [
+        "Library",
+        "Item"
+      ],
+      "spikeins_used": [],
+      "award": "/awards/U54HG006996/",
+      "uuid": "f25eea55-4511-42fb-814b-0caf9f209078",
+      "@id": "/libraries/ENCLB690UAL/",
+      "strand_specificity": false,
+      "accession": "ENCLB690UAL",
+      "date_created": "2017-06-21T00:00:41.682532+00:00",
+      "size_range": "450-650",
+      "documents": [],
+      "nucleic_acid_term_id": "SO:0000352",
+      "nucleic_acid_term_name": "DNA",
+      "submitted_by": "/users/51d0b8cb-6bb4-46a7-a167-8db20f23e562/",
+      "dbxrefs": [
+        "GEO:GSM2827209"
+      ],
+      "schema_version": "8",
+      "treatments": [],
+      "status": "released",
+      "lab": "/labs/michael-snyder/"
+    },
+    "experiment": "/experiments/ENCSR502NRF/",
+    "antibody": {
+      "uuid": "bd2a5651-18c1-42ad-a949-7e1f5e817208",
+      "antigen_description": "",
+      "accession": "ENCAB778OCV",
+      "lot_id": "1",
+      "purifications": [
+        "affinity"
+      ],
+      "title": "ENCAB778OCV",
+      "date_created": "2014-12-18T02:47:28.632615+00:00",
+      "dbxrefs": [
+        "AR:AB_2615437"
+      ],
+      "source": "/sources/bethyl-labs/",
+      "submitted_by": "/users/60bc1c02-53ad-44ff-8b9c-3cfc62ac1c1b/",
+      "host_organism": "/organisms/rabbit/",
+      "characterizations": [
+        "/antibody-characterizations/705f4f76-9730-4e9b-89fc-b9c886e433bd/",
+        "/antibody-characterizations/b431060f-2775-4f44-baf6-cdb76069059c/",
+        "/antibody-characterizations/1c1eeb17-b839-4cd4-b360-83f3520a387f/",
+        "/antibody-characterizations/eaed6a40-8ffa-4006-9245-27f6de802be5/",
+        "/antibody-characterizations/f2a48067-70b3-4d00-926e-e19757229547/",
+        "/antibody-characterizations/17dcdd9c-51bf-42bf-bedb-61318cb283a1/",
+        "/antibody-characterizations/adaabbfe-8257-4d5f-a715-cf0baf7102e4/"
+      ],
+      "schema_version": "9",
+      "targets": [
+        "/targets/ELF1-human/"
+      ],
+      "lot_id_alias": [],
+      "lab": "/labs/michael-snyder/",
+      "aliases": [
+        "michael-snyder:AS-1249"
+      ],
+      "alternate_accessions": [],
+      "@type": [
+        "AntibodyLot",
+        "Item"
+      ],
+      "award": "/awards/U54HG006996/",
+      "@id": "/antibodies/ENCAB778OCV/",
+      "clonality": "polyclonal",
+      "product_id": "A301-443A",
+      "lot_reviews": [
+        {
+          "biosample_term_id": "EFO:0001187",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "HepG2",
+          "detail": "Fully characterized with exemption."
+        },
+        {
+          "biosample_term_id": "EFO:0001203",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "MCF-7",
+          "detail": "Fully characterized with exemption."
+        },
+        {
+          "biosample_term_id": "EFO:0002067",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "K562",
+          "detail": "Fully characterized with exemption."
+        },
+        {
+          "biosample_term_id": "EFO:0002784",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "GM12878",
+          "detail": "Fully characterized with exemption."
+        }
+      ],
+      "status": "released"
+    },
+    "schema_version": "9",
+    "biological_replicate_number": 1,
+    "status": "released"
+  },
+  {
+    "aliases": [
+      "michael-snyder:L-3526-2_ENCSR502NRF"
+    ],
+    "date_created": "2017-06-20T23:49:41.568993+00:00",
+    "@type": [
+      "Replicate",
+      "Item"
+    ],
+    "uuid": "c407beef-f6a8-4b2b-91fe-1f7d712a65c6",
+    "@id": "/replicates/c407beef-f6a8-4b2b-91fe-1f7d712a65c6/",
+    "technical_replicate_number": 1,
+    "submitted_by": "/users/51d0b8cb-6bb4-46a7-a167-8db20f23e562/",
+    "library": {
+      "aliases": [
+        "michael-snyder:L-3526"
+      ],
+      "biosample": {
+        "biosample_term_id": "EFO:0001203",
+        "biosample_type": "immortalized cell line",
+        "status": "released",
+        "applied_modifications": [],
+        "uuid": "31ee5456-0828-4411-a116-c375214fab4b",
+        "references": [],
+        "schema_version": "19",
+        "accession": "ENCBS758TZQ",
+        "date_created": "2017-05-02T06:13:20.610839+00:00",
+        "dbxrefs": [
+          "GEO:SAMN07791195"
+        ],
+        "source": {
+          "aliases": [],
+          "url": "http://www.atcc.org/",
+          "uuid": "eadabaf1-d5b6-4b48-8847-e86461f12101",
+          "@type": [
+            "Source",
+            "Item"
+          ],
+          "name": "atcc",
+          "@id": "/sources/atcc/",
+          "description": "American Type Culture Collection (ATCC)",
+          "title": "ATCC",
+          "schema_version": "5",
+          "status": "current"
+        },
+        "health_status": "breast cancer (adenocarcinoma)",
+        "submitted_by": {
+          "@id": "/users/51d0b8cb-6bb4-46a7-a167-8db20f23e562/",
+          "uuid": "51d0b8cb-6bb4-46a7-a167-8db20f23e562",
+          "@type": [
+            "User",
+            "Item"
+          ],
+          "title": "Nathaniel Watson",
+          "lab": "/labs/michael-snyder/"
+        },
+        "biosample_synonyms": [
+          "MCF7 cell",
+          "MCF-7 cell",
+          "MCF7"
+        ],
+        "system_slims": [],
+        "characterizations": [],
+        "organ_slims": [
+          "mammary gland"
+        ],
+        "developmental_slims": [],
+        "treatments": [],
+        "sex": "female",
+        "lab": "/labs/michael-snyder/",
+        "aliases": [
+          "michael-snyder:B-367"
+        ],
+        "culture_harvest_date": "2016-11-22",
+        "alternate_accessions": [],
+        "@type": [
+          "Biosample",
+          "Item"
+        ],
+        "internal_tags": [],
+        "summary": "Homo sapiens MCF-7 immortalized cell line",
+        "age": "69",
+        "age_display": "69 year",
+        "documents": [
+          "/documents/2a32df77-1325-4a2d-af71-2f2b68eb9830/"
+        ],
+        "parent_of": [],
+        "life_stage": "adult",
+        "organism": {
+          "uuid": "7745b647-ff15-4ff3-9ced-b897d4e2983c",
+          "@type": [
+            "Organism",
+            "Item"
+          ],
+          "status": "current",
+          "name": "human",
+          "@id": "/organisms/human/",
+          "taxon_id": "9606",
+          "schema_version": "4",
+          "scientific_name": "Homo sapiens"
+        },
+        "@id": "/biosamples/ENCBS758TZQ/",
+        "genetic_modifications": [],
+        "donor": {
+          "uuid": "f9837098-f448-4910-b485-aa94b5f18553",
+          "siblings": [],
+          "accession": "ENCDO000AAE",
+          "date_created": "2013-10-04T09:10:06.721185-08:00",
+          "dbxrefs": [],
+          "ethnicity": "Caucasian",
+          "health_status": "breast cancer (adenocarcinoma)",
+          "submitted_by": "/users/81a6cc12-2847-4e2e-8f2c-f566699eb29e/",
+          "external_ids": [
+            "GEO:SAMN04284562"
+          ],
+          "schema_version": "11",
+          "children": [],
+          "sex": "female",
+          "lab": "/labs/encode-consortium/",
+          "aliases": [
+            "encode:donor of MCF-7",
+            "bradley-bernstein:Donor of MCF-7 cells"
+          ],
+          "alternate_accessions": [],
+          "@type": [
+            "HumanDonor",
+            "Donor",
+            "Item"
+          ],
+          "award": "/awards/U41HG006992/",
+          "@id": "/human-donors/ENCDO000AAE/",
+          "parents": [],
+          "age": "69",
+          "documents": [],
+          "age_units": "year",
+          "life_stage": "adult",
+          "status": "released",
+          "references": [
+            "/publications/2cbcb148-7858-430c-9951-a16850c2b7fa/"
+          ],
+          "organism": {
+            "uuid": "7745b647-ff15-4ff3-9ced-b897d4e2983c",
+            "@type": [
+              "Organism",
+              "Item"
+            ],
+            "status": "current",
+            "name": "human",
+            "@id": "/organisms/human/",
+            "taxon_id": "9606",
+            "schema_version": "4",
+            "scientific_name": "Homo sapiens"
+          },
+          "characterizations": []
+        },
+        "award": "/awards/U54HG006996/",
+        "age_units": "year",
+        "biosample_term_name": "MCF-7"
+      },
+      "alternate_accessions": [],
+      "@type": [
+        "Library",
+        "Item"
+      ],
+      "status": "released",
+      "award": "/awards/U54HG006996/",
+      "uuid": "95759740-b7d3-4e9c-a77f-cfe4a367d9d6",
+      "@id": "/libraries/ENCLB782CIR/",
+      "strand_specificity": false,
+      "accession": "ENCLB782CIR",
+      "date_created": "2017-06-20T23:49:38.835010+00:00",
+      "size_range": "450-650",
+      "nucleic_acid_term_id": "SO:0000352",
+      "nucleic_acid_term_name": "DNA",
+      "submitted_by": "/users/51d0b8cb-6bb4-46a7-a167-8db20f23e562/",
+      "dbxrefs": [
+        "GEO:GSM2827208"
+      ],
+      "schema_version": "8",
+      "treatments": [],
+      "documents": [],
+      "spikeins_used": [],
+      "lab": "/labs/michael-snyder/"
+    },
+    "experiment": "/experiments/ENCSR502NRF/",
+    "antibody": {
+      "uuid": "bd2a5651-18c1-42ad-a949-7e1f5e817208",
+      "antigen_description": "",
+      "accession": "ENCAB778OCV",
+      "lot_id": "1",
+      "purifications": [
+        "affinity"
+      ],
+      "title": "ENCAB778OCV",
+      "date_created": "2014-12-18T02:47:28.632615+00:00",
+      "dbxrefs": [
+        "AR:AB_2615437"
+      ],
+      "source": "/sources/bethyl-labs/",
+      "submitted_by": "/users/60bc1c02-53ad-44ff-8b9c-3cfc62ac1c1b/",
+      "host_organism": "/organisms/rabbit/",
+      "characterizations": [
+        "/antibody-characterizations/705f4f76-9730-4e9b-89fc-b9c886e433bd/",
+        "/antibody-characterizations/b431060f-2775-4f44-baf6-cdb76069059c/",
+        "/antibody-characterizations/1c1eeb17-b839-4cd4-b360-83f3520a387f/",
+        "/antibody-characterizations/eaed6a40-8ffa-4006-9245-27f6de802be5/",
+        "/antibody-characterizations/f2a48067-70b3-4d00-926e-e19757229547/",
+        "/antibody-characterizations/17dcdd9c-51bf-42bf-bedb-61318cb283a1/",
+        "/antibody-characterizations/adaabbfe-8257-4d5f-a715-cf0baf7102e4/"
+      ],
+      "schema_version": "9",
+      "targets": [
+        "/targets/ELF1-human/"
+      ],
+      "lot_id_alias": [],
+      "lab": "/labs/michael-snyder/",
+      "aliases": [
+        "michael-snyder:AS-1249"
+      ],
+      "alternate_accessions": [],
+      "@type": [
+        "AntibodyLot",
+        "Item"
+      ],
+      "award": "/awards/U54HG006996/",
+      "@id": "/antibodies/ENCAB778OCV/",
+      "clonality": "polyclonal",
+      "product_id": "A301-443A",
+      "lot_reviews": [
+        {
+          "biosample_term_id": "EFO:0001187",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "HepG2",
+          "detail": "Fully characterized with exemption."
+        },
+        {
+          "biosample_term_id": "EFO:0001203",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "MCF-7",
+          "detail": "Fully characterized with exemption."
+        },
+        {
+          "biosample_term_id": "EFO:0002067",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "K562",
+          "detail": "Fully characterized with exemption."
+        },
+        {
+          "biosample_term_id": "EFO:0002784",
+          "organisms": [
+            "/organisms/human/"
+          ],
+          "targets": [
+            "/targets/ELF1-human/"
+          ],
+          "status": "characterized to standards with exemption",
+          "biosample_term_name": "GM12878",
+          "detail": "Fully characterized with exemption."
+        }
+      ],
+      "status": "released"
+    },
+    "schema_version": "9",
+    "biological_replicate_number": 2,
+    "status": "released"
+  }
+]
