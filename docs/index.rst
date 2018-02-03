@@ -6,14 +6,24 @@
 ENCODE Utils package
 ========================================
 
+Client API Modules
+------------------
+
 .. toctree::
    :maxdepth: 3
-   :caption: Modules
 
    encode_utils
    utils
    connection
    profiles 
+
+Unit test modules
+-----------------
+
+.. toctree::
+   :maxdepth: 3
+
+   tests/utils
 
 
 Indices and tables
