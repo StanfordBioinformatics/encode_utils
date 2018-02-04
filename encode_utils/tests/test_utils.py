@@ -9,7 +9,7 @@
 
 """                                                                                                    
 Tests functions in the utils module. A few test data files are used from within the 'data' folder.  
-The contents of the files are explained here. When a test utilized any of them, you can check here  
+The contents of the files are explained here. When a test utilizes any of them, you can check here  
 to read the documentation about the contents of that file.                                             
                                                                                                        
 * replicates_for_ENCSR502NRF.json                                                                      
