@@ -20,6 +20,9 @@ to read the documentation about the contents of that file.
     technical_replicate_number=1. It belongs to library accession ENCLB690UAL.                         
   * michael-snyder:L-3526-2_ENCSR502NRF with biological_replicate_number=2 and                         
     technical_replicate_number=1. It belongs to library accession ENCLB782CIR.                         
+
+* test_fq_40recs.fastq.gz
+  Contains 40 FASTQ records.
 """
 
 import json
@@ -33,6 +36,12 @@ DATA_DIR = "data"
 class TestUtils(unittest.TestCase):
   """Tests the utils.py module.
   """
+
+  def setUp(self):
+    rep_json_file = os.path.join(DATA_DIR,"replicates_for_ENCSR502NRF.json")
+    with open(rep_json_file,'r') as fh:
+      self.replicates_json = json.loads(fh.read())
+    self.fqfile = os.path.join(DATA_DIR,"test_fq_40recs.fastq.gz")
 
   def test_add_to_set(self):
     """Tests the function utils.add_to_set() for success when all elements are already unique.
@@ -53,7 +62,7 @@ class TestUtils(unittest.TestCase):
     """
     infile = os.path.join(DATA_DIR,"test_fq_40recs.fastq.gz")
     md5sum = utils.calculate_md5sum(infile) 
-    self.assertEqual(md5sum,"dc991f01103594ef590d612e0caabf39")
+    self.assertEqual(md5sum,"a3e7cb3df359d0642ab0edd33ea7e93e")
 
   def test_clean_alias_name(self):
     """Tests the function clean_alias_name() for success.
@@ -63,40 +72,67 @@ class TestUtils(unittest.TestCase):
 
   def test_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for 1 result when when only care about
+    Test the function utils.does_lib_replicate_exist() for correct result when we only care about
     whether the library has any replicates, and not any particular one.
     """
-    infile = os.path.join(DATA_DIR,"replicates_for_ENCSR502NRF.json")
-    with open(infile,'r') as fh:
-      replicates_json = json.loads(fh.read())
-    lib_accession = "ENCLB690UAL"
-    res = utils.does_lib_replicate_exist(replicates_json=replicates_json,
+    lib_accession = "ENCLB690UAL" #has replicate for (1,1).
+    res = utils.does_lib_replicate_exist(replicates_json=self.replicates_json,
                                          lib_accession=lib_accession)
     self.assertEqual(res,["37b3dabc-bbdc-4832-88a5-78c2a8369942"])
 
+ 
   def test_2_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for empty result when library accession
-    doesn't belong to any of the replicates.
+    Test the function utils.does_lib_replicate_exist() for the correct result when we restrict 
+    the replicate search to only those with the specific `biological_replicate_number`.
     """
-    infile = os.path.join(DATA_DIR,"replicates_for_ENCSR502NRF.json")
-    with open(infile,'r') as fh:
-      replicates_json = json.loads(fh.read())
-    lib_accession = "ENCLB000000" #Doesn't exist.
-    res = utils.does_lib_replicate_exist(replicates_json=replicates_json,
-                                         lib_accession=lib_accession)
-    self.assertEqual(res,[])
+    lib_accession = "ENCLB690UAL" #has replicate for (1,1).
+    brn = 1
+    res = utils.does_lib_replicate_exist(
+      replicates_json=self.replicates_json,
+      lib_accession=lib_accession,
+      biological_replicate_number=brn)
+ 
+    self.assertEqual(res,["37b3dabc-bbdc-4832-88a5-78c2a8369942"])
 
   def test_3_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for empty result when library accession
-    doesn't belong to any of the replicates.
+    Test the function utils.does_lib_replicate_exist() for the empty result when we restrict 
+    the replicates search to a `biological_replicate_number` that does not apply.
     """
-    infile = os.path.join(DATA_DIR,"replicates_for_ENCSR502NRF.json")
-    with open(infile,'r') as fh:
-      replicates_json = json.loads(fh.read())
+    lib_accession = "ENCLB690UAL" #has replicate for (1,1).
+    brn = 2
+    res = utils.does_lib_replicate_exist(
+      replicates_json=self.replicates_json,
+      lib_accession=lib_accession,
+      biological_replicate_number=brn)
+ 
+    self.assertEqual(res,[])
+
+  def test_4_does_lib_replicate_exist(self):
+    """
+    Test the function utils.does_lib_replicate_exist() for the empty result when we restrict 
+    the replicates search to a `biological_replicate_number` that does apply but a 
+    `technical_replicate_number` that doesn't.
+    """
+    lib_accession = "ENCLB690UAL" #has replicate for (1,1).
+    brn = 1
+    trn = 2
+    res = utils.does_lib_replicate_exist(
+      replicates_json=self.replicates_json,
+      lib_accession=lib_accession,
+      biological_replicate_number=brn,
+      technical_replicate_number=trn)
+ 
+    self.assertEqual(res,[])
+
+  def test_5_does_lib_replicate_exist(self):
+    """
+    Test the function utils.does_lib_replicate_exist() for the empty result when the library 
+    accession doesn't belong to any of the replicates.
+    """
     lib_accession = "ENCLB000000" #Doesn't exist.
-    res = utils.does_lib_replicate_exist(replicates_json=replicates_json,
+    res = utils.does_lib_replicate_exist(replicates_json=self.replicates_json,
                                          lib_accession=lib_accession)
     self.assertEqual(res,[])
 
