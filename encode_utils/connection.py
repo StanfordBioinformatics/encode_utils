@@ -987,19 +987,16 @@ class Connection():
     Links an existing document on the ENCODE Portal to another existing object on the Portal via
     the latter's "documents" property.
 
-    There is a known issue where the same document can be linked multiple times to some other
-    object. This method has this side effect, despite being what should be an idempotent PATCH 
-    operation. This is considered a bug on the DCC end. It will occur anytime this method is
-    rerun with the same inputs and the passed in `document_id` is not a primary ID identifier 
-    (i.e. an accession or alias instead of the value of the `@id` property). 
-    That is because when checking for uniquness, the passed in indentifier is only compared against 
-    the primary identifiers in the `documents` property of the record identified by `rec_id`. 
-
     Args:
         rec_id: `str`. A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to 
           link the document to.
         document_id: `str`. An identifier of a `document` record.
     """
+    
+    #Need to compare the documents at the primary ID level ('@id' property) in order to ensure the
+    # document isn't already linked. If not comparing at this identifier type and instead some
+    # other type (i.e. alias, uuid), then the document will be relinked as a duplicate.
+
     doc_json = self.get(ignore404=False,rec_ids=document_id)
     doc_primary_id = doc_json["@id"]
 
