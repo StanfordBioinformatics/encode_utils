@@ -19,5 +19,5 @@ setup(
     "requests",
     "urllib3"],
   scripts = ["encode_utils/MetaDataRegistration/eu_register.py"],
-  package_data = {"encode_utils": ["data/test_fq_40recs.fastq.gz"]}
+  package_data = {"encode_utils": ["tests/data/*"]}
 )
