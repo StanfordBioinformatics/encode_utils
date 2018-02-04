@@ -762,12 +762,13 @@ class Connection():
  
     Returns:
         `dict`: `dict` containing keys named after AWS environment variables being:
+
           1. AWS_ACCESS_KEY_ID,
           2. AWS_SECRET_ACCESS_KEY,
           3. AWS_SECURITY_TOKEN,
           4. UPLOAD_URL
+
         Will be empty if the `upload_credentials` property isn't present in `file_json`.
-           
     """
     try:
       creds = file_json["upload_credentials"]
@@ -1059,9 +1060,9 @@ class Connection():
     the latter's "documents" property.
 
     Args:
-         rec_id: `str`. A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to link the
-             document to.
-         dcc_document_uuid: `str`. The value of the document's 'uuid' attribute.
+        rec_id: `str`. A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to 
+          link the document to.
+        dcc_document_uuid: `str`. The value of the document's 'uuid' attribute.
 
     Returns:
         `dict`: The response form self.patch().
