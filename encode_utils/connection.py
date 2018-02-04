@@ -181,10 +181,9 @@ class Connection():
         aliases[index] =  euu.strip_alias_prefix(alias)
     return aliases
 
-  def search_encode(self,search_args):
+  def search(self,search_args):
     """
-    Searches the ENCODE Portal using the provided query parameters in dictionary format. The query
-    parameters will be first URL encoded.
+    Searches the Portal using the provided query parameters,which will first be URL encoded.
 
     Args:
         search_args: `dict`. The key and value query parameters.
@@ -193,7 +192,7 @@ class Connection():
         `list`: The search results.
 
     Raises:
-        requests.exceptions.HTTPError: If the status code is not in the set [200,404].
+        requests.exceptions.HTTPError: The status code is not in the set [200,404].
 
     **Example**:
         Given we have the following dictionary *d* of key and value pairs::
@@ -215,7 +214,7 @@ class Connection():
     DEBUG_LOGGER.debug("Searching DCC with query {url}.".format(url=url))
     response = requests.get(url,
                             auth=self.auth,
-                            timeout=en.TIMEOUT,
+                            timeout=eu.TIMEOUT,
                             headers=euu.REQUEST_HEADERS_JSON,
                             verify=False)
     if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
@@ -223,11 +222,12 @@ class Connection():
     return response.json()["@graph"] #the @graph object is a list
 
 
-  def validate_profile_in_payload(self,payload):
+  def get_profile_from_payload(self,payload):
     """
     Useful to call when doing a POST (and self.post() does call this). Ensures that the profile key
     identified by self.PROFILE_KEY exists in the passed-in payload and that the value is
-    a recognized ENCODE object profile (schema).
+    a recognized ENCODE object profile (schema). Alternatively, the user can set the profile in 
+    the more convoluted `@id` attribute.
 
     Args:
         payload: `dict`. The intended object data to POST.
@@ -236,16 +236,19 @@ class Connection():
         `str`: The ID of the profile if all validations pass, otherwise.
 
     Raises:
-        encode_utils.connection.ProfileNotSpecified: The key self.PROFILE_KEY is missing in the payload.
+        encode_utils.connection.ProfileNotSpecified: Both keys self.PROFILE_KEY and `@id` are
+          missing in the payload.
         encode_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
             `encode_utils.profiles.Profile`.
     """
 
     profile_id = payload.get(self.PROFILE_KEY)
     if not profile_id:
-      raise ProfileNotSpecified(
-        ("You need to specify the ID of the profile to submit to by using the '{}' key"
-         " in the payload.").format(self.PROFILE_KEY))
+      profile_id = payload.get("@id")
+      if not profile_id:
+        raise ProfileNotSpecified(
+          ("You need to specify the ID of the profile to submit to by using the '{}' key"
+           " in the payload, or by setting the `@id` property explicitely.").format(self.PROFILE_KEY))
     profile = eup.Profile(profile_id) #raises euu.UnknownProfile if unknown profile ID.
     return profile.profile_id
 
@@ -289,7 +292,7 @@ class Connection():
   #  url = os.path.join(eu.DCC_URL,rec_id)
   #  self.logger.info(
   #    (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
-  #  response = requests.delete(url,auth=self.auth,timeout=en.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
+  #  response = requests.delete(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
   #  pdb.set_trace()
   #  if response.ok:
   #    return response.json()
@@ -462,7 +465,7 @@ class Connection():
         encode_utils.utils.MD5SumError: Perculated through the function 
           `encode_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
     """
-    profile_id = payload[self.PROFILE_KEY]
+    profile_id = self.get_profile_from_payload(payload)
     if profile_id != eup.Profile.FILE_PROFILE_ID:
       return payload
     try:
@@ -519,7 +522,8 @@ class Connection():
     """POST a record to the ENCODE Portal.
 
     Requires that you include in the payload the non-schematic key self.PROFILE_KEY to
-    designate the name of the ENCODE object profile that you are submitting against.
+    designate the name of the ENCODE object profile that you are submitting against, or the 
+    actual `@id` property itself, which is rather convoluted. 
 
     If the 'lab' property isn't present in the payload, then the default will be set to the value
     of the DCC_LAB environment variable. Similarly, if the 'award' property isn't present, then the
@@ -546,7 +550,7 @@ class Connection():
     DEBUG_LOGGER.debug("\nIN post().")
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json.loads(json.dumps(payload))
-    profile_id = self.validate_profile_in_payload(payload)
+    profile_id = self.get_profile_from_payload(payload)
     url = os.path.join(eu.DCC_URL,profile_id)
     #Check if we need to add defaults for 'award' and 'lab' properties:
     if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS: #No lab prop for these profiles either.
@@ -562,7 +566,16 @@ class Connection():
 
     #Run 'before' hooks:
     payload = self.before_submit_hooks(payload,method=self.POST)
-    payload.pop(self.PROFILE_KEY)
+    #Remove the non-schematic self.PROFILE_KEY if being used. Also check for the '@id' property
+    # and remove if found too.
+    try:
+      payload.pop(self.PROFILE_KEY)
+    except KeyError:
+      pass
+    try:
+      payload.pop("@id")
+    except KeyError:
+      pass
 
     DEBUG_LOGGER.debug(
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
@@ -649,6 +662,7 @@ class Connection():
 
     #Run 'before' hooks:
     payload = self.before_submit_hooks(payload,method=self.PATCH)
+    payload.pop(self.ENCODE_IDENTIFIER_KEY)
 
     url = os.path.join(eu.DCC_URL,encode_id)
     DEBUG_LOGGER.debug(
@@ -662,6 +676,7 @@ class Connection():
 
     if response.ok:
       DEBUG_LOGGER.debug("Success.")
+      response_json = response_json["@graph"][0]
       uuid = response_json["uuid"]
       profile = eup.Profile(response_json["@id"])
       #Run 'after' hooks:
@@ -930,15 +945,16 @@ class Connection():
     return list(set(platforms))
 
   def post_document(self,download_filename,document,document_type,description):
-    """
-    The alias for the document will be the lab prefix plus the file name (minus the file extension).
+    """POSTS a document to the Portal.
+
+    The alias for the document will be the lab prefix plus the file name.
 
     Args:
         download_filename: `str`. The name to give the document when downloading it from the ENCODE
-            portal.
+          portal.
         document_type: `str`. For possible values, see
-            https://www.encodeproject.org/profiles/document.json. It appears that one should use
-            "data QA" for analysis results documents.
+          https://www.encodeproject.org/profiles/document.json. It appears that one should use
+          "data QA" for analysis results documents.
         description: `str`. The description for the document.
         document: `str`. Local file path to the document to be submitted.
 
@@ -946,17 +962,17 @@ class Connection():
         `str`: The DCC UUID of the new document.
     """
     document_filename = os.path.basename(document)
-    document_alias = eu.LAB + os.path.splitext(document_filename)[0]
+    document_alias = eu.LAB[eu.LAB_PROP_NAME] + ":" + document_filename
     mime_type = mimetypes.guess_type(document_filename)[0]
     if not mime_type:
       raise Exception("Couldn't guess MIME type for {}.".format(document_filename))
 
     ## Post information
     payload = {}
-    payload["@id"] = "documents/"
+    payload[self.PROFILE_KEY] = "document"
     payload["aliases"] = [document_alias]
     payload["document_type"] = document_type
-    payload["description"] = document_description
+    payload["description"] = description
 
     #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
     attachment = self.set_attachment(document)
@@ -966,33 +982,47 @@ class Connection():
     response = self.post(payload=payload)
     return response['uuid']
 
-  def link_document(self,rec_id,dcc_document_uuid):
+  def link_document(self,rec_id,document_id):
     """
     Links an existing document on the ENCODE Portal to another existing object on the Portal via
     the latter's "documents" property.
 
+    There is a known issue where the same document can be linked multiple times to some other
+    object. This method has this side effect, despite being what should be an idempotent PATCH 
+    operation. This is considered a bug on the DCC end. It will occur anytime this method is
+    rerun with the same inputs and the passed in `document_id` is not a primary ID identifier 
+    (i.e. an accession or alias instead of the value of the `@id` property). 
+    That is because when checking for uniquness, the passed in indentifier is only compared against 
+    the primary identifiers in the `documents` property of the record identified by `rec_id`. 
+
     Args:
         rec_id: `str`. A DCC object identifier, i.e. accession, @id, UUID, ..., of the object to 
           link the document to.
-        dcc_document_uuid: `str`. The value of the document's 'uuid' attribute.
-
-    Returns:
-        `dict`: The response form self.patch().
+        document_id: `str`. An identifier of a `document` record.
     """
+    doc_json = self.get(ignore404=False,rec_ids=document_id)
+    doc_primary_id = doc_json["@id"]
+
     rec_json = self.get(ignore404=False,rec_ids=rec_id)
-    documents_json = rec_json["documents"]
+    try:
+      rec_document_primary_ids = rec_json["documents"]
+    except KeyError:
+      #There aren't any documents at present.
+      rec_document_primary_ids = []
+
+    if doc_primary_id in rec_document_primary_ids:
+      DEBUG_LOGGER.debug("Will not attempt to link document {} to {} since it is already linked.".format(document_id,rec_id))
+      return
+
+    #Add primary ID of new document to link.
+    rec_document_primary_ids.append(doc_primary_id)
     #Originally in form of [u'/documents/ba93f5cc-a470-41a2-842f-2cb3befbeb60/',
     #                       u'/documents/tg81g5aa-a580-01a2-842f-2cb5iegcea03, ...]
     #Strip off the /documents/ prefix from each document UUID:
-    document_uuids = [x.strip("/").split("/")[-1] for x in documents_json]
-    if document_uuids:
-      document_uuids = euu.add_to_set(entries=document_uuids,new=dcc_document_uuid)
-    else:
-      document_uuids.append(dcc_document_uuid)
     payload = {}
-    payload["@id"] = euu.parse_profile_from_id_prop(rec_json["@id"])
-    payload["documents"] = document_uuids
-    self.patch(payload=payload,record_id=rec_id)
+    payload[self.ENCODE_IDENTIFIER_KEY] = rec_id
+    payload["documents"] = rec_document_primary_ids
+    self.patch(payload=payload)
 
 #When appending "?datastore=database" to the URL. As Esther stated: "_indexer to the end of the
 # URL to see the status of elastic search like
