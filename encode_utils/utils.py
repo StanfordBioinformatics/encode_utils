@@ -153,30 +153,30 @@ def add_to_set(entries,new):
   unique_list = list(set(entries))
   return unique_list
 
-def does_lib_replicate_exist(replicates_json,lib_accession,biologicial_replicate_number=False,technical_replicate_number=False):
+def does_lib_replicate_exist(replicates_json,lib_accession,biological_replicate_number=False,technical_replicate_number=False):
   """
   Regarding the replicates on the specified experiment, determines whether any of them belong
-  to the specified library.  Optional constraints are the biologicial_replicate_number and
+  to the specified library.  Optional constraints are the biological_replicate_number and
   the technical_replicate_number props of the replicates.
 
   Args:
       replicates_json: `list`. The value of the `replicates` property of an Experiment record.
       lib_accession: `str`. The value of a library object's 'accession' property.
-      biologicial_replicate_number: int. The biological replicate number.
+      biological_replicate_number: int. The biological replicate number.
       technical_replicate_number: int. The technical replicate number.
 
   Returns:
       `list`: The replicate UUIDs that pass the search constraints.
   """
-  biologicial_replicate_number = int(biologicial_replicate_number)
+  biological_replicate_number = int(biological_replicate_number)
   technical_replicate_number = int(technical_replicate_number)
   results = [] #list of replicate UUIDs.
   for rep in replicates_json:
     rep_id = rep["uuid"]
     if not lib_accession == rep["library"]["accession"]:
       continue
-    if biologicial_replicate_number:
-      if biologicial_replicate_number != rep["biological_replicate_number"]:
+    if biological_replicate_number:
+      if biological_replicate_number != rep["biological_replicate_number"]:
         continue
     if technical_replicate_number:
       if technical_replicate_number != rep["technical_replicate_number"]:

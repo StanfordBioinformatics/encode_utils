@@ -450,7 +450,8 @@ class Connection():
     return payload
 
   def before_post_file(self,payload):
-    """
+    """Calculates and sets the md5sum property for a file record.    
+
     Args:
         payload: `dict`. The payload to submit to the Portal.
 
@@ -750,40 +751,60 @@ class Connection():
       dico[brn][trn][read_num].append(file_json)
     return dico
 
+  def extract_aws_upload_credentials(self,file_json):
+    """
+    Sets values for the AWS environment variables to the credentials found in a file record's 
+    `upload_credentials` property.
+
+    Args:
+        file_json: `dict`: A file record's JSON serialization.
+ 
+    Returns:
+        `dict`: `dict` containing keys named after AWS environment variables being:
+             1. AWS_ACCESS_KEY_ID,
+             2. AWS_SECRET_ACCESS_KEY,
+             3. AWS_SECURITY_TOKEN,
+             4. UPLOAD_URL
+           Will be empty if the `upload_credentials` property isn't present in `file_json`.
+           
+    """
+    try:
+      creds = file_json["upload_credentials"]
+    except KeyError:
+      return {}
+    aws_creds = {}
+    aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
+    aws_creds["AWS_SECRET_ACCESS_KEY"] = creds["secret_key"]
+    aws_creds["AWS_SECURITY_TOKEN"] = creds["session_token"]
+    aws_creds["UPLOAD_URL"] = creds["upload_url"]
+    return aws_creds
 
   def set_aws_upload_config(self,file_id):
     """
-    Sets the AWS security credentials needed to upload a file to AWS S3 using the
-    AWS CLI agent for a specific file object. See self.upload_file() for an example
-    of how this is used.
+    Sets the AWS security credentials needed to upload a file to AWS S3 by the
+    AWS CLI agent. First will attempt to extract the upload credentials
+    from the file record if the property `upload_credentials` is set. If not set, then an attempt
+    to regenerate the upload credentials will be made. 
 
     Args:
         file_id: `str`. A file object identifier (i.e. accession, uuid, alias, md5sum).
 
     Returns:
-        `dict`: `dict` that sets the keys AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and
-            AWS_SECURITY_TOKEN. These can be set as environment variables for use with the AWS CLI
-            agent. Will be empty if new upload credentials could not be generated (i.e. forbidden).
+        `dict`: See documentation for the return value for self.extract_aws_upload_credentials().
     """
     file_json = self.get(file_id,ignore404=False)
-    try:
-      creds = file_json["upload_credentials"]
-    except KeyError:
+    creds = self.set_aws_upload_config(file_json)
+    if not creds:
       creds = self.regenerate_aws_upload_creds(file_id)
       #Will be None if forbidden.
 
     if not creds:
       return {}
 
-    aws_creds = {}
-    aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
-    aws_creds["AWS_SECRET_ACCESS_KEY"] = creds["secret_key"]
-    aws_creds["AWS_SECURITY_TOKEN"] = creds["session_token"]
-    aws_creds["UPLOAD_URL"] = creds["upload_url"]
     #URL example from dev Portal:
     #  s3://encoded-files-dev/2018/01/28/7c5c6d58-c98a-48b4-9d4b-3296b4126b89/TSTFF334203.fastq.gz"
     #  That's the uuid after the date.
-    return aws_creds
+    return creds
 
   def post_file_metadata(self,payload,patch):
     """

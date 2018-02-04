@@ -49,8 +49,38 @@ class TestConnection(unittest.TestCase):
       "aliases": [alias],
       "md5sum": md5
     }
+
     res = self.conn.get_lookup_ids_from_payload(payload)
     self.assertEquals(sorted(res),sorted([accession,alias,md5]))
+
+  def test_extract_aws_upload_credentials(self):
+    """ 
+    Tests the method extract_aws_upload_credentials() for extracting the upload credentials 
+    for from a file object's JSON.
+    """
+    access_key = "access_key"
+    secret_key = "secret_key"
+    session_token = "session_token"
+    upload_url = "upload_url"
+
+    payload = {
+      "upload_credentials": {
+        access_key: access_key,
+        secret_key: secret_key,
+        session_token: session_token,
+        upload_url: upload_url
+      }
+    }
+ 
+    res = self.conn.extract_aws_upload_credentials(payload)
+
+    aws_creds = {}
+    aws_creds["AWS_ACCESS_KEY_ID"] = access_key
+    aws_creds["AWS_SECRET_ACCESS_KEY"] = secret_key
+    aws_creds["AWS_SECURITY_TOKEN"] = session_token
+    aws_creds["UPLOAD_URL"] = upload_url
+
+    self.assertEquals(res,aws_creds)
 
   def test_validate_profile_in_payload(self):
     """
@@ -60,6 +90,7 @@ class TestConnection(unittest.TestCase):
     payload = {
       connection.Connection.PROFILE_KEY: "/genetic-modifications/ENCGM063ASY/"
     }
+
     res = self.conn.validate_profile_in_payload(payload)
     self.assertEquals(res,"genetic_modification")
 

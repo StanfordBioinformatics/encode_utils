@@ -24,6 +24,7 @@ Unit Tests
    :maxdepth: 3
 
    tests/test_utils
+   tests/test_connection
 
 Indices and tables
 ==================

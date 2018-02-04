@@ -138,7 +138,7 @@ class Profile:
     orig_profile = profile_id
     profile_id = profile_id.strip("/").split("/")[0].lower()
     #Multi-word profile names are hypen-separated, i.e. genetic-modifications.
-    profile_id = profile_id.replace("-","")
+    profile_id = profile_id.replace("-","_")
     if not profile_id in Profile._PROFILES:
       profile_id = profile_id.rstrip("s")
       if not profile_id in Profile._PROFILES:
