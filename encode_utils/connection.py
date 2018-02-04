@@ -494,7 +494,7 @@ class Connection():
 
     Returns:
         `dict`: The potentially modified payload that has been passed through all applicable
-            pre-submit hooks.
+        pre-submit hooks.
     """
     #Check allowed_methods. Will matter later when there are POST-specific
     # and PATCH-specific hooks.
@@ -533,7 +533,7 @@ class Connection():
 
     Returns:
         `dict`: The JSON response from the POST operation, or GET operation If the resource already
-          exist on the Portal.
+        exist on the Portal.
 
     Raises:
         AwardPropertyMissing: The 'award' property isn't present in the payload and there isn't a
@@ -620,6 +620,7 @@ class Connection():
         extend_array_values: `bool`. Only affects keys with array values. True (default) means to
             extend the corresponding value on the Portal with what's specified in the payload.
             False means to replace the value on the Portal with what's in the payload.
+
     Returns:
         `dict`: The JSON response from the PATCH operation.
 
@@ -727,10 +728,10 @@ class Connection():
         dcc_exp_id: `list` of DCC file IDs or aliases
     Returns:
         `dict`: `dict` where each key is a biological_replicate_number.
-            The value of each key is another dict where each key is a technical_replicate_number.
-            The value of this is yet another dict with keys being file read numbers -
-            1 for forward reads, 2 for reverse reads.  The value
-            for a given key of this most inner dictionary is a list of file objects.
+        The value of each key is another dict where each key is a technical_replicate_number.
+        The value of this is yet another dict with keys being file read numbers -
+        1 for forward reads, 2 for reverse reads.  The value
+        for a given key of this most inner dictionary is a list of file objects.
     """
     exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
     dcc_file_ids = exp_json["original_files"]
@@ -761,11 +762,11 @@ class Connection():
  
     Returns:
         `dict`: `dict` containing keys named after AWS environment variables being:
-             1. AWS_ACCESS_KEY_ID,
-             2. AWS_SECRET_ACCESS_KEY,
-             3. AWS_SECURITY_TOKEN,
-             4. UPLOAD_URL
-           Will be empty if the `upload_credentials` property isn't present in `file_json`.
+          1. AWS_ACCESS_KEY_ID,
+          2. AWS_SECRET_ACCESS_KEY,
+          3. AWS_SECURITY_TOKEN,
+          4. UPLOAD_URL
+        Will be empty if the `upload_credentials` property isn't present in `file_json`.
            
     """
     try:
@@ -902,8 +903,8 @@ class Connection():
 
     Returns:
         `dict`: `dict` containing the value of the 'upload_credentials' key in the JSON serialization
-            of the file object represented by file_id. Will be empty if new upload credentials
-            could not be issued.
+        of the file object represented by file_id. Will be empty if new upload credentials
+        could not be issued.
     """
     DEBUG_LOGGER.debug("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
