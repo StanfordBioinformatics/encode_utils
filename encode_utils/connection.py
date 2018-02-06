@@ -28,15 +28,11 @@ import encode_utils.profiles as eup
 import encode_utils.utils as euu
 
 
+
+LOG_DIR = "EU_Logs"
+
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 #urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-#: A descendent logger of the debug logger created in `encode_utils`
-#: (see the function description for `encode_utils._create_debug_logger`)
-DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
-#: A descendent logger of the error logger created in `encode_utils`
-#: (see the function description for `encode_utils._create_error_logger`)
-ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
 
 class AwardPropertyMissing(Exception):
   """
@@ -110,26 +106,34 @@ class Connection():
   POST = "post"
   PATCH = "patch"
 
-  def __init__(self):
+  def __init__(self,dcc_mode=False):
 
-    debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
-    error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
+    #: A reference to the debug logger that was created earlier; see `encode_utils.debug_logger`.
+    #: This class adds a file handler, such that all messages send to it are logged to this
+    #: file in addition to STDOUT>
+    self.debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME)
+    self.dcc_mode = self._set_dcc_mode(dcc_mode)
+    self.dcc_host = eu.DCC_MODES[self.dcc_mode]["host"]
+    self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
+   
+    #Add debug file handler to debug_logger:
+    self._add_file_handler(logger=self.debug_logger,level=logging.DEBUG)
 
-    f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(pathname)s:\t%(message)s')
+    #: A `logging` instance with a file handler for logging messages at the ERROR level or greater.
+    #: Meant to log terse error messages.
+    #: The log file resides locally within the directory specified by the constant LOG_DIR.
+    self.error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME)
+    log_level = logging.ERROR
+    self.error_logger.setLevel(log_level)
+    self._add_file_handler(logger=self.error_logger,level=log_level)
 
-    #: A logging instance for logging successful POST operations to a file by the name of
-    #: DCC_MODE_posted, which is opened in append mode in the calling directory.
+    #: A `logging` instance with a file handler for logging successful POST operations.
+    #: The log file resides locally within the directory specified by the constant LOG_DIR.
     #: Accepts messages >= logging.INFO.
-    post_logger = logging.getLogger("post")
-    post_logger.setLevel(logging.INFO)
-    post_logger_fh = logging.FileHandler(filename=eu.DCC_MODE + "_" + "posted.txt",mode="a")
-    post_logger_fh.setLevel(logging.INFO)
-    post_logger_fh.setFormatter(f_formatter)
-    post_logger.addHandler(post_logger_fh)
-
-    DEBUG_LOGGER = debug_logger
-    ERROR_LOGGER = error_logger
-    self.post_logger = post_logger
+    self.post_logger = logging.getLogger(eu.POST_LOGGER_NAME)
+    log_level = logging.POST
+    self.post_logger.setLevel(log_level)
+    self._add_file_handler(logger=self.post_logger,level=log_level)
 
 
     #: The API key to use when authenticating with the DCC servers. This is set automatically
@@ -139,6 +143,36 @@ class Connection():
     #: to the value of the DCC_SECRET_KEY environment variable in the _set_api_keys() private method.
     self.secret_key = self._set_api_keys()[1]
     self.auth = (self.api_key,self.secret_key)
+
+  def _set_dcc_mode(self,dcc_mode=False):
+    if not dcc_mode:
+      try:
+        dcc_mode = os.environ["DCC_MODE"]
+        self.debug_logger.debug("Utilizing DCC_MODE environment variable.")
+      except KeyError:
+        pass
+    dcc_mode = dcc_mode.lower()
+    if dcc_mode not in eu.DCC_MODES:
+      raise Exception(
+        "The specified dcc_mode of '{}' is not valid. Should be one of '{}' or '{}'.".format(dcc_mode, eu.DCC_MODES.keys()))
+    return dcc_mode
+
+  def _get_logfile_name(self,log_level):
+    filename = "log_eu_" + self.dcc_mode + "_" + log_level + ".txt"
+    filename = os.path.join(LOG_DIR,filename)
+    return filename
+
+  def _add_file_handler(self,logger,level):
+    """
+    Creates a logger that logs messages at the ERROR level or greater. There is a single handler,
+    which logs its messages to a file by the name of log_eu_$DCC_MODE_error.txt.
+    """
+    f_formatter = logging.Formatter('%(asctime)s:%(name)s:\t%(message)s')
+    filename = self._get_logfile_name(level)
+    handler = logging.FileHandler(filename=filename,mode="a")
+    handler.setLevel(level)
+    handler.setFormatter(f_formatter)
+    logger.addHandler(handler)
 
   def _set_api_keys(self):
     """
@@ -211,7 +245,7 @@ class Connection():
     """
     query = urllib.parse.urlencode(search_args)
     url = os.path.join(eu.DCC_URL,"search/?",query)
-    DEBUG_LOGGER.debug("Searching DCC with query {url}.".format(url=url))
+    self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
     response = requests.get(url,
                             auth=self.auth,
                             timeout=eu.TIMEOUT,
@@ -328,10 +362,10 @@ class Connection():
     for r in rec_ids:
       if r.endswith("/"):
         r = r.rstrip("/")
-      url = os.path.join(eu.DCC_URL,r,"?format=json&datastore=database")
+      url = os.path.join(self.dcc_url,r,"?format=json&datastore=database")
       if frame:
         url += "&frame={frame}".format(frame=frame)
-      DEBUG_LOGGER.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
+      self.debug_logger.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
           rec_id=r,url=url))
       response = requests.get(url,
                               auth=self.auth,
@@ -547,11 +581,11 @@ class Connection():
         requests.exceptions.HTTPError: The return status is not okay (not in the 200 range), with
             the exception of a conflict (409), which is only logged.
     """
-    DEBUG_LOGGER.debug("\nIN post().")
+    self.debug_logger.debug("\nIN post().")
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json.loads(json.dumps(payload))
     profile_id = self.get_profile_from_payload(payload)
-    url = os.path.join(eu.DCC_URL,profile_id)
+    url = os.path.join(self.dcc_url,profile_id)
     #Check if we need to add defaults for 'award' and 'lab' properties:
     if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS: #No lab prop for these profiles either.
       if eu.AWARD_PROP_NAME not in payload:
@@ -577,7 +611,7 @@ class Connection():
     except KeyError:
       pass
 
-    DEBUG_LOGGER.debug(
+    self.debug_logger.debug(
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
 
@@ -590,7 +624,7 @@ class Connection():
     response_json = response.json()
 
     if response.ok:
-      DEBUG_LOGGER.debug("Success.")
+      self.debug_logger.debug("Success.")
       response_json = response_json["@graph"][0]
       encid = ""
       try:
@@ -604,16 +638,16 @@ class Connection():
       return response_json
     elif response.status_code == requests.codes.CONFLICT:
       log_msg = "Will not post {} because it already exists.".format(alias)
-      DEBUG_LOGGER.debug(log_msg)
-      ERROR_LOGGER.error(log_msg)
+      self.debug_logger.debug(log_msg)
+      self.error_logger.error(log_msg)
       rec_json = self.get(rec_ids=alias,ignore404=False)
       return rec_json
     else:
       message = "Failed to POST {alias}".format(alias=alias)
-      DEBUG_LOGGER.debug(message)
-      ERROR_LOGGER.error(message)
-      DEBUG_LOGGER.debug("<<<<<< DCC POST RESPONSE: ")
-      DEBUG_LOGGER.debug(euu.print_format_dict(response_json))
+      self.debug_logger.debug(message)
+      self.error_logger.error(message)
+      self.debug_logger.debug("<<<<<< DCC POST RESPONSE: ")
+      self.debug_logger.debug(euu.print_format_dict(response_json))
       response.raise_for_status()
 
   def patch(self,payload,raise_403=True, extend_array_values=True):
@@ -645,7 +679,7 @@ class Connection():
     """
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json.loads(json.dumps(payload))
-    DEBUG_LOGGER.debug("\nIN patch()")
+    self.debug_logger.debug("\nIN patch()")
     encode_id = payload[self.ENCODE_IDENTIFIER_KEY]
     rec_json = self.get(rec_ids=encode_id,ignore404=False)
 
@@ -664,8 +698,8 @@ class Connection():
     payload = self.before_submit_hooks(payload,method=self.PATCH)
     payload.pop(self.ENCODE_IDENTIFIER_KEY)
 
-    url = os.path.join(eu.DCC_URL,encode_id)
-    DEBUG_LOGGER.debug(
+    url = os.path.join(self.dcc_url,encode_id)
+    self.debug_logger.debug(
         ("<<<<<< PATCHING {encode_id} To DCC with URL"
          " {url} and this payload:\n\n{payload}\n\n").format(
              encode_id=encode_id,url=url,payload=euu.print_format_dict(payload)))
@@ -675,7 +709,7 @@ class Connection():
     response_json = response.json()
 
     if response.ok:
-      DEBUG_LOGGER.debug("Success.")
+      self.debug_logger.debug("Success.")
       response_json = response_json["@graph"][0]
       uuid = response_json["uuid"]
       profile = eup.Profile(response_json["@id"])
@@ -688,10 +722,10 @@ class Connection():
         return rec_json
 
     message = "Failed to PATCH {}".format(encode_id)
-    DEBUG_LOGGER.debug(message)
-    ERROR_LOGGER.error(message)
-    DEBUG_LOGGER.debug("<<<<<< DCC PATCH RESPONSE: ")
-    DEBUG_LOGGER.debug(euu.print_format_dict(response_json))
+    self.debug_logger.debug(message)
+    self.error_logger.error(message)
+    self.debug_logger.debug("<<<<<< DCC PATCH RESPONSE: ")
+    self.debug_logger.debug(euu.print_format_dict(response_json))
     response.raise_for_status()
 
 
@@ -834,11 +868,11 @@ class Connection():
         of the file object represented by file_id. Will be empty if new upload credentials
         could not be issued.
     """
-    DEBUG_LOGGER.debug("Using curl to generate new file upload credentials")
+    self.debug_logger.debug("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
            " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
-           " | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,host=eu.DCC_HOST,file_id=file_id)
-    DEBUG_LOGGER.debug("curl command: '{}'".format(cmd))
+           " | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,host=self.dcc_host,file_id=file_id)
+    self.debug_logger.debug("curl command: '{}'".format(cmd))
     popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate() #each is a bytes object.
     stdout = stdout.decode("utf-8")
@@ -848,11 +882,11 @@ class Connection():
       raise Exception(("Command {cmd} failed with return code {retcode}. stdout is {stdout} and"
                        " stderr is {stderr}.").format(cmd=cmd,retcode=retcode,stdout=stdout, stderr=stderr))
     response = json.loads(stdout)
-    DEBUG_LOGGER.debug(response)
+    self.debug_logger.debug(response)
     if "code" in response:
       #Then problem occurred.
       code = response["code"]
-      ERROR_LOGGER.info("Unable to reissue upload credentials for {}: Code {}.".format(file_id,code))
+      self.error_logger.error("Unable to reissue upload credentials for {}: Code {}.".format(file_id,code))
       return {}
 
       # For ex, response would look like this for a 404.
@@ -891,18 +925,18 @@ class Connection():
     Raises:
         FileUploadFailed: The return code of the AWS upload command was non-zero.
     """
-    DEBUG_LOGGER.debug("\nIN upload_file()\n")
+    self.debug_logger.debug("\nIN upload_file()\n")
     aws_creds = self.set_aws_upload_config(file_id)
     if not aws_creds:
       msg = "Cannot upload file for {} since upload credentials could not be generated.".format(file_id)
-      DEBUG_LOGGER.debug(msg)
-      ERROR_LOGGER.error(msg)
+      self.debug_logger.debug(msg)
+      self.error_logger.error(msg)
       return
     if not file_path:
       file_rec = self.get(rec_ids=file_id)
     file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
     cmd = "aws s3 cp {file_path} {upload_url}".format(file_path=file_path,upload_url=aws_creds["UPLOAD_URL"])
-    DEBUG_LOGGER.debug("Running command {cmd}.".format(cmd=cmd))
+    self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
     popen = subprocess.Popen(cmd,
                              shell=True,
                              env=os.environ.update(aws_creds),
@@ -914,14 +948,14 @@ class Connection():
     retcode = popen.returncode
     if retcode:
       error_msg = "Failed to upload file '{}' for {}.".format(file_path,file_id)
-      DEBUG_LOGGER.debug(error_msg)
-      ERROR_LOGGER.error(error_msg)
+      self.debug_logger.debug(error_msg)
+      self.error_logger.error(error_msg)
       error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
                     " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
                       cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
-      DEBUG_LOGGER.debug(error_msg)
+      self.debug_logger.debug(error_msg)
       raise FileUploadFailed(error_msg)
-    DEBUG_LOGGER.debug("AWS upload successful.")
+    self.debug_logger.debug("AWS upload successful.")
 
 
   def get_platforms_on_experiment(self,rec_id):
@@ -1008,7 +1042,7 @@ class Connection():
       rec_document_primary_ids = []
 
     if doc_primary_id in rec_document_primary_ids:
-      DEBUG_LOGGER.debug("Will not attempt to link document {} to {} since it is already linked.".format(document_id,rec_id))
+      self.debug_logger.debug("Will not attempt to link document {} to {} since it is already linked.".format(document_id,rec_id))
       return
 
     #Add primary ID of new document to link.

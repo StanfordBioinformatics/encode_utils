@@ -20,11 +20,9 @@ import encode_utils as eu
 import encode_utils.utils as euu
 
 
-#: A descendent logger of the debug logger created in `encode_utils`
-#: (see the function description for `encode_utils._create_debug_logger`)
+#: A debug `logging` instance.
 DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
-#: A descendent logger of the error logger created in `encode_utils`
-#: (see the function description for `encode_utils._create_error_logger`)
+#: An error `logging` instance.
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
 
 

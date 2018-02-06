@@ -24,13 +24,10 @@ import encode_utils as eu
 #: Stores the HTTP headers to indicate JSON content in a request. 
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
-#: A descendent logger of the debug logger created in `encode_utils`
-#: (see the function description for `encode_utils._create_debug_logger`)
-DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
-#: A descendent logger of the error logger created in `encode_utils`
-#: (see the function description for `encode_utils._create_error_logger`)
-ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
-
+#: A debug `logging` instance.
+DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)                                
+#: An error `logging` instance.
+ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__) 
 
 def calculate_md5sum(file_path):
   """"Calculates the md5sum for a file.
