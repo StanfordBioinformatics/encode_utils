@@ -97,7 +97,7 @@ class Connection():
   #: This is not a valid attribute of any ENCODE object schema, and is only used in the patch()
   #: instance method when you need to designate the record to update and don't have an alias you
   #: can specify in the 'aliases' attribute.
-  ENCODE_IDENTIFIER_KEY = "_enc_id"
+  ENCID_KEY = "_enc_id"
 
   #: Identifies the name of the key in the payload (dictionary) that stores the ID of the profile
   #: to submit to.
@@ -293,7 +293,7 @@ class Connection():
     Given a payload to submit to the Portal, extracts the identifiers that can be used to lookup
     the record on the Portal, i.e. to see if the record already exists. Identifiers are extracted
     from the following fields:
-    1) self.ENCODE_IDENTIFIER_KEY,
+    1) self.ENCID_KEY,
     2) aliases,
     3) md5sum (in the case of a file object)
 
@@ -304,8 +304,8 @@ class Connection():
         `list`: The possible lookup identifiers.
     """
     lookup_ids = []
-    if self.ENCODE_IDENTIFIER_KEY in payload:
-      lookup_ids.append(payload[self.ENCODE_IDENTIFIER_KEY])
+    if self.ENCID_KEY in payload:
+      lookup_ids.append(payload[self.ENCID_KEY])
     if "aliases" in payload:
       lookup_ids.extend(payload["aliases"])
     if "md5sum" in payload:
@@ -318,7 +318,7 @@ class Connection():
         raise RecordIdNotPresent(
           ("The payload does not contain a recognized identifier for traceability. For example,"
            " you need to set the 'aliases' key, or specify an ENCODE assigned identifier in the"
-           " non-schematic key {}.".format(self.ENCODE_IDENTIFIER_KEY)))
+           " non-schematic key {}.".format(self.ENCID_KEY)))
 
     return lookup_ids
 
@@ -457,6 +457,24 @@ class Connection():
     #Call PATCH-specific hooks if PATCH:
     #... None yet.
 
+  def before_submit_alias(self,payload):
+    """
+    A POST and PATCH pre-submit hook used to add the alias prefix to any aliases that are 
+    missing it. An alias prefix is composed of the 
+
+    Args:
+        payload: `dict`. The payload to submit to the Portal.
+
+    Returns:
+        `dict`: The payload to submit to the Portal.
+    """
+    aliases_prop = "aliases"
+    if not aliases_prop in payload:
+      return payload
+    payload[aliases_prop] = euu.add_alias_prefix(payload[aliases_prop])
+    return payload
+    
+
   def before_submit_attachment(self,payload):
     """
     A POST and PATCH pre-submit hook used to simplify the creation of an attachment in profiles 
@@ -543,6 +561,7 @@ class Connection():
 
     #Call agnostic hooks
     payload = self.before_submit_attachment(payload)
+    payload = self.before_submit_alias(payload)
 
     #Call POST-specific hooks if POST:
     if method == self.POST:
@@ -660,7 +679,7 @@ class Connection():
 
     Args:
         payload: `dict`. containing the attribute key and value pairs to patch. Must contain the key
-            self.ENCODE_IDENTIFIER_KEY in order to indicate which record to PATCH.
+            self.ENCID_KEY in order to indicate which record to PATCH.
         raise_403: `bool`. True means to raise a requests.exceptions.HTTPError if a 403 status
             (Forbidden) is returned.
             If set to False and there still is a 403 return status, then the object you were
@@ -674,7 +693,7 @@ class Connection():
         `dict`: The JSON response from the PATCH operation.
 
     Raises:
-        KeyError: The payload doesn't have the key self.ENCODE_IDENTIFIER_KEY set AND there aren't
+        KeyError: The payload doesn't have the key self.ENCID_KEY set AND there aren't
             any aliases provided in the payload's 'aliases' key.
         requests.exceptions.HTTPError: if the return status is not in the 200 range (excluding a
             403 status if 'raise_403' is False.
@@ -682,7 +701,7 @@ class Connection():
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json.loads(json.dumps(payload))
     self.debug_logger.debug("\nIN patch()")
-    encode_id = payload[self.ENCODE_IDENTIFIER_KEY]
+    encode_id = payload[self.ENCID_KEY]
     rec_json = self.get(rec_ids=encode_id,ignore404=False)
 
     if extend_array_values:
@@ -698,7 +717,7 @@ class Connection():
 
     #Run 'before' hooks:
     payload = self.before_submit_hooks(payload,method=self.PATCH)
-    payload.pop(self.ENCODE_IDENTIFIER_KEY)
+    payload.pop(self.ENCID_KEY)
 
     url = os.path.join(self.dcc_url,encode_id)
     self.debug_logger.debug(
@@ -764,9 +783,9 @@ class Connection():
       return self.post(payload=payload)
     else:
       #PATCH
-      if self.ENCODE_IDENTIFIER_KEY not in payload:
+      if self.ENCID_KEY not in payload:
         encode_id = aliases[0]
-        payload[self.ENCODE_IDENTIFIER_KEY] = encode_id
+        payload[self.ENCID_KEY] = encode_id
       return self.patch(payload=payload,extend_array_values=extend_array_values,raise_403=raise_403)
 
   def get_fastqfile_replicate_hash(self,dcc_exp_id):
@@ -936,7 +955,13 @@ class Connection():
       return
     if not file_path:
       file_rec = self.get(rec_ids=file_id)
-    file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
+      try:
+        file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
+      except KeyError: #subbmited_file_name property not set:
+        pass
+      if not file_path:
+        raise Exception("No file path specified.")
+
     cmd = "aws s3 cp {file_path} {upload_url}".format(file_path=file_path,upload_url=aws_creds["UPLOAD_URL"])
     self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
     popen = subprocess.Popen(cmd,
@@ -1053,7 +1078,7 @@ class Connection():
     #                       u'/documents/tg81g5aa-a580-01a2-842f-2cb5iegcea03, ...]
     #Strip off the /documents/ prefix from each document UUID:
     payload = {}
-    payload[self.ENCODE_IDENTIFIER_KEY] = rec_id
+    payload[self.ENCID_KEY] = rec_id
     payload["documents"] = rec_document_primary_ids
     self.patch(payload=payload)
 

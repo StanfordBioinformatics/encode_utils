@@ -116,6 +116,44 @@ def create_subprocess(cmd,check_retcode=True):
   else:
     return popen
 
+def add_alias_prefix(aliases,prefix=False):
+  """
+  Given a list of aliases, adds the lab prefix to each one that doesn't yet have a prefix set. 
+  The lab prefix is taken as the passed-in `prefix`, otherwise, it defaults to the `DCC_LAB`
+  environment variable. 
+
+  Args: 
+      aliases: `list` of aliases.
+ 
+  Returns: 
+      `list`. 
+  
+  **Example**::
+
+        add_alias_prefix(aliases=["my-alias"],prefix="michael-snyder")
+        # Returns ["michael-snyder:my-alias"]
+
+        add_alias_prefix(aliases=["some-prefix:my-alias"],prefix="michael-snyder")
+        # Returns ["some-refix:my-alias"]
+
+  """
+  if not prefix:
+    prefix = eu.LAB_PREFIX
+    if not prefix:
+      return aliases #Nothing to do.
+  else:
+    if not prefix.endswith(":"):
+      prefix += ":"
+
+  res = []
+  for i in aliases:
+    if ":" in i:
+      #A prefix is already set.
+      res.append(i)
+    else:
+      res.append(prefix + i)
+  return res
+
 def strip_alias_prefix(alias):
   """
   Splits 'alias' on ':' to strip off any alias prefix. Aliases have a lab-specific prefix with

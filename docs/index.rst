@@ -6,6 +6,9 @@
 ENCODE Utils package
 ========================================
 
+:doc:`examples`
+
+
 Client API Modules
 ------------------
 
