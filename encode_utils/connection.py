@@ -117,7 +117,7 @@ class Connection():
     self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
    
     #Add debug file handler to debug_logger:
-    self._add_file_handler(logger=self.debug_logger,level=logging.DEBUG)
+    self._add_file_handler(logger=self.debug_logger,level=logging.DEBUG,tag="debug")
 
     #: A `logging` instance with a file handler for logging messages at the ERROR level or greater.
     #: Meant to log terse error messages.
@@ -125,15 +125,15 @@ class Connection():
     self.error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME)
     log_level = logging.ERROR
     self.error_logger.setLevel(log_level)
-    self._add_file_handler(logger=self.error_logger,level=log_level)
+    self._add_file_handler(logger=self.error_logger,level=log_level,tag="error")
 
     #: A `logging` instance with a file handler for logging successful POST operations.
     #: The log file resides locally within the directory specified by the constant LOG_DIR.
     #: Accepts messages >= logging.INFO.
     self.post_logger = logging.getLogger(eu.POST_LOGGER_NAME)
-    log_level = logging.POST
+    log_level = logging.INFO
     self.post_logger.setLevel(log_level)
-    self._add_file_handler(logger=self.post_logger,level=log_level)
+    self._add_file_handler(logger=self.post_logger,level=log_level,tag="posted")
 
 
     #: The API key to use when authenticating with the DCC servers. This is set automatically
@@ -150,25 +150,27 @@ class Connection():
         dcc_mode = os.environ["DCC_MODE"]
         self.debug_logger.debug("Utilizing DCC_MODE environment variable.")
       except KeyError:
-        pass
+        raise Exception("You must supply the `dcc_mode` argument or set the environment variable DCC_MODE.")
     dcc_mode = dcc_mode.lower()
     if dcc_mode not in eu.DCC_MODES:
       raise Exception(
         "The specified dcc_mode of '{}' is not valid. Should be one of '{}' or '{}'.".format(dcc_mode, eu.DCC_MODES.keys()))
     return dcc_mode
 
-  def _get_logfile_name(self,log_level):
-    filename = "log_eu_" + self.dcc_mode + "_" + log_level + ".txt"
+  def _get_logfile_name(self,log_level,tag):
+    if not os.path.exists(LOG_DIR):
+      os.mkdir(LOG_DIR)
+    filename = "log_eu_" + self.dcc_mode + "_" + tag + ".txt"
     filename = os.path.join(LOG_DIR,filename)
     return filename
 
-  def _add_file_handler(self,logger,level):
+  def _add_file_handler(self,logger,level,tag):
     """
     Creates a logger that logs messages at the ERROR level or greater. There is a single handler,
     which logs its messages to a file by the name of log_eu_$DCC_MODE_error.txt.
     """
     f_formatter = logging.Formatter('%(asctime)s:%(name)s:\t%(message)s')
-    filename = self._get_logfile_name(level)
+    filename = self._get_logfile_name(level,tag)
     handler = logging.FileHandler(filename=filename,mode="a")
     handler.setLevel(level)
     handler.setFormatter(f_formatter)
