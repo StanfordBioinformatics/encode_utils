@@ -231,5 +231,5 @@ any duplicates.""")
       if not record_id:
         raise Exception("Can't patch payload {} since there isn't a '{}' field indiciating an identifer for the record to be PATCHED.".format(euu.print_format_dict(payload),RECORD_ID_FIELD))
       payload.pop(RECORD_ID_FIELD)
-      payload.update({conn.ENCODE_IDENTIFIER_KEY: record_id})
+      payload.update({conn.ENCID_KEY: record_id})
       conn.send(payload=payload,error_if_not_found=error_if_not_found,extend_array_values=not overwrite_array_values)
