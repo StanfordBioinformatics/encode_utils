@@ -256,7 +256,7 @@ class Connection():
     Raises:
         requests.exceptions.HTTPError: The status code is not in the set [200,404].
 
-    **Example**:
+    Example:
         Given we have the following dictionary *d* of key and value pairs::
 
             {"type": "experiment",
