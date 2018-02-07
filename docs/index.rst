@@ -6,7 +6,24 @@
 ENCODE Utils package
 ========================================
 
-:doc:`examples`
+Installation_ and configuration_ instructions are provided on the project's `GitHub wiki`_.
+
+.. _installation: https://github.com/StanfordBioinformatics/encode_utils/wiki/Installation
+
+.. _configuration: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration
+
+.. _GitHub wiki: https://github.com/StanfordBioinformatics/encode_utils/wiki
+
+
+Examples
+--------
+
+.. toctree::
+   :maxdepth: 3
+ 
+   Connection class <examples>
+
+.. :doc:`examples`
 
 
 Client API Modules

@@ -13,6 +13,7 @@ Tests logic in the Connection class in the connection module.
 
 import unittest
 
+import encode_utils as eu
 from encode_utils import connection
 from encode_utils import profiles
 
@@ -23,7 +24,7 @@ class TestConnection(unittest.TestCase):
   """
 
   def setUp(self):
-    self.conn = connection.Connection()
+    self.conn = connection.Connection(eu.DCC_DEV_MODE)
 
   def test_before_file_post(self):
     """
