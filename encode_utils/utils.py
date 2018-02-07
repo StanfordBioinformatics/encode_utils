@@ -69,7 +69,7 @@ def clean_alias_name(alias):
   Returns:
       `str`: The cleaned alias.
 
-  **Example**::
+  Example::
         
         clean_alias_name("michael-snyder:a/troublesome\alias")
         # Returns michael-snyder:a_troublesome_alias
@@ -128,7 +128,7 @@ def add_alias_prefix(aliases,prefix=False):
   Returns: 
       `list`. 
   
-  **Example**::
+  Example::
 
         add_alias_prefix(aliases=["my-alias"],prefix="michael-snyder")
         # Returns ["michael-snyder:my-alias"]
@@ -166,7 +166,7 @@ def strip_alias_prefix(alias):
   Returns:
       `str`: The alias without the lab prefix.
 
-  **Example**:: 
+  Example:: 
 
         strip_alias_prefix("michael-snyder:B-167")
         # Returns "B-167"
