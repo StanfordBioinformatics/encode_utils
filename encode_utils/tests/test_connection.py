@@ -11,6 +11,7 @@
 Tests logic in the Connection class in the connection module.
 """
 
+import os
 import unittest
 
 import encode_utils as eu
@@ -46,7 +47,7 @@ class TestConnection(unittest.TestCase):
     alias = "michael-snyder:SCGPM_SReq-1103_HG7CL_L3_GGCTAC_R1.fastq.gz"
     md5 = "3fef3e25315f105b944691668838b9b5"
     payload = {
-      self.conn.ENCODE_IDENTIFIER_KEY: accession,
+      self.conn.ENCID_KEY: accession,
       "aliases": [alias],
       "md5sum": md5
     }
@@ -83,17 +84,37 @@ class TestConnection(unittest.TestCase):
 
     self.assertEquals(res,aws_creds)
 
-  def test_validate_profile_in_payload(self):
+  def test_make_search_url(self):
     """
-    Tests the method validate_profile_in_payload() for returning the correct profile ID 
-    when given the value of a record's `@id` property.
+    Tests the method make_search_url() for building the correct URL given the query arguments
+    to find ChIP-seq assays performed on primary cells from blood.
     """
-    payload = {
-      connection.Connection.PROFILE_KEY: "/genetic-modifications/ENCGM063ASY/"
-    }
+    query = {                                                                                            
+    "assay_title": "ChIP-seq",                                                                         
+    "biosample_type": "primary cell",                                                                  
+    "organ_slims": "blood",                                                                            
+    "type": "Experiment"
+    } 
+    
+    res = self.conn.make_search_url(search_args=query) 
+    query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=all&organ_slims=blood&type=Experiment"
+    self.assertEquals(res,os.path.join(self.conn.dcc_url,query))
 
-    res = self.conn.validate_profile_in_payload(payload)
-    self.assertEquals(res,"genetic_modification")
+  def test_2_make_search_url(self):
+    """
+    Tests the method make_search_url() for building the correct URL given the query arguments
+    to find ChIP-seq assays performed on primary cells from blood, and a limit of 1 search result.
+    """
+    query = {                                                                                            
+    "assay_title": "ChIP-seq",                                                                         
+    "biosample_type": "primary cell",                                                                  
+    "organ_slims": "blood",                                                                            
+    "type": "Experiment"
+    } 
+    
+    res = self.conn.make_search_url(search_args=query,limit=1) 
+    query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=1&organ_slims=blood&type=Experiment"
+    self.assertEquals(res,os.path.join(self.conn.dcc_url,query))
 
 if __name__ == "__main__":
   unittest.main()

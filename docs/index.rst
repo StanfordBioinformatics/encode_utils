@@ -19,7 +19,7 @@ Examples
 --------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
  
    Connection class <examples>
 

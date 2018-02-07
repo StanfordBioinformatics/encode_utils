@@ -20,8 +20,33 @@ Connecting to the production and development Portals
   #dev portal
   conn = Connection("dev")
 
-PATCH
------
+GET Request
+-----------
+
+Retrieve the JSON serialization for the Experiment record with accession ENCSR161EAA::
+
+  conn.get("ENCSR161EAA")
+
+Search
+------
+
+Search for ChIP-seq assays performed on primary cells from blood::
+
+  query = {
+    "assay_title": "ChIP-seq",
+    "biosample_type": "primary cell",
+    "organ_slims": "blood",
+    "type": "Experiment"
+  }
+
+  conn.search(query)
+
+The query will be URL encoded for you.  If you want to use the search functionality 
+programmatically, you should first test your search interactively on the Portal. The result will 
+be an array of record results, where each result is given in its JSON representation.
+
+PATCH Request
+-------------
 
 Add a new alias to the GeneticModification record ENCGM063ASY. Create a payload
 (`dict`) that indicates the record to PATCH and the new alias. The record to PATCH must be
@@ -56,8 +81,8 @@ You can also explicitely set the path to the file to upload:
 
   conn.upload_fild(file_id="ENCFF852WVP",file_path="/path/to/myfile")
 
-POST
-----
+POST Request
+------------
 
 Let's create a new File record on the Portal that represents a FASTQ file, and automatically upload
 the file to AWS once that is done:

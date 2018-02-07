@@ -217,12 +217,38 @@ class Connection():
         aliases[index] =  euu.strip_alias_prefix(alias)
     return aliases
 
-  def search(self,search_args):
+  def make_search_url(self,search_args,limit=None):
+    """Creates a URL encoded URL given the search arguments.
+
+    Args:
+        search_args: `dict`. The key and value query parameters.
+        limit: `int`. The number of search results to return. Don't specify if you want all. 
+
+    Returns:
+        `str`: The URL containing the URL encoded query.
+
+    Raises:
+        requests.exceptions.HTTPError: The status code is not in the set [200,404].
+    """
+    if not limit:
+      search_args["limit"] = "all"
+    else:
+      search_args["limit"] = str(limit)
+
+    #Convert dict to list of two-item tuples since order of search arguments will be preserved 
+    # this way per the documentation (easier for the corresponding test case).
+    search = sorted(search_args.items())
+    query = urllib.parse.urlencode(search)
+    url = os.path.join(self.dcc_url,"search/?") + query
+    return url
+
+  def search(self,search_args,limit=None):
     """
     Searches the Portal using the provided query parameters,which will first be URL encoded.
 
     Args:
         search_args: `dict`. The key and value query parameters.
+        limit: `int`. The number of search results to return. Don't specify if you want all. 
 
     Returns:
         `list`: The search results.
@@ -245,8 +271,7 @@ class Connection():
             search_encode(search_args=d)
 
     """
-    query = urllib.parse.urlencode(search_args)
-    url = os.path.join(eu.DCC_URL,"search/?",query)
+    url = self.make_search_url(search_args=search_args,limit=limit)
     self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
     response = requests.get(url,
                             auth=self.auth,
@@ -325,7 +350,7 @@ class Connection():
   #def delete(self,rec_id):
   #  """Not supported at present by the DCC - Only wranglers and delete objects.
   #  """
-  #  url = os.path.join(eu.DCC_URL,rec_id)
+  #  url = os.path.join(self.dcc_url,rec_id)
   #  self.logger.info(
   #    (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
   #  response = requests.delete(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
