@@ -17,7 +17,7 @@ setup(
   install_requires = [
     "awscli",
     "requests",
-    "sphinxarg.ext",
+    "sphinx-argparse",
     "urllib3"],
   scripts = ["encode_utils/MetaDataRegistration/eu_register.py"],
   package_data = {"encode_utils": ["tests/data/*"]}
