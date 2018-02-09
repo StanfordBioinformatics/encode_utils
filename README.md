@@ -2,6 +2,7 @@
 
 # Latest news
 2018-02-09
+
 The first, formal release is soon to come out in the next few days. There are lots of bug fixes, new test cases, and increased functionality. Stay tuned for the announcement for the upcoming release.  
 
 # encode_utils
