@@ -4,6 +4,7 @@ test
 /dcc_submitters.json
 *.txt
 !LICENSE.txt
+!docs/requirements.txt
 docs/_build
 docs/_static
 docs/_templates
