@@ -133,4 +133,3 @@ Without futher ado, let's now add the profile specification to the payload and P
 
 The logging to STDOUT and your log files will indicate the progress of your request, including
 the upload of your FASTQ file to AWS.
-

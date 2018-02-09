@@ -25,6 +25,13 @@ Examples
 
 .. :doc:`examples`
 
+Scripts
+-------
+
+.. toctree::
+    :maxdepth: 2
+   
+    registration <scripts/eu_register>
 
 Client API Modules
 ------------------

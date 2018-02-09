@@ -7,6 +7,29 @@
 # nathankw@stanford.edu                                                                                 
 ### 
 
+"""
+Given a tab-delimited input file containing one or more records belonging to one of the profiles
+listed on the ENCODE Portal (such as https://www.encodeproject.org/profiles/biosample.json), 
+either POSTS or PATCHES the records. The default is to POST each record; to PATCH instead, see
+the ``--patch`` option.
+
+When POSTING file records, the md5sum of each file will be calculated for you if you haven't
+already provided the `md5sum` property. Then, after the POST operation completes, the actual file
+will be uploaded to AWS. In order for this to work, you must set the `submitted_file_name`
+property to the full, local path to your file to upload.
+
+Note that there is a special 'trick' defined in the encode_utils.connection.Connection()
+class that can be taken advantage of to simplify submission under certain profiles.  
+It concerns the 'attachment' property in any profile that employs it, such as the document
+profile.  The trick works as follows: instead of constructing the attachment propery object 
+value as defined in the schema, simply use a single-key object of the following format::
+
+  {"path": "/path/to/myfile"}
+
+and the attachment object will be constructed for you. 
+|
+"""
+
 import os
 import json
 import argparse
@@ -19,9 +42,96 @@ from encode_utils.parent_argparser import dcc_login_parser
 import encode_utils.profiles as eup
 
 
+def get_parser():
+  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
+
+  parser.add_argument("-p","--profile_id",required=True,help="""
+    The ID of the profile to submit to, i.e. use 'genetic_modification' for 
+    https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for 
+    type-checking in order to type-cast any values in the input file to the proper type (i.e. some 
+    values need to be submitted as integers, not strings).""")
+
+  parser.add_argument("-i","--infile",required=True,help="""
+    The tab-delimited input file with a field-header line as the first line. 
+    Any lines after the header line that start with a '#' will be skipped, as well as any empty lines. 
+    The field names must be 
+    exactly equal to the corresponding property names in the corresponding profile. Non-scematic fields 
+    are allowed as long as they begin with a '#'; they will be skipped. If a property has an 
+    array data type (as indicated in the profile's documentation on the Portal), the array literals 
+    '[' and ']' are optional. Values within the array must be comma-delimited. For example, if a 
+    property takes an array of strings, then you can use either of these as the value:
+
+    1) str1,str2,str3
+    2) [str1,str2,str3]
+
+    On the other hand, if a property takes a JSON object as a value, then the value you enter must be 
+    valid JSON. This is true anytime you have to specify a JSON object.  Thus, if you are submitting a 
+    genetic_modification and you have two 'introduced_tags' to provide, you can supply them in either 
+    of the following two ways:
+
+    1) {"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}
+    2) [{"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}]
+     
+    When patching objects, you must specify the 'record_id' field to indicate the identifier of the record. 
+    Note that this a special field that is not present in the ENCODE schema, and doesn't use the '#' 
+    prefix to mark it as non-schematic. Here you can specify any valid record identifier 
+    (i.e. UUID, accession, alias).
+
+    Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set 
+    as fields in the input file, or can be left out, in which case the default values for these
+    attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.""")
+
+
+  parser.add_argument("--patch",action="store_true",help="""
+    Presence of this option indicates to patch an existing DCC record rather than register a new one.""")
+
+  parser.add_argument("-e","--error-if-not-found", action="store_true",help="""
+    If trying to PATCH a record and the record cannot be found on the ENCODE Portal, the default 
+    behavior is to then attempt a POST. Specifying this option causes an Exception to be raised.""")
+
+  parser.add_argument("-w","--overwrite-array-values",action="store_true",help="""
+    Only has meaning in combination with the --patch option. When this is specified, it means that 
+    any keys with array values will be overwritten on the ENCODE Portal with the corresponding value 
+    to patch. The default action is to extend the array value with the patch value and then to remove 
+    any duplicates.""")
+
+  return parser
+
+
+def main():
+  parser = get_paser()
+  args = parser.parse_args()
+  profile_id = args.profile_id
+  dcc_mode = args.dcc_mode
+  error_if_not_found = args.error_if_not_found
+  overwrite_array_values = args.overwrite_array_values
+
+  if dcc_mode:
+    conn = euc.Connection(dcc_mode)
+  else:
+    conn = euc.Connection()
+
+  infile = args.infile
+  patch = args.patch
+  gen = create_payloads(profile_id=profile_id,infile=infile)
+  for payload in gen:
+    if not patch:
+      conn.post(payload)
+    else:
+      record_id = payload.get(RECORD_ID_FIELD,False)
+      if not record_id:
+        raise Exception("Can't patch payload {} since there isn't a '{}' field indiciating an identifer for the record to be PATCHED.".format(euu.print_format_dict(payload),RECORD_ID_FIELD))
+      payload.pop(RECORD_ID_FIELD)
+      payload.update({conn.ENCID_KEY: record_id})
+      conn.send(payload=payload,error_if_not_found=error_if_not_found,extend_array_values=not overwrite_array_values)
+
 #: RECORD_ID_FIELD is a special field that won't be skipped in the create_payload() function.
 #: It is used when patching objects to indicate the identifier of the record to patch. 
 RECORD_ID_FIELD = "record_id" 
+
+def validate_property_names(json_obj):
+  pass
+  
 
 def check_valid_json(prop,val,row_count):
   """
@@ -140,96 +250,4 @@ def create_payloads(profile_id,infile):
 
 
 if __name__ == "__main__":
-
-
-  description = """
-Given a tab-delimited input file containing records belonging to one of the profiles listed on the 
-ENCODE Portal (such as https://www.encodeproject.org/profiles/biosample.json), either registers or
-patches metadata for each record. Don't mix input files containing both new records and records to 
-patch - in this case they should be split into separate input files.
-
-Note that there is a special 'trick' defined in the encode_utils.connection.Connection()
-class that can be taken advantage of to simplify submission under certain profiles.  
-It concerns the 'attachment' property in any profile that employs it, such as document. 
-The trick works as follows: instead of constructing the attachment propery object value as 
-defined in the schema, simply use a single-key object containing 'path', i.e.
- {"path": "/path/to/myfile"}, and it'll do the rest. 
-
-"""
-  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
-  parser = argparse.ArgumentParser(description=description,formatter_class=argparse.RawTextHelpFormatter)
-
-  parser.add_argument("-p","--profile_id",required=True,help="""
-The ID of the profile to submit to, i.e. put 'genetic_modification' for 
-https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for 
-type-checking in order to type-cast any values in the input file to the proper type (i.e. some 
-values need to be submitted as integers, not strings).""")
-
-  parser.add_argument("-i","--infile",help="""
-The tab-delimited input file with a field-header line as the first line. The field names must be 
-exactly equal to the corresponding property names in the corresponding profile. Non-scematic fields 
-are allowed as long as they begin with a '#'. Such fields will be skipped. If a property has an 
-array value (as indicated in the profile's documentation on the Portal), the array literals 
-'[' and ']' are optional. Values within the array must be comma-delimited. For example, if a 
-property takes an array of strings, then you can use either of these as the value:
-
-  1) str1,str2,str3
-  2) [str1,str2,str3]
-
-On the other hand, if a property takes a JSON object as a value, then the value you enter must be 
-valid JSON. This is true anytime you have to specify a JSON object.  Thus, if you are submitting a 
-genetic_modification and you have two 'introduced_tags' to provide, you can supply them in either 
-of the following two ways:
-
-  1) {"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}
-  2) [{"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}]
-     
-Any lines after the header line that start with a '#' will be skipped, as well as any empty lines. 
-
-When patching objects, you must specify the 'record_id' field to indicate the identifier of the record. 
-Note that this a special field that is not present in the ENCODE schema, and doesn't use the '#' 
-prefix to mark it as non-schematic. Here you can specify any valid record identifier 
-(i.e. UUID, accession, alias). If this special field is present, it will not be skipped. 
-
-Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set 
-as fields in the input file, or can be left out, in which case the default values for these
-attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.""")
-
-
-  parser.add_argument("--patch",action="store_true",help="""
-Presence of this option indicates to patch an existing DCC record rather than register a new one.""")
-
-  parser.add_argument("-e","--error-if-not-found", action="store_true",help="""
-If trying to PATCH a record and the record cannot be found on the ENCODE Portal, the default 
-behavior is to then attempt a POST. Specifying this option causes an Exception to be raised.""")
-
-  parser.add_argument("-w","--overwrite-array-values",action="store_true",help="""
-Only has meaning in combination with the --patch option. When this is specified, it means that 
-any keys with array values will be overwritten on the ENCODE Portal with the corresponding value 
-to patch. The default action is to extend the array value with the patch value and then to remove 
-any duplicates.""")
-
-  args = parser.parse_args()
-  profile_id = args.profile_id
-  dcc_mode = args.dcc_mode
-  error_if_not_found = args.error_if_not_found
-  overwrite_array_values = args.overwrite_array_values
-
-  if dcc_mode:
-    conn = euc.Connection(dcc_mode)
-  else:
-    conn = euc.Connection()
-
-  infile = args.infile
-  patch = args.patch
-  gen = create_payloads(profile_id=profile_id,infile=infile)
-  for payload in gen:
-    if not patch:
-      conn.post(payload)
-    else:
-      record_id = payload.get(RECORD_ID_FIELD,False)
-      if not record_id:
-        raise Exception("Can't patch payload {} since there isn't a '{}' field indiciating an identifer for the record to be PATCHED.".format(euu.print_format_dict(payload),RECORD_ID_FIELD))
-      payload.pop(RECORD_ID_FIELD)
-      payload.update({conn.ENCID_KEY: record_id})
-      conn.send(payload=payload,error_if_not_found=error_if_not_found,extend_array_values=not overwrite_array_values)
+  main()
