@@ -27,6 +27,7 @@ value as defined in the schema, simply use a single-key object of the following 
   {"path": "/path/to/myfile"}
 
 and the attachment object will be constructed for you. 
+
 |
 """
 
