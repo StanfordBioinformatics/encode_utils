@@ -37,7 +37,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 class AwardPropertyMissing(Exception):
   """
   Raised when the 'award' property isn't set in the payload when doing a POST, and a default isn't
-  set by the environment variable DCC_AWARD either.
+  set by the environment variable `DDCC_AWARD` either.
   """
   message = ("The property '{}' is missing from the payload and a default isn't set either. To"
              " store a default, set the DCC_AWARD environment variable.")
@@ -52,23 +52,19 @@ class FileUploadFailed(Exception):
 class LabPropertyMissing(Exception):
   """
   Raised when the 'lab' property isn't set in the payload when doing a POST, and a default isn't
-  set by the environment variable DCC_AWARD either.
+  set by the environment variable `DCC_LAB` either.
   """
   message = ("The property '{}' is missing from the payload and a default isn't set either. To"
              " store a default, set the DCC_LAB environment variable.")
 
 class ProfileNotSpecified(Exception):
   """
-  Raised when the profile (object schema) to submit to isn't specifed in a payload.
+  Raised when the profile (object schema) to submit to isn't specifed in a POST payload.
   """
   pass
 
 
 class RecordIdNotPresent(Exception):
-  """
-  Raised when a payload to submit to the Portal doesn't have any record identifier (either
-  a pre-existing ENCODE assigned identifier or an alias.
-  """
   pass
 
 
@@ -80,27 +76,38 @@ class RecordNotFound(Exception):
 
 
 class Connection():
-  """ENCODE Portal data submission and retrieval.
+  """Handles communication with the ENCODE Portal regarding data submission and retrieval.
 
   In order to authenticate with the DCC servers when making HTTP requests, you must have the
-  the environment variables DCC_API_KEY and DCC_SECRET_KEY set. Check with your DCC data wrangler
+  the environment variables `DCC_API_KEY` and `DCC_SECRET_KEY` set. Check with your DCC data wrangler
   if you haven't been assigned these keys.
 
-  Two log files will be opened in append mode in the calling directory, and named
-  DCC_MODE_posted.txt and DCC_MODE_error.txt, where DCC_MODE represents the value stored in
-  eu.DCC_MODE.
+  There are three log files opened in append mode in the directory specified by ``connection.LOG_DIR`` that
+  are specific to whichver Portal you are connected to. When connected to Production, each log file
+  name will include the token '_prod_'. For Development, the token will be '_dev_'. The three 
+  log files are named accordingly in reference to their purpose, and are classified as:
+
+  1. debug log file - All messages sent to STDOUT are also written to this log file. In addition,
+     all messages written to the error log file described below are logged here.
+  2. error log file - Only terse error messages are sent to this log file for quick scanning of 
+     any potential issues. If you identify an error here that needs more explanation, then you 
+     should consult the debug log file.
+  3. posted log file - Tabulates what was successfully POSTED. There are three tab-delimited 
+     colummns ordered as submission timestamp, record alias, and record accession (or UUID if 
+     the 'accession' property doesn't exist for the profile of the record at hand). Note that if a 
+     record has several aliases, then only the first one in the list for the 'aliases' property is 
+     used.
   """
 
-  #: Identifies the name of the key in the payload (dictionary) that stores a valid ENCODE-assigned
-  #: identifier for a record, such as 'accession', 'uuid', 'md5sum', ... depending on the object
-  #: being submitted.
-  #: This is not a valid attribute of any ENCODE object schema, and is only used in the patch()
-  #: instance method when you need to designate the record to update and don't have an alias you
-  #: can specify in the 'aliases' attribute.
+  #: Identifies the name of the key in the payload that stores a valid ENCODE-assigned
+  #: identifier for a record, such as alias, accession, uuid, md5sum, ... depending on 
+  #: the object being submitted.
+  #: This is not a valid property of any ENCODE object schema, and is used in the ``patch()``
+  #: (and ``send()`` when doing a PATCH) instance method  to designate the record to update.
   ENCID_KEY = "_enc_id"
 
-  #: Identifies the name of the key in the payload (dictionary) that stores the ID of the profile
-  #: to submit to.
+  #: Identifies the name of the key in the payload that stores the ID of the profile
+  #: to submit to. Like ``ENCID_KEY``, this is a non-schematic key that is used only internally.
   PROFILE_KEY = "_profile"
 
   POST = "post"
@@ -108,9 +115,9 @@ class Connection():
 
   def __init__(self,dcc_mode=None):
 
-    #: A reference to the debug logger that was created earlier; see `encode_utils.debug_logger`.
+    #: A reference to the `debug` logging instance that was created earlier in ``encode_utils.debug_logger``.
     #: This class adds a file handler, such that all messages send to it are logged to this
-    #: file in addition to STDOUT>
+    #: file in addition to STDOUT.
     self.debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME)
     #: An indication of which Portal instance to use. Set to 'prod' for the production Portal, 
     #: and 'dev' for the development Portal. Leaving the default of None means to use the value
@@ -122,17 +129,17 @@ class Connection():
     #Add debug file handler to debug_logger:
     self._add_file_handler(logger=self.debug_logger,level=logging.DEBUG,tag="debug")
 
-    #: A `logging` instance with a file handler for logging messages at the ERROR level or greater.
-    #: Meant to log terse error messages.
-    #: The log file resides locally within the directory specified by the constant LOG_DIR.
+    #: A ``logging`` instance with a file handler for logging terse error messages.
+    #: The log file resides locally within the directory specified by the constant 
+    #: ``connection.LOG_DIR``. Accepts messages >= ``logging.ERROR``.
     self.error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME)
     log_level = logging.ERROR
     self.error_logger.setLevel(log_level)
     self._add_file_handler(logger=self.error_logger,level=log_level,tag="error")
 
-    #: A `logging` instance with a file handler for logging successful POST operations.
-    #: The log file resides locally within the directory specified by the constant LOG_DIR.
-    #: Accepts messages >= logging.INFO.
+    #: A ``logging`` instance with a file handler for logging successful POST operations.
+    #: The log file resides locally within the directory specified by the constant 
+    #: ``connection.LOG_DIR``. Accepts messages >= ``logging.INFO``.
     self.post_logger = logging.getLogger(eu.POST_LOGGER_NAME)
     log_level = logging.INFO
     self.post_logger.setLevel(log_level)
@@ -140,10 +147,12 @@ class Connection():
 
 
     #: The API key to use when authenticating with the DCC servers. This is set automatically
-    #: to the value of the DCC_API_KEY environment variable in the _set_api_keys() private method.
+    #: to the value of the `DCC_API_KEY` environment variable in the ``_set_api_keys()`` private 
+    #: instance method.
     self.api_key = self._set_api_keys()[0]
     #: The secret key to use when authenticating with the DCC servers. This is set automatically
-    #: to the value of the DCC_SECRET_KEY environment variable in the _set_api_keys() private method.
+    #: to the value of the `DCC_SECRET_KEY` environment variable in the ``_set_api_keys()`` private 
+    #: instance method.
     self.secret_key = self._set_api_keys()[1]
     self.auth = (self.api_key,self.secret_key)
 
@@ -181,8 +190,8 @@ class Connection():
 
   def _set_api_keys(self):
     """
-    Retrieves the API key and secret key based on the environment variables DCC_API_KEY and
-    DCC_SECRET_KEY.
+    Retrieves the API key and secret key based on the environment variables `DCC_API_KEY` and
+    `DCC_SECRET_KEY`.
 
     Returns:
         `tuple`: Two item tuple containing the API Key and the Secret Key
@@ -200,6 +209,12 @@ class Connection():
     """
     entry = alias + "\t" + dcc_id
     self.post_logger.info(entry)
+
+  def log_error(self,msg):
+    """Sends 'msg' to both ``self.error_logger`` and ``self.debug_logger``.
+    """
+    self.debug_logger.debug(msg)
+    self.error_logger.error(msg)
 
   def get_aliases(self,dcc_id,strip_alias_prefix=False):
     """
@@ -229,9 +244,6 @@ class Connection():
 
     Returns:
         `str`: The URL containing the URL encoded query.
-
-    Raises:
-        requests.exceptions.HTTPError: The status code is not in the set [200,404].
     """
     if not limit:
       search_args["limit"] = "all"
@@ -257,7 +269,7 @@ class Connection():
         `list`: The search results.
 
     Raises:
-        requests.exceptions.HTTPError: The status code is not in the set [200,404].
+        requests.exceptions.HTTPError: The status code is not ok and != 404.
 
     Example:
         Given we have the following dictionary *d* of key and value pairs::
@@ -269,7 +281,7 @@ class Connection():
              "datastore": "database"
             }
 
-        We can call the function as::
+        We can call the method as::
 
             search_encode(search_args=d)
 
@@ -281,17 +293,18 @@ class Connection():
                             timeout=eu.TIMEOUT,
                             headers=euu.REQUEST_HEADERS_JSON,
                             verify=False)
-    if response.status_code not in [requests.codes.OK,requests.codes.NOT_FOUND]:
+    status_code = response.status_code
+    if not response.ok and status_code != requests.codes.NOT_FOUND:
       response.raise_for_status()
     return response.json()["@graph"] #the @graph object is a list
 
 
   def get_profile_from_payload(self,payload):
     """
-    Useful to call when doing a POST (and self.post() does call this). Ensures that the profile key
-    identified by self.PROFILE_KEY exists in the passed-in payload and that the value is
+    Useful to call when doing a POST (and ``self.post()`` does call this). Ensures that the profile key
+    identified by ``self.PROFILE_KEY`` exists in the passed-in payload and that the value is
     a recognized ENCODE object profile (schema) identifier. Alternatively, the user can set the profile in 
-    the more convoluted `@id` attribute.
+    the more convoluted `@id` property.
 
     Args:
         payload: `dict`. The intended object data to POST.
@@ -300,7 +313,7 @@ class Connection():
         `str`: The ID of the profile if all validations pass, otherwise.
 
     Raises:
-        encode_utils.connection.ProfileNotSpecified: Both keys self.PROFILE_KEY and `@id` are
+        encode_utils.connection.ProfileNotSpecified: Both keys ``self.PROFILE_KEY`` and `@id` are
           missing in the payload.
         encode_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
             `encode_utils.profiles.Profile`.
@@ -318,12 +331,13 @@ class Connection():
 
   def get_lookup_ids_from_payload(self,payload):
     """
-    Given a payload to submit to the Portal, extracts the identifiers that is used to lookup
+    Given a payload to submit to the Portal, extracts the identifiers that can be used to lookup
     the record on the Portal, i.e. to see if the record already exists. Identifiers are extracted
     from the following fields:
-      1. self.ENCID_KEY,
-      2. aliases,
-      3. md5sum (in the case of a file object)
+
+    1. ``self.ENCID_KEY``,
+    2. aliases,
+    3. md5sum (in the case of a file object)
 
     Args:
         payload: `dict`. The data to submit.
@@ -366,24 +380,23 @@ class Connection():
     """GET a record from the ENCODE Portal.
 
     Looks up a record in the Portal and performs a GET request, returning the JSON serialization of
-    the object. You supply a list of identifiers for a specific record, such as the object ID, an
-    alias, uuid, or accession. The Portal will be searched for each identifier in turn
-    until one is either found or the list is exhaused.
+    the object. You supply a list of identifiers for a specific record, and the Portal will be
+    searched for each identifier in turn until one is either found or the list is exhaused.
 
     Args:
-        rec_ids: `str` containing a single record identifier, or a list of identifiers for a
-            specific record. For a few example identifiers, you can be a uuid, accession, ...,  
-            or even the value of a record's `@id` property.
+        rec_ids: `str` or `list`. Must be a `list` if you want to supply more than one identifier.
+            For a few example identifiers, you can use a uuid, accession, ..., or even the value of 
+            a record's `@id` property.
         ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
-            ENCODE Portal. In this case, If set to True, then an empty dict will be returned.
-            If set to False, then an E
+            ENCODE Portal.  In this case, If set to `True`, then an empty `dict` will be returned.
+            If set to `False`, then an Exception will be raised.
 
 
     Returns:
         `dict`: The JSON response. Will be empty if no record was found AND ignore404=True.
 
     Raises:
-        requests.exceptions.HTTPError: The status code is not okay (in the 200 range), and the
+        requests.exceptions.HTTPError: The status code is not ok, and the
             cause isn't due to a 404 (not found) status code when ignore404=True.
     """
     if isinstance(rec_ids,str):
@@ -418,8 +431,8 @@ class Connection():
 
   def set_attachment(self,document):
     """
-    Sets the attachment property for any profile that supports it, such as document or 
-    antibody_characterization.
+    Sets the attachment property for any profile that supports it, such as `document` or 
+    `antibody_characterization`.
 
     Args:
         document: `str`. A local file path.
@@ -536,7 +549,7 @@ class Connection():
     return payload
 
   def before_post_file(self,payload):
-    """Calculates and sets the md5sum property for a file record.    
+    """A pre-POST hook that calculates and sets the md5sum property for a file record.    
 
     Args:
         payload: `dict`. The payload to submit to the Portal.
@@ -610,8 +623,8 @@ class Connection():
     actual `@id` property itself, which is rather convoluted. 
 
     If the 'lab' property isn't present in the payload, then the default will be set to the value
-    of the DCC_LAB environment variable. Similarly, if the 'award' property isn't present, then the
-    default will be set to the value of the DCC_AWARD environment variable.
+    of the `DCC_LAB` environment variable. Similarly, if the 'award' property isn't present, then the
+    default will be set to the value of the `DCC_AWARD` environment variable.
 
     Before the POST is attempted, any pre-submit hooks are fist called (see the method
     `self.before_submit_hooks`).
@@ -625,10 +638,10 @@ class Connection():
 
     Raises:
         AwardPropertyMissing: The 'award' property isn't present in the payload and there isn't a
-            defualt set by the environment variable DCC_AWARD.
+            defualt set by the environment variable `DCC_AWARD`.
         LabPropertyMissing: The 'lab' property isn't present in the payload and there isn't a
-            default set by the environment variable DCC_AWARD.
-        requests.exceptions.HTTPError: The return status is not okay (not in the 200 range), with
+            default set by the environment variable `DCC_LAB`.
+        requests.exceptions.HTTPError: The return status is not ok, with
             the exception of a conflict (409), which is only logged.
     """
     self.debug_logger.debug("\nIN post().")
@@ -688,14 +701,12 @@ class Connection():
       return response_json
     elif response.status_code == requests.codes.CONFLICT:
       log_msg = "Will not post {} because it already exists.".format(alias)
-      self.debug_logger.debug(log_msg)
-      self.error_logger.error(log_msg)
+      self.log_error(log_msg)
       rec_json = self.get(rec_ids=alias,ignore404=False)
       return rec_json
     else:
       message = "Failed to POST {alias}".format(alias=alias)
-      self.debug_logger.debug(message)
-      self.error_logger.error(message)
+      self.log_error(message)
       self.debug_logger.debug("<<<<<< DCC POST RESPONSE: ")
       self.debug_logger.debug(euu.print_format_dict(response_json))
       response.raise_for_status()
@@ -724,7 +735,7 @@ class Connection():
     Raises:
         KeyError: The payload doesn't have the key self.ENCID_KEY set AND there aren't
             any aliases provided in the payload's 'aliases' key.
-        requests.exceptions.HTTPError: if the return status is not in the 200 range (excluding a
+        requests.exceptions.HTTPError: if the return status is not ok (excluding a
             403 status if 'raise_403' is False.
     """
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
@@ -772,8 +783,7 @@ class Connection():
         return rec_json
 
     message = "Failed to PATCH {}".format(encode_id)
-    self.debug_logger.debug(message)
-    self.error_logger.error(message)
+    self.log_error(message)
     self.debug_logger.debug("<<<<<< DCC PATCH RESPONSE: ")
     self.debug_logger.debug(euu.print_format_dict(response_json))
     response.raise_for_status()
@@ -936,7 +946,7 @@ class Connection():
     if "code" in response:
       #Then problem occurred.
       code = response["code"]
-      self.error_logger.error("Unable to reissue upload credentials for {}: Code {}.".format(file_id,code))
+      self.log_error("Unable to reissue upload credentials for {}: Code {}.".format(file_id,code))
       return {}
 
       # For ex, response would look like this for a 404.
@@ -979,8 +989,7 @@ class Connection():
     aws_creds = self.set_aws_upload_config(file_id)
     if not aws_creds:
       msg = "Cannot upload file for {} since upload credentials could not be generated.".format(file_id)
-      self.debug_logger.debug(msg)
-      self.error_logger.error(msg)
+      self.log_error(msg)
       return
     if not file_path:
       file_rec = self.get(rec_ids=file_id)
@@ -1004,10 +1013,9 @@ class Connection():
     retcode = popen.returncode
     if retcode:
       error_msg = "Failed to upload file '{}' for {}.".format(file_path,file_id)
-      self.debug_logger.debug(error_msg)
-      self.error_logger.error(error_msg)
-      error_msg += (" Subprocess command '{cmd}' failed with return code '{retcode}'."
-                    " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
+      self.log_error(error_msg)
+      error_msg = (" Subprocess command '{cmd}' failed with return code '{retcode}'."
+                   " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
                       cmd=cmd,retcode=retcode,stdout=stdout,stderr=stderr)
       self.debug_logger.debug(error_msg)
       raise FileUploadFailed(error_msg)

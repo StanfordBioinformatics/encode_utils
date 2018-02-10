@@ -63,7 +63,7 @@ class Profile:
   Encapsulates knowledge about the existing profiles on the Portal and contains useful methods
   for working with a given profile.
 
-  The user supplies a profile name, typically the value of a record's `@id` property. It will be
+  The user supplies a profile identifier, typically the value of a record's `@id` property. It will be
   normalized to match the syntax of the profile ID keys in the dict returned by the function
   `encode_utils.profiles.get_profile_ids()`. The constant `Profile._PROFILES` stores the dict returned by that function.
   """
