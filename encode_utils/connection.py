@@ -247,7 +247,7 @@ class Connection():
 
   def search(self,search_args,limit=None):
     """
-    Searches the Portal using the provided query parameters,which will first be URL encoded.
+    Searches the Portal using the provided query parameters, which will first be URL encoded.
 
     Args:
         search_args: `dict`. The key and value query parameters.
@@ -290,7 +290,7 @@ class Connection():
     """
     Useful to call when doing a POST (and self.post() does call this). Ensures that the profile key
     identified by self.PROFILE_KEY exists in the passed-in payload and that the value is
-    a recognized ENCODE object profile (schema). Alternatively, the user can set the profile in 
+    a recognized ENCODE object profile (schema) identifier. Alternatively, the user can set the profile in 
     the more convoluted `@id` attribute.
 
     Args:
@@ -318,12 +318,12 @@ class Connection():
 
   def get_lookup_ids_from_payload(self,payload):
     """
-    Given a payload to submit to the Portal, extracts the identifiers that can be used to lookup
+    Given a payload to submit to the Portal, extracts the identifiers that is used to lookup
     the record on the Portal, i.e. to see if the record already exists. Identifiers are extracted
     from the following fields:
-    1) self.ENCID_KEY,
-    2) aliases,
-    3) md5sum (in the case of a file object)
+      1. self.ENCID_KEY,
+      2. aliases,
+      3. md5sum (in the case of a file object)
 
     Args:
         payload: `dict`. The data to submit.
@@ -365,9 +365,9 @@ class Connection():
   def get(self,rec_ids,ignore404=True,frame=None):
     """GET a record from the ENCODE Portal.
 
-    Looks up a record in ENCODE and performs a GET request, returning the JSON serialization of
+    Looks up a record in the Portal and performs a GET request, returning the JSON serialization of
     the object. You supply a list of identifiers for a specific record, such as the object ID, an
-    alias, uuid, or accession. The ENCODE Portal will be searched for each identifier in turn
+    alias, uuid, or accession. The Portal will be searched for each identifier in turn
     until one is either found or the list is exhaused.
 
     Args:
@@ -487,8 +487,9 @@ class Connection():
 
   def before_submit_alias(self,payload):
     """
-    A POST and PATCH pre-submit hook used to add the alias prefix to any aliases that are 
-    missing it. An alias prefix is composed of the 
+    A POST and PATCH pre-submit hook used to add the lab alias prefix to any aliases that are 
+    missing it. The `DCC_LAB` environment variable is consulted to fetch the lab name, and if
+    not set, it will be a no-op. 
 
     Args:
         payload: `dict`. The payload to submit to the Portal.
