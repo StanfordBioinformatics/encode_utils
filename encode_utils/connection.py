@@ -28,7 +28,7 @@ import encode_utils.profiles as eup
 import encode_utils.utils as euu
 
 
-
+#: The directory that contains the log files created by the `Connection` class.
 LOG_DIR = "EU_Logs"
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -106,12 +106,15 @@ class Connection():
   POST = "post"
   PATCH = "patch"
 
-  def __init__(self,dcc_mode=False):
+  def __init__(self,dcc_mode=None):
 
     #: A reference to the debug logger that was created earlier; see `encode_utils.debug_logger`.
     #: This class adds a file handler, such that all messages send to it are logged to this
     #: file in addition to STDOUT>
     self.debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME)
+    #: An indication of which Portal instance to use. Set to 'prod' for the production Portal, 
+    #: and 'dev' for the development Portal. Leaving the default of None means to use the value
+    #: of the `DCC_MODE` environment variable.
     self.dcc_mode = self._set_dcc_mode(dcc_mode)
     self.dcc_host = eu.DCC_MODES[self.dcc_mode]["host"]
     self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
