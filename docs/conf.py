@@ -107,7 +107,7 @@ todo_include_todos = True
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ['_static/encode_utils.css']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -178,5 +178,7 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
-
+#: Define setup() function as descried in Read The Docs at                                             
+#: http://docs.readthedocs.io/en/latest/guides/adding-custom-css.html                                  
+def setup(app):                                                                                        
+    app.add_stylesheet('css/encode_utils.css') 
