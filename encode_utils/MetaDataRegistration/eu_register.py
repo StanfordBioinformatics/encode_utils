@@ -15,18 +15,18 @@ the ``--patch`` option.
 
 When POSTING file records, the md5sum of each file will be calculated for you if you haven't
 already provided the `md5sum` property. Then, after the POST operation completes, the actual file
-will be uploaded to AWS. In order for this to work, you must set the `submitted_file_name`
+will be uploaded to AWS S3. In order for this to work, you must set the `submitted_file_name`
 property to the full, local path to your file to upload.
 
-Note that there is a special 'trick' defined in the encode_utils.connection.Connection()
+Note that there is a special 'trick' defined in the ``encode_utils.connection.Connection()``
 class that can be taken advantage of to simplify submission under certain profiles.  
-It concerns the 'attachment' property in any profile that employs it, such as the document
-profile.  The trick works as follows: instead of constructing the attachment propery object 
+It concerns the `attachment` property in any profile that employs it, such as the `document`
+profile.  The trick works as follows: instead of constructing the `attachment` propery object 
 value as defined in the schema, simply use a single-key object of the following format::
 
   {"path": "/path/to/myfile"}
 
-and the attachment object will be constructed for you. 
+and the `attachment` object will be constructed for you. 
 
 |
 """
