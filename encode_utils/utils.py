@@ -24,13 +24,13 @@ import encode_utils as eu
 #: Stores the HTTP headers to indicate JSON content in a request. 
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
-#: A debug `logging` instance.
+#: A debug ``logging`` instance.
 DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)                                
-#: An error `logging` instance.
+#: An error ``logging`` instance.
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__) 
 
 def calculate_md5sum(file_path):
-  """"Calculates the md5sum for a file.
+  """Calculates the md5sum for a file.
 
   Args:
       file_path: `str`. The path to a local file.
@@ -45,26 +45,25 @@ def calculate_md5sum(file_path):
 
 def print_format_dict(dico,indent=2):
   """Formats a dictionary for printing purposes to ease visual inspection.
-
-  Wraps the json.dumps() function.
+  Wraps the ``json.dumps()`` function.
 
   Args:
       indent: `int`. The number of spaces to indent each level of nesting. Passed directly
-          to the json.dumps() method.
+          to the ``json.dumps()`` function.
   """
   #Could use pprint, but that looks too ugly with dicts due to all the extra spacing.
   return json.dumps(dico,indent=indent,sort_keys=True)
 
 def clean_alias_name(alias):
   r"""
-  Removes unwanted characters from the alias name. Only the '/' character purportedly causes issues.
+  Removes unwanted characters from the alias name. 
   This function replaces both '/' and '\\\\' with '_'. Can be called prior to registering a new
   alias if you know it may contain such unwanted characters. You would then need to update 
   your payload with the new alias to submit.
 
   Args:
-      alias: `str`. A alias that you want to submit. Should be a raw string (i.e. `r"some\alias"`)
-        or a string where any '\' character is already escaped (i.e. `"some\\alias"`). 
+      alias: `str`. An alias that you want to submit. Should be a raw string (i.e. ``r"some\alias"``)
+        or a string where any '\' character is already escaped (i.e. ``"some\\alias"``). 
 
   Returns:
       `str`: The cleaned alias.
@@ -82,24 +81,24 @@ def clean_alias_name(alias):
 def create_subprocess(cmd,check_retcode=True):
   """Runs a command in a subprocess and checks for any errors.
 
-  Creates a subprocess via a call to subprocess.Popen with the argument 'shell=True', and pipes
+  Creates a subprocess via a call to ``subprocess.Popen`` with the argument ``shell=True``, and pipes
   stdout and stderr.  
 
   Args:
       cmd: `str`. The command to execute.
-      check_retcode: `bool`. When True, then an `subprocess.SubprocessError` is raised when the 
+      check_retcode: `bool`. When `True`, then a ``subprocess.SubprocessError`` is raised when the 
         subprocess returns a non-zero return code. 
         The error message will display the command that was executed along with its
         actual return code,  as well as any messages that the subprocess sent to STDOUT and STDERR.
-        When False, the `subprocess.Popen` instance will be returned instead and it is expected 
-        that the caller will call the its `communicate` method.
+        When `False`, the ``subprocess.Popen`` instance will be returned instead and it is expected 
+        that the caller will call its ``communicate`` method.
 
   Returns:
       Two-item tuple containing the subprocess's STDOUT and STDERR streams' content if 
-      `check_retcode=True`, otherwise a `subprocess.Popen` instance.
+      ``check_retcode=True``, otherwise a ``subprocess.Popen`` instance.
 
   Raises:
-      subprocess.SubprocessError: There is a non-zero return code and `check_retcode=True`.
+      subprocess.SubprocessError: There is a non-zero return code and ``check_retcode=True``.
   """
   popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   if check_retcode:
@@ -128,13 +127,14 @@ def add_alias_prefix(aliases,prefix=False):
   Returns: 
       `list`. 
   
-  Example::
+  Examples::
 
         add_alias_prefix(aliases=["my-alias"],prefix="michael-snyder")
         # Returns ["michael-snyder:my-alias"]
 
         add_alias_prefix(aliases=["some-prefix:my-alias"],prefix="michael-snyder")
         # Returns ["some-refix:my-alias"]
+        # Doesn't change an existing alias.
 
   """
   if not prefix:
@@ -156,7 +156,7 @@ def add_alias_prefix(aliases,prefix=False):
 
 def strip_alias_prefix(alias):
   """
-  Splits 'alias' on ':' to strip off any alias prefix. Aliases have a lab-specific prefix with
+  Splits `alias` on ':' to strip off any alias prefix. Aliases have a lab-specific prefix with
   ':' delimiting the lab name and the rest of the alias; this delimiter shouldn't appear
   elsewhere in the alias.
 
@@ -191,11 +191,11 @@ def add_to_set(entries,new):
 def does_lib_replicate_exist(replicates_json,lib_accession,biological_replicate_number=False,technical_replicate_number=False):
   """
   Regarding the replicates on the specified experiment, determines whether any of them belong
-  to the specified library.  Optional constraints are the biological_replicate_number and
-  the technical_replicate_number props of the replicates.
+  to the specified library.  Optional constraints are the 'biological_replicate_number' and
+  the 'technical_replicate_number' props of the replicates.
 
   Args:
-      replicates_json: `list`. The value of the `replicates` property of an Experiment record.
+      replicates_json: `list`. The value of the 'replicates' property of an Experiment record.
       lib_accession: `str`. The value of a library object's 'accession' property.
       biological_replicate_number: int. The biological replicate number.
       technical_replicate_number: int. The technical replicate number.
