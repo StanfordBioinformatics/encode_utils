@@ -195,8 +195,8 @@ def does_lib_replicate_exist(replicates_json,lib_accession,biological_replicate_
   the 'technical_replicate_number' props of the replicates.
 
   Args:
-      replicates_json: `list`. The value of the 'replicates' property of an Experiment record.
-      lib_accession: `str`. The value of a library object's 'accession' property.
+      replicates_json: `list`. The value of the `replicates` property of an Experiment record.
+      lib_accession: `str`. The value of a library object's `accession` property.
       biological_replicate_number: int. The biological replicate number.
       technical_replicate_number: int. The technical replicate number.
 

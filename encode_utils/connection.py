@@ -36,7 +36,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class AwardPropertyMissing(Exception):
   """
-  Raised when the 'award' property isn't set in the payload when doing a POST, and a default isn't
+  Raised when the `award` property isn't set in the payload when doing a POST, and a default isn't
   set by the environment variable `DDCC_AWARD` either.
   """
   message = ("The property '{}' is missing from the payload and a default isn't set either. To"
@@ -51,7 +51,7 @@ class FileUploadFailed(Exception):
 
 class LabPropertyMissing(Exception):
   """
-  Raised when the 'lab' property isn't set in the payload when doing a POST, and a default isn't
+  Raised when the `lab` property isn't set in the payload when doing a POST, and a default isn't
   set by the environment variable `DCC_LAB` either.
   """
   message = ("The property '{}' is missing from the payload and a default isn't set either. To"
@@ -94,8 +94,8 @@ class Connection():
      should consult the debug log file.
   3. posted log file - Tabulates what was successfully POSTED. There are three tab-delimited 
      colummns ordered as submission timestamp, record alias, and record accession (or UUID if 
-     the 'accession' property doesn't exist for the profile of the record at hand). Note that if a 
-     record has several aliases, then only the first one in the list for the 'aliases' property is 
+     the `accession` property doesn't exist for the profile of the record at hand). Note that if a 
+     record has several aliases, then only the first one in the list for the `aliases` property is 
      used.
   """
 
@@ -433,7 +433,7 @@ class Connection():
 
   def set_attachment(self,document):
     """
-    Sets the 'attachment' property for any profile that supports it, such as `document` or 
+    Sets the `attachment` property for any profile that supports it, such as `document` or 
     `antibody_characterization`.
 
     Args:
@@ -529,7 +529,7 @@ class Connection():
     A pre-POST and pre-PATCH hook used to simplify the creation of an attachment in profiles 
     that support it.
 
-    Checks the payload for the presence of the 'attachment' property that is used by certain 
+    Checks the payload for the presence of the `attachment` property that is used by certain 
     profiles, i.e. `document` and `antibody_characterization`, and then checks to see if a particular
     shortcut is being employed to indicate the attachment. That shortcut works as follows: if the 
     dictionary value of the 'attachment' key has a key named 'path' in it (case-sensitive), then 
@@ -556,7 +556,7 @@ class Connection():
     return payload
 
   def before_post_file(self,payload):
-    """A pre-POST hook that calculates and sets the md5sum property for a file record.    
+    """A pre-POST hook that calculates and sets the `md5sum` property for a file record.    
 
     If the 'md5sum' key is already present in the payload, then this is a no-op.
 
@@ -628,10 +628,10 @@ class Connection():
 
     Requires that you include in the payload the non-schematic key ``self.PROFILE_KEY`` to
     designate the name of the ENCODE object profile that you are submitting to, or the 
-    actual '@id' property itself.
+    actual `@id` property itself.
 
-    If the 'lab' property isn't present in the payload, then the default will be set to the value
-    of the `DCC_LAB` environment variable. Similarly, if the 'award' property isn't present, then the
+    If the `lab` property isn't present in the payload, then the default will be set to the value
+    of the `DCC_LAB` environment variable. Similarly, if the `award` property isn't present, then the
     default will be set to the value of the `DCC_AWARD` environment variable.
 
     Before the POST is attempted, any pre-POST hooks are fist called (see the method
@@ -645,9 +645,9 @@ class Connection():
         exist on the Portal.
 
     Raises:
-        encode_utils.connection.AwardPropertyMissing: The 'award' property isn't present in the payload and there isn't a
+        encode_utils.connection.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
             defualt set by the environment variable `DCC_AWARD`.
-        encode_utils.connection.LabPropertyMissing: The 'lab' property isn't present in the payload and there isn't a
+        encode_utils.connection.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
             default set by the environment variable `DCC_LAB`.
         encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok, with
             the exception of a conflict (409) which is only logged.
@@ -671,7 +671,7 @@ class Connection():
 
     #Run 'before' hooks:
     payload = self.before_submit_hooks(payload,method=self.POST)
-    #Remove the non-schematic self.PROFILE_KEY if being used. Also check for the '@id' property
+    #Remove the non-schematic self.PROFILE_KEY if being used. Also check for the `@id` property
     # and remove if found too.
     try:
       payload.pop(self.PROFILE_KEY)
@@ -838,7 +838,7 @@ class Connection():
   def get_fastqfile_replicate_hash(self,dcc_exp_id):
     """
     Given a DCC experiment ID, gets its JSON representation from the Portal and looks in the 
-    'original' property to find FASTQ file objects and creates a `dict` organized by replicate 
+    `original` property to find FASTQ file objects and creates a `dict` organized by replicate 
     numbers. Keying through the `dict` by replicate numbers, you can get to a particular file 
     object's JSON serialization.
 
@@ -993,7 +993,7 @@ class Connection():
         file_id: `str`. An identifier of a `file` record.
         file_path: `str`. the local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
           If not set, defaults to `None` in which case the local file path will be extracted from the
-          record's 'submitted_file_name' property.
+          record's `submitted_file_name` property.
 
     Raises:
         encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
@@ -1039,7 +1039,7 @@ class Connection():
     """
     Looks at all FASTQ files on the specified experiment, and tallies up the varying sequencing
     platforms that generated them.  The platform of a given file record is indicated by the
-    'platform' property. This is moreless used to verify that there aren't a mix of
+    `platform` property. This is moreless used to verify that there aren't a mix of
     multiple different platforms present as normally all reads should come from the same platform.
 
     Args:
@@ -1098,14 +1098,14 @@ class Connection():
   def link_document(self,rec_id,document_id):
     """
     Links an existing `document` record on the Portal to some other record on the Portal via
-    the latter's 'documents' property.
+    the latter's `documents` property.
 
     Args:
         rec_id: `str`. A DCC object identifier of the record to link the document to.
         document_id: `str`. An identifier of a `document` record.
     """
     
-    #Need to compare the documents at the primary ID level ('@id' property) in order to ensure the
+    #Need to compare the documents at the primary ID level (`@id` property) in order to ensure the
     # document isn't already linked. If not comparing at this identifier type and instead some
     # other type (i.e. alias, uuid), then the document will be relinked as a duplicate.
 
