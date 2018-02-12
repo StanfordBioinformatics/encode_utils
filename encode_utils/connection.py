@@ -867,7 +867,7 @@ class Connection():
       dico[brn][trn][read_num].append(file_json)
     return dico
 
-  def extract_aws_upload_credentials(self,file_json):
+  def extract_aws_upload_credentials(self,creds):
     """
     Sets values for the AWS CLI security credentials (for uploading a file to AWS S3) to the 
     credentials found in a file record's `upload_credentials` property. The security credentials
@@ -875,7 +875,7 @@ class Connection():
     the AWS CLI.
 
     Args:
-        file_json: `dict`: A file record's JSON serialization.
+        creds: `dict`: The value of a File object's `upload_credentials` property.
  
     Returns:
         `dict`: `dict` containing keys named after AWS CLI environment variables being:
@@ -887,10 +887,6 @@ class Connection():
 
         Will be empty if the `upload_credentials` property isn't present in `file_json`.
     """
-    try:
-      creds = file_json["upload_credentials"]
-    except KeyError:
-      return {}
     aws_creds = {}
     aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
     aws_creds["AWS_SECRET_ACCESS_KEY"] = creds["secret_key"]
@@ -898,7 +894,7 @@ class Connection():
     aws_creds["UPLOAD_URL"] = creds["upload_url"]
     return aws_creds
 
-  def set_aws_upload_config(self,file_id):
+  def get_upload_credentials(self,file_id):
     """
     Similar to ``self.extract_aws_upload_credentials()``, but it goes a step further in that it is
     capable of regenerating the upload credentials if they aren't currently present in the file 
@@ -908,17 +904,16 @@ class Connection():
         file_id: `str`. A file object identifier (i.e. accession, uuid, alias, md5sum).
 
     Returns:
-        `dict`: See documentation for the return value for 
-        ``self.extract_aws_upload_credentials()``.
+        `dict`: The value of the `upload_credentials` property if present, otherwise, the `dict`
+         returned by ``self.regenerate_aws_upload_creds``, which tries to generate the value for
+         this property.
     """
     file_json = self.get(file_id,ignore404=False)
-    creds = self.extract_aws_upload_credentials(file_json)
-    if not creds:
+    try:
+      creds = file_json["upload_credentials"]
+    except KeyError: 
       creds = self.regenerate_aws_upload_creds(file_id)
       #Will be None if forbidden.
-
-    if not creds:
-      return {}
 
     #URL example from dev Portal:
     #  s3://encoded-files-dev/2018/01/28/7c5c6d58-c98a-48b4-9d4b-3296b4126b89/TSTFF334203.fastq.gz"
@@ -996,11 +991,12 @@ class Connection():
         encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
     """
     self.debug_logger.debug("\nIN upload_file()\n")
-    aws_creds = self.set_aws_upload_config(file_id)
-    if not aws_creds:
+    upload_credentials = self.get_upload_credentials(file_id)
+    if not upload_credentials:
       msg = "Cannot upload file for {} since upload credentials could not be generated.".format(file_id)
       self.log_error(msg)
       return
+    aws_creds = self.extract_aws_upload_credentials(upload_credentials)
     if not file_path:
       file_rec = self.get(rec_ids=file_id)
       try:

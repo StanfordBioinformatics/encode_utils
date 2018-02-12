@@ -31,17 +31,22 @@ and the `attachment` object will be constructed for you.
 |
 """
 
-import os
-import json
 import argparse
-import requests
+import json
+import os
 import re
+import sys
+import requests
 
 import encode_utils.utils as euu
 import encode_utils.connection as euc
 from encode_utils.parent_argparser import dcc_login_parser
 import encode_utils.profiles as eup
 
+#Check that Python3 is being used
+v = sys.version_info
+if v < (3,3):
+  raise Exception("Requires Python 3.3 or greater.")
 
 def get_parser():
   parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
