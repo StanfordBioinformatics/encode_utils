@@ -764,6 +764,9 @@ class Connection():
     #Run 'before' hooks:
     payload = self.before_submit_hooks(payload,method=self.PATCH)
     payload.pop(self.ENCID_KEY)
+    if self.PROFILE_KEY in payload:
+      #Some client software may add this key in; won't hurt to remove it.
+      payload.pop(self.PROFILE_KEY)
 
     url = os.path.join(self.dcc_url,encode_id)
     self.debug_logger.debug(
