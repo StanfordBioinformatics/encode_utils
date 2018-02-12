@@ -34,6 +34,9 @@ from encode_utils import utils
 DATA_DIR = "data"
 
 class TestUtils(unittest.TestCase):
+  """
+  Tests functions in the ``encode_utils.utils`` module.
+  """
 
   def setUp(self):
     rep_json_file = os.path.join(DATA_DIR,"replicates_for_ENCSR502NRF.json")
