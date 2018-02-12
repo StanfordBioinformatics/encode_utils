@@ -83,7 +83,7 @@ class TestConnection(unittest.TestCase):
   def test_3_get_profile_from_payload(self):
     """
     Tests the method ``get_profile_from_payload()`` for raising the exception 
-    ``encode_utils.connection.ProfileNotSpecified`` when neither the ``self.PROFILE_KEY or `@id`
+    ``encode_utils.connection.ProfileNotSpecified`` when neither the ``self.PROFILE_KEY`` or `@id`
     key is present in the payload.
     """
     #Use a valid profile ID that exists as a key in profiles.Profile.PROFILES.
