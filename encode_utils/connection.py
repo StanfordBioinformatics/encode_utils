@@ -468,11 +468,7 @@ class Connection():
     """
     if profile_id != eup.Profile.FILE_PROFILE_ID:
       return
-    rec = self.get(rec_ids=rec_id,ignore404=False)
-    if eup.Profile.SUBMITTED_FILE_PROP_NAME in rec:
-      filename = rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
-      if filename:
-        self.upload_file(file_id=rec_id,file_path=filename)
+    self.upload_file(file_id=rec_id)
 
   def after_submit_hooks(self,rec_id,profile_id,method=""):
     """
@@ -943,7 +939,7 @@ class Connection():
     self.debug_logger.debug("Using curl to generate new file upload credentials")
     cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
            " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
-           " | python -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,host=self.dcc_host,file_id=file_id)
+           " | python3 -m json.tool").format(api_key=self.api_key,secret_key=self.secret_key,host=self.dcc_host,file_id=file_id)
     self.debug_logger.debug("curl command: '{}'".format(cmd))
     popen = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout,stderr = popen.communicate() #each is a bytes object.

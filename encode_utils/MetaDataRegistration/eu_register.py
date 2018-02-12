@@ -100,7 +100,7 @@ def get_parser():
 
 
 def main():
-  parser = get_paser()
+  parser = get_parser()
   args = parser.parse_args()
   profile_id = args.profile_id
   dcc_mode = args.dcc_mode
@@ -110,6 +110,7 @@ def main():
   if dcc_mode:
     conn = euc.Connection(dcc_mode)
   else:
+    #Default dcc_mode taken from environment variable DCC_MODE.
     conn = euc.Connection()
 
   infile = args.infile
@@ -129,10 +130,6 @@ def main():
 #: RECORD_ID_FIELD is a special field that won't be skipped in the create_payload() function.
 #: It is used when patching objects to indicate the identifier of the record to patch. 
 RECORD_ID_FIELD = "record_id" 
-
-def validate_property_names(json_obj):
-  pass
-  
 
 def check_valid_json(prop,val,row_count):
   """
@@ -202,7 +199,7 @@ def create_payloads(profile_id,infile):
     if not line or line[0].startswith("#"):
       continue
     payload = {}
-    payload[conn.PROFILE_KEY] = profile.profile_id
+    payload[euc.Connection.PROFILE_KEY] = profile.profile_id
     fi_count = -1 
     for val in line:
       fi_count += 1

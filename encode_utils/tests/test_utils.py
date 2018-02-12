@@ -45,14 +45,14 @@ class TestUtils(unittest.TestCase):
     self.fqfile = os.path.join(DATA_DIR,"test_fq_40recs.fastq.gz")
 
   def test_add_to_set(self):
-    """Tests the function ``utils.add_to_set()`` for success when all elements are already unique.
+    """Tests the function ``add_to_set()`` for success when all elements are already unique.
     """
     entries = [1,2,3]
     new = 4
     self.assertEqual(utils.add_to_set(entries=entries,new=new),[1,2,3,4])
 
   def test_add_to_set_2(self):
-    """Tests the function ``utils.add_to_set()`` for success when there are duplicates.
+    """Tests the function ``add_to_set()`` for success when there are duplicates.
     """
     entries = [1,2,3]
     new = 3
@@ -84,7 +84,7 @@ class TestUtils(unittest.TestCase):
  
   def test_2_does_lib_replicate_exist(self):
     """
-    Test the function ``utils.does_lib_replicate_exist()`` for the correct result when we restrict 
+    Test the function ``does_lib_replicate_exist()`` for the correct result when we restrict 
     the replicate search to only those with the specific `biological_replicate_number`.
     """
     lib_accession = "ENCLB690UAL" #has replicate for (1,1).
@@ -98,7 +98,7 @@ class TestUtils(unittest.TestCase):
 
   def test_3_does_lib_replicate_exist(self):
     """
-    Test the function ``utils.does_lib_replicate_exist()`` for the empty result when we restrict 
+    Test the function ``does_lib_replicate_exist()`` for the empty result when we restrict 
     the replicates search to a `biological_replicate_number` that does not apply.
     """
     lib_accession = "ENCLB690UAL" #has replicate for (1,1).
@@ -112,7 +112,7 @@ class TestUtils(unittest.TestCase):
 
   def test_4_does_lib_replicate_exist(self):
     """
-    Test the function ``utils.does_lib_replicate_exist()`` for the empty result when we restrict 
+    Test the function ``does_lib_replicate_exist()`` for the empty result when we restrict 
     the replicates search to a `biological_replicate_number` that does apply but a 
     `technical_replicate_number` that doesn't.
     """
@@ -129,7 +129,7 @@ class TestUtils(unittest.TestCase):
 
   def test_5_does_lib_replicate_exist(self):
     """
-    Test the function ``utils.does_lib_replicate_exist()`` for the empty result when the library 
+    Test the function ``does_lib_replicate_exist()`` for the empty result when the library 
     accession doesn't belong to any of the replicates.
     """
     lib_accession = "ENCLB000000" #Doesn't exist.
