@@ -238,6 +238,20 @@ class Connection():
         aliases[index] =  euu.strip_alias_prefix(alias)
     return aliases
 
+  def indexing(self):
+    """Indicates whether the Portal is updating its schematic indicies.
+
+    Returns:
+        `bool`: True if the Portal is indexing, False otherwise.
+        
+    """
+    response = self.get("_indexer",ignore404=False)
+    status = response["status"]
+    if status == "indexing":
+      return True
+    return False
+    
+
   def make_search_url(self,search_args,limit=None):
     """Creates a URL encoded URL given the search arguments.
 
