@@ -8,7 +8,7 @@
 ###
 
 """                                                                                                    
-Tests functions in the utils module. A few test data files are used from within the 'data' folder.  
+Tests functions in the ``encode_utils.utils`` module. A few test data files are used from within the 'data' folder.  
 The contents of the files are explained here. When a test utilizes any of them, you can check here  
 to read the documentation about the contents of that file.                                             
                                                                                                        
@@ -34,8 +34,6 @@ from encode_utils import utils
 DATA_DIR = "data"
 
 class TestUtils(unittest.TestCase):
-  """Tests the utils.py module.
-  """
 
   def setUp(self):
     rep_json_file = os.path.join(DATA_DIR,"replicates_for_ENCSR502NRF.json")
@@ -44,35 +42,35 @@ class TestUtils(unittest.TestCase):
     self.fqfile = os.path.join(DATA_DIR,"test_fq_40recs.fastq.gz")
 
   def test_add_to_set(self):
-    """Tests the function utils.add_to_set() for success when all elements are already unique.
+    """Tests the function ``utils.add_to_set()`` for success when all elements are already unique.
     """
     entries = [1,2,3]
     new = 4
     self.assertEqual(utils.add_to_set(entries=entries,new=new),[1,2,3,4])
 
   def test_add_to_set_2(self):
-    """Tests the function utils.add_to_set() for success when there are duplicates.
+    """Tests the function ``utils.add_to_set()`` for success when there are duplicates.
     """
     entries = [1,2,3]
     new = 3
     self.assertEqual(utils.add_to_set(entries=entries,new=new),[1,2,3])
 
   def test_calculate_md5_sum(self):
-    """Tests the function calculate_md5_sum() for success.
+    """Tests the function ``calculate_md5_sum()`` for success.
     """
     infile = os.path.join(DATA_DIR,"test_fq_40recs.fastq.gz")
     md5sum = utils.calculate_md5sum(infile) 
     self.assertEqual(md5sum,"a3e7cb3df359d0642ab0edd33ea7e93e")
 
   def test_clean_alias_name(self):
-    """Tests the function clean_alias_name() for success.
+    """Tests the function ``clean_alias_name()`` for success.
     """
     alias = r"michael-snyder:a/troublesome\alias"
     self.assertEqual(utils.clean_alias_name(alias),"michael-snyder:a_troublesome_alias")
 
   def test_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for correct result when we only care about
+    Test the function ``does_lib_replicate_exist()`` for correct result when we only care about
     whether the library has any replicates, and not any particular one.
     """
     lib_accession = "ENCLB690UAL" #has replicate for (1,1).
@@ -83,7 +81,7 @@ class TestUtils(unittest.TestCase):
  
   def test_2_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for the correct result when we restrict 
+    Test the function ``utils.does_lib_replicate_exist()`` for the correct result when we restrict 
     the replicate search to only those with the specific `biological_replicate_number`.
     """
     lib_accession = "ENCLB690UAL" #has replicate for (1,1).
@@ -97,7 +95,7 @@ class TestUtils(unittest.TestCase):
 
   def test_3_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for the empty result when we restrict 
+    Test the function ``utils.does_lib_replicate_exist()`` for the empty result when we restrict 
     the replicates search to a `biological_replicate_number` that does not apply.
     """
     lib_accession = "ENCLB690UAL" #has replicate for (1,1).
@@ -111,7 +109,7 @@ class TestUtils(unittest.TestCase):
 
   def test_4_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for the empty result when we restrict 
+    Test the function ``utils.does_lib_replicate_exist()`` for the empty result when we restrict 
     the replicates search to a `biological_replicate_number` that does apply but a 
     `technical_replicate_number` that doesn't.
     """
@@ -128,7 +126,7 @@ class TestUtils(unittest.TestCase):
 
   def test_5_does_lib_replicate_exist(self):
     """
-    Test the function utils.does_lib_replicate_exist() for the empty result when the library 
+    Test the function ``utils.does_lib_replicate_exist()`` for the empty result when the library 
     accession doesn't belong to any of the replicates.
     """
     lib_accession = "ENCLB000000" #Doesn't exist.
@@ -137,7 +135,7 @@ class TestUtils(unittest.TestCase):
     self.assertEqual(res,[])
 
   def test_strip_alias_prefix(self):
-    """Tests the function strip_alias_prefix for success.
+    """Tests the function ``strip_alias_prefix()`` for success.
     """
     alias = "michael-snyder:B-167"
     self.assertEqual(utils.strip_alias_prefix(alias),"B-167")
