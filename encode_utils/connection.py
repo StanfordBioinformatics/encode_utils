@@ -570,7 +570,7 @@ class Connection():
         encode_utils.utils.MD5SumError: Perculated through the function 
           `encode_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
     """
-    profile_id = self.get_profile_from_payload(payload)
+    profile_id = payload[self.PROFILE_KEY]
     if profile_id != eup.Profile.FILE_PROFILE_ID:
       return payload
     try:
@@ -656,6 +656,7 @@ class Connection():
     #Make sure we have a payload that can be converted to valid JSON, and tuples become arrays, ...
     json.loads(json.dumps(payload))
     profile_id = self.get_profile_from_payload(payload)
+    payload[self.PROFILE_KEY] = profile_id
     url = os.path.join(self.dcc_url,profile_id)
     #Check if we need to add defaults for 'award' and 'lab' properties:
     if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS: #No lab prop for these profiles either.

@@ -55,6 +55,56 @@ class TestConnection(unittest.TestCase):
     res = self.conn.get_lookup_ids_from_payload(payload)
     self.assertEquals(sorted(res),sorted([accession,alias,md5]))
 
+  def test_get_profile_from_payload(self):
+    """
+    Tests the method ``get_profile_from_payload()`` for returning the correct result when only the 
+    key ``encode_utils.connection.Connection.PROFILE_KEY`` is set in the payload.
+    """
+    #Use a valid profile ID that exists as a key in profiles.Profile.PROFILES.
+    profile_id = "genetic_modification" 
+    payload = {}
+    payload[self.conn.PROFILE_KEY] = "genetic_modification"
+    res = self.conn.get_profile_from_payload(payload)
+    self.assertEquals(res,profile_id)
+
+  def test_2_get_profile_from_payload(self):
+    """
+    Tests the method ``get_profile_from_payload()`` for returning the correct result when only the 
+    key for the `@id` property is set in the payload.
+    """
+    #Use a valid profile ID that exists as a key in profiles.Profile.PROFILES.
+    profile_id = "genetic_modification" 
+    payload = {}
+    payload["@id"] = "genetic_modification"
+    res = self.conn.get_profile_from_payload(payload)
+    self.assertEquals(res,profile_id)
+
+  def test_3_get_profile_from_payload(self):
+    """
+    Tests the method ``get_profile_from_payload()`` for raising the exception 
+    ``encode_utils.connection.ProfileNotSpecified`` when neither the ``self.PROFILE_KEY or `@id`
+    key is present in the payload.
+    """
+    #Use a valid profile ID that exists as a key in profiles.Profile.PROFILES.
+    payload = {}
+    self.assertRaises(
+      connection.ProfileNotSpecified,
+      self.conn.get_profile_from_payload,
+      payload)
+
+  def test_4_get_profile_from_payload(self):
+    """
+    Tests the method ``get_profile_from_payload()`` for raising the exception 
+    ``profiles.UnknownProfile`` when an unknown profile is specified in the payload.
+    """
+    #Use a valid profile ID that exists as a key in profiles.Profile.PROFILES.
+    payload = {}
+    payload[self.conn.PROFILE_KEY] = "unknown_profile"
+    self.assertRaises(
+      profiles.UnknownProfile,
+      self.conn.get_profile_from_payload,
+      payload)
+
   def test_extract_aws_upload_credentials(self):
     """ 
     Tests the method extract_aws_upload_credentials() for extracting the upload credentials 
