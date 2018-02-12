@@ -1,5 +1,4 @@
 .nfs*
-test
 *.pyc
 /dcc_submitters.json
 *.txt

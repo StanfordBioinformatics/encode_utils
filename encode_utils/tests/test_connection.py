@@ -117,12 +117,10 @@ class TestConnection(unittest.TestCase):
     upload_url = "upload_url"
 
     payload = {
-      "upload_credentials": {
-        access_key: access_key,
-        secret_key: secret_key,
-        session_token: session_token,
-        upload_url: upload_url
-      }
+      access_key: access_key,
+      secret_key: secret_key,
+      session_token: session_token,
+      upload_url: upload_url
     }
  
     res = self.conn.extract_aws_upload_credentials(payload)

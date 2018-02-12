@@ -138,6 +138,7 @@ class Connection():
     log_level = logging.ERROR
     self.error_logger.setLevel(log_level)
     self._add_file_handler(logger=self.error_logger,level=log_level,tag="error")
+    self.log_error("New Connection() object")
 
     #: A ``logging`` instance with a file handler for logging successful POST operations.
     #: The log file resides locally within the directory specified by the constant 
@@ -664,7 +665,6 @@ class Connection():
         if not eu.LAB:
           raise LabPropertyMissing
         payload.update(eu.LAB)
-    alias = payload["aliases"][0]
 
     #Run 'before' hooks:
     payload = self.before_submit_hooks(payload,method=self.POST)
@@ -679,6 +679,7 @@ class Connection():
     except KeyError:
       pass
 
+    alias = payload["aliases"][0]
     self.debug_logger.debug(
         ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
          " payload:\n\n{payload}\n\n").format(alias=alias,url=url,payload=euu.print_format_dict(payload)))
