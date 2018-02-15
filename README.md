@@ -3,7 +3,7 @@
 # Latest news
 Feb. 15, 2018
 
-Release [[1\.1\.1|https://github.com/StanfordBioinformatics/encode_utils/releases/tag/1.1.1]]
+Release (1.1.1)[https://github.com/StanfordBioinformatics/encode_utils/releases/tag/1.1.1]
 
 ***
 
