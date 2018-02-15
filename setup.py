@@ -8,7 +8,7 @@ from distutils.core import setup
 
 setup(
   name = "encode utils",
-  version = "1.0",
+  version = "1.1.1",
   description = "Client and tools for ENCODE data submitters.",
   author = "Nathaniel Watson",
   author_email = "nathankw@stanford.edu",
