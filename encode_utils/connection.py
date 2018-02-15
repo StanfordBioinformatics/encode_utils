@@ -853,6 +853,7 @@ class Connection():
               ``error_if_not_found=True``) but the record isn't found.
     """
     #Check wither record already exists on the portal
+    self.debug_logger.debug("WARNING: Connection.send() is deprecated since v1.1.1.")
     lookup_ids = self.get_lookup_ids_from_payload(payload)
     rec_json = self.get(rec_ids=lookup_ids,ignore404=not error_if_not_found)
 
