@@ -48,6 +48,10 @@ v = sys.version_info
 if v < (3,3):
   raise Exception("Requires Python 3.3 or greater.")
 
+#: RECORD_ID_FIELD is a special field that won't be skipped in the create_payload() function.
+#: It is used when patching objects to indicate the identifier of the record to patch. 
+RECORD_ID_FIELD = "record_id" 
+
 def get_parser():
   parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
 
@@ -91,10 +95,6 @@ def get_parser():
   parser.add_argument("--patch",action="store_true",help="""
     Presence of this option indicates to patch an existing DCC record rather than register a new one.""")
 
-  parser.add_argument("-e","--error-if-not-found", action="store_true",help="""
-    If trying to PATCH a record and the record cannot be found on the ENCODE Portal, the default 
-    behavior is to then attempt a POST. Specifying this option causes an Exception to be raised.""")
-
   parser.add_argument("-w","--overwrite-array-values",action="store_true",help="""
     Only has meaning in combination with the --patch option. When this is specified, it means that 
     any keys with array values will be overwritten on the ENCODE Portal with the corresponding value 
@@ -109,7 +109,6 @@ def main():
   args = parser.parse_args()
   profile_id = args.profile_id
   dcc_mode = args.dcc_mode
-  error_if_not_found = args.error_if_not_found
   overwrite_array_values = args.overwrite_array_values
 
   if dcc_mode:
@@ -130,11 +129,7 @@ def main():
         raise Exception("Can't patch payload {} since there isn't a '{}' field indiciating an identifer for the record to be PATCHED.".format(euu.print_format_dict(payload),RECORD_ID_FIELD))
       payload.pop(RECORD_ID_FIELD)
       payload.update({conn.ENCID_KEY: record_id})
-      conn.send(payload=payload,error_if_not_found=error_if_not_found,extend_array_values=not overwrite_array_values)
-
-#: RECORD_ID_FIELD is a special field that won't be skipped in the create_payload() function.
-#: It is used when patching objects to indicate the identifier of the record to patch. 
-RECORD_ID_FIELD = "record_id" 
+      conn.patch(payload=payload,extend_array_values=not overwrite_array_values)
 
 def check_valid_json(prop,val,row_count):
   """

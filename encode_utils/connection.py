@@ -669,6 +669,10 @@ class Connection():
     profile_id = self.get_profile_from_payload(payload)
     payload[self.PROFILE_KEY] = profile_id
     url = os.path.join(self.dcc_url,profile_id)
+    if self.ENCID_KEY in payload:
+      #Shouldn't be here, unless maybe a PATCH was attempted and the record didn't exist, so
+      # a POST was then attempted. In face, self.send() can do just that. 
+      payload.pop(self.ENCID_KEY)
     #Check if we need to add defaults for 'award' and 'lab' properties:
     if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS: #No lab prop for these profiles either.
       if eu.AWARD_PROP_NAME not in payload:
@@ -735,7 +739,8 @@ class Connection():
     """PATCH a record on the Portal.
 
     Before the PATCH is attempted, any pre-PATCH hooks are fist called (see the method
-    ``self.before_submit_hooks()``).
+    ``self.before_submit_hooks()``). If the PATCH fails due to the resource not being found (404),
+    then that fact is logged to both the debug and error loggers.
 
     Args:
         payload: `dict`. containing the attribute key and value pairs to patch. Must contain the key
@@ -762,7 +767,14 @@ class Connection():
     json.loads(json.dumps(payload))
     self.debug_logger.debug("\nIN patch()")
     encode_id = payload[self.ENCID_KEY]
-    rec_json = self.get(rec_ids=encode_id,ignore404=False)
+    try:
+      rec_json = self.get(rec_ids=encode_id,ignore404=False)
+    except requests.exceptions.HTTPError as e:
+      if e.response.status_code == requests.codes.NOT_FOUND:
+        self.log_error("Failed to PATCH '{}': Record not found.".format(encode_id))
+        return {}
+      else:
+        raise
 
     if extend_array_values:
       for key in payload:
@@ -814,6 +826,8 @@ class Connection():
 
   def send(self,payload,error_if_not_found=False,extend_array_values=True,raise_403=True):
     """
+    DEPRECATED - Will be removed in the next major release.
+   
     A wrapper over ``self.post()`` and ``self.patch()`` that determines which to call based on whether the
     record exists on the Portal.  Especially useful when submitting a high-level object,
     such as an experiment which contains many dependent objects, in which case you could have a mix
