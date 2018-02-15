@@ -826,7 +826,8 @@ class Connection():
 
   def send(self,payload,error_if_not_found=False,extend_array_values=True,raise_403=True):
     """
-    DEPRECATED - Will be removed in the next major release.
+    .. deprecated:: 1.1.1
+       Will be removed in the next major release.
    
     A wrapper over ``self.post()`` and ``self.patch()`` that determines which to call based on whether the
     record exists on the Portal.  Especially useful when submitting a high-level object,
