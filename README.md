@@ -1,6 +1,12 @@
 © 2018 The Board of Trustees of the Leland Stanford Junior University.
 
 # Latest news
+Feb. 15, 2018
+
+Release [1.1.1](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/1.1.1).
+
+***
+
 Feb. 12, 2018
 
 Release 1.0.0 is out. 

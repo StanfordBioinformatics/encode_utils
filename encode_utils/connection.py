@@ -826,7 +826,8 @@ class Connection():
 
   def send(self,payload,error_if_not_found=False,extend_array_values=True,raise_403=True):
     """
-    DEPRECATED - Will be removed in the next major release.
+    .. deprecated:: 1.1.1
+       Will be removed in the next major release.
    
     A wrapper over ``self.post()`` and ``self.patch()`` that determines which to call based on whether the
     record exists on the Portal.  Especially useful when submitting a high-level object,
@@ -852,6 +853,7 @@ class Connection():
               ``error_if_not_found=True``) but the record isn't found.
     """
     #Check wither record already exists on the portal
+    self.debug_logger.debug("WARNING: Connection.send() is deprecated since v1.1.1.")
     lookup_ids = self.get_lookup_ids_from_payload(payload)
     rec_json = self.get(rec_ids=lookup_ids,ignore404=not error_if_not_found)
 
