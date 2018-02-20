@@ -196,7 +196,7 @@ def create_payloads(profile_id,infile):
   for line in fh:
     line_count += 1
     line = line.strip("\n").split("\t")
-    if not line or line[0].startswith("#"):
+    if not line.strip() or line[0].startswith("#"):
       continue
     payload = {}
     payload[euc.Connection.PROFILE_KEY] = profile.profile_id
