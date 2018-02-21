@@ -596,6 +596,30 @@ class Connection():
     payload["md5sum"] = md5sum
     return payload
 
+  def before_post_fastq_file(self,payload):
+    """
+    A pre-POST hook for FASTQ file objects that checks whether certain rules are followed as
+    defined in the file.json schema. 
+
+    For example, if the FASTQ file is sequenced single-end, then the property ``File.run_type`` 
+    should be set to `single-ended` as expected, however, the property ``File.paired_end`` 
+    shouldn't be set in the payload, as the ``File.run_type`` property has the commment:
+
+      Only paired-ended files should have paired_end values
+
+    """
+    profile_id = payload[self.PROFILE_KEY]
+    if profile_id != eup.Profile.FILE_PROFILE_ID:
+      return payload
+
+    run_type = payload.get("run_type")
+    if not run_type:
+      return payload
+
+    if run_type == "single-ended":
+      if "paired_end" in payload:
+        payload.pop("paired_end")
+    return payload
 
   def before_submit_hooks(self,payload,method=""):
     """Calls pre-POST and pre-PATCH hooks. This method is called from both the ``post()`` and
@@ -627,6 +651,7 @@ class Connection():
     #Call POST-specific hooks if POST:
     if method == self.POST:
       payload = self.before_post_file(payload)
+      payload = self.before_post_fastq_file(payload)
 
     #Call PATCH-specific hooks if PATCH:
     #... None yet.
