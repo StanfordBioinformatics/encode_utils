@@ -420,8 +420,7 @@ class Connection():
       rec_ids = [rec_ids]
     status_codes = {} #key is return code, value is the record ID
     for r in rec_ids:
-      if r.endswith("/"):
-        r = r.rstrip("/")
+      r = r.strip("/")
       url = os.path.join(self.dcc_url,r,"?format=json&datastore=database")
       if frame:
         url += "&frame={frame}".format(frame=frame)
@@ -891,6 +890,25 @@ class Connection():
         payload[self.ENCID_KEY] = encode_id
       return self.patch(payload=payload,extend_array_values=extend_array_values,raise_403=raise_403)
 
+  def get_fastqfiles_on_exp(self,dcc_exp_id):
+    """Returns a list of all FASTQ file objects in the experiment.
+ 
+    Args:
+        dcc_exp_id: `list` of DCC file IDs or aliases
+    
+    Returns:
+        `list`: Each element is the JSON form of a FASTQ file record.
+    """
+    exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
+    dcc_file_ids = exp_json["original_files"]
+    fastq_records_json = []
+    for i in dcc_file_ids:
+      file_json = self.get(ignore404=False,rec_ids=i)
+      if file_json["file_type"] != "fastq":
+        continue #this is not a file object for a FASTQ file.
+      fastq_records_json.append(file_json)
+    return fastq_records_json
+
   def get_fastqfile_replicate_hash(self,dcc_exp_id):
     """
     Given a DCC experiment ID, gets its JSON representation from the Portal and looks in the 
@@ -907,16 +925,18 @@ class Connection():
         1 for forward reads, 2 for reverse reads.  The value
         for a given key of this most inner dictionary is a list of JSON-serialized file objects.
     """
-    exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
-    dcc_file_ids = exp_json["original_files"]
+    fastq_file_records = self.get_fastqfiles_on_exp(dcc_exp_id)
     dico = {}
-    for i in dcc_file_ids:
-      file_json = self.get(ignore404=False,rec_ids=i)
-      if file_json["file_type"] != "fastq":
-        continue #this is not a file object for a FASTQ file.
+    for file_json in fastq_file_records:
       brn = file_json["replicate"]["biological_replicate_number"]
       trn = file_json["replicate"]["technical_replicate_number"]
-      read_num = file_json["paired_end"] #string
+
+      try:
+        read_num = int(file_json["paired_end"]) #string
+      except KeyError:
+        #File.paired_end property not included when File.run_type="single-ended".
+        read_num = 1
+
       if brn not in dico:
         dico[brn] = {}
       if trn not in dico[brn]:

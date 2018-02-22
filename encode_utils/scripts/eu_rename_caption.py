@@ -7,10 +7,14 @@
 # nathankw@stanford.edu                                                                                 
 ### 
 
+"""
+Internal only.
+"""
+
 import argparse
 from encode_utils.connection import Connection
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("-i","--infile",required=True,help="Input file with DCC record identifiers, one per line.")
 args = parser.parse_args()
 infile = args.infile

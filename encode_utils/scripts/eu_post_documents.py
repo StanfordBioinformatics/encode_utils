@@ -6,6 +6,10 @@
 # Nathaniel Watson                                                                                      
 # nathankw@stanford.edu                                                                                 
 ###                                                                                                    
+
+"""
+POSTS documents to ENCODE's document.json schema.
+"""
                                                                                                        
 import argparse                                                                                        
 from encode_utils.connection import Connection                                                         
@@ -27,9 +31,7 @@ FIELDS[DESC_FN] = None
 
 REQUIRED_FIELDS = [DOC_FN,TYPE_FN,DESC_FN]
 
-
-description = "POSTS documents to ENCODE's document.json schema."
-parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
+parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("-i","--infile",required=True,help="""The tab-delimited input file with required headerline in first row containing the following fields:
 
     *) document - Required. The local path to the file.
