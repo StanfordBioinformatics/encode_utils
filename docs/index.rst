@@ -32,6 +32,7 @@ Scripts
     :maxdepth: 1
    
     registration <scripts/eu_register>
+    scripts/eu_report_fastq_content_errors.rst
 
 Client API Modules
 ------------------
