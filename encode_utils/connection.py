@@ -172,7 +172,7 @@ class Connection():
         "The specified dcc_mode of '{}' is not valid. Should be one of '{}' or '{}'.".format(dcc_mode, eu.DCC_MODES.keys()))
     return dcc_mode
 
-  def _get_logfile_name(self,log_level,tag):
+  def _get_logfile_name(self,tag):
     if not os.path.exists(LOG_DIR):
       os.mkdir(LOG_DIR)
     filename = "log_eu_" + self.dcc_mode + "_" + tag + ".txt"
@@ -185,7 +185,7 @@ class Connection():
     which logs its messages to a file by the name of log_eu_$DCC_MODE_error.txt.
     """
     f_formatter = logging.Formatter('%(asctime)s:%(name)s:\t%(message)s')
-    filename = self._get_logfile_name(level,tag)
+    filename = self._get_logfile_name(tag)
     handler = logging.FileHandler(filename=filename,mode="a")
     handler.setLevel(level)
     handler.setFormatter(f_formatter)

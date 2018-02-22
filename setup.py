@@ -4,7 +4,7 @@
 # This page is useful for dependencies: 
 # http://python-packaging.readthedocs.io/en/latest/dependencies.html.
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
   name = "encode utils",
@@ -13,7 +13,7 @@ setup(
   author = "Nathaniel Watson",
   author_email = "nathankw@stanford.edu",
   url = "https://github.com/StanfordBioinformatics/encode_utils/wiki",
-  packages = ["encode_utils"],
+  packages = find_packages(),
   install_requires = [
     "awscli",
     "requests",

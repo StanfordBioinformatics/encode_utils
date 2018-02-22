@@ -81,8 +81,8 @@ POST_LOGGER_NAME = "post"
 #: A ``logging`` instance that logs all messages sent to it to STDOUT.
 debug_logger = logging.getLogger(DEBUG_LOGGER_NAME)
 level = logging.DEBUG
-f_formatter = logging.Formatter('%(asctime)s:%(name)s:\t%(message)s')
 debug_logger.setLevel(level)
+f_formatter = logging.Formatter('%(asctime)s:%(name)s:\t%(message)s')
 ch = logging.StreamHandler(stream=sys.stdout)
 ch.setLevel(level)
 ch.setFormatter(f_formatter)
