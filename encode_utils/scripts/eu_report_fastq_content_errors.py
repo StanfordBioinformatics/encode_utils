@@ -36,7 +36,7 @@ def get_parser():
     
       1. The accession of the Experiment record that the FASTQ file record belongs to.
       2. The accession of the FASTQ file record.
-      2. The error message stored in the File objects `content_error_detail` property.
+      3. The error message stored in the File objects `content_error_detail` property.
 
   """)
   return parser
