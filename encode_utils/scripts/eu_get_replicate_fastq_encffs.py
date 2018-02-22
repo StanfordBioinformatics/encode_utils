@@ -27,29 +27,35 @@ from encode_utils.connection import Connection
 from encode_utils.parent_argparser import dcc_login_parser 
 #dcc_login_parser  contains the arguments needed for logging in to the ENCODE Portal, including which env.
 
-parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument("-e","--dcc-exp-id",required=True,help="The experiment to which the replicates belong. Must be set if --all-reps is absent.")
-parser.add_argument("-b","--bio-rep-num",type=int,help="Print FASTQ ENCFFs for this specified biological replicate number.")
-parser.add_argument("-t","--tech-rep-num",type=int,help="Print FASTQ ENCFFs for the specified technical replicate number of the specified biological replicate.")
-args = parser.parse_args()
-user_name = args.dcc_username
-mode = args.dcc_mode
-exp_id = args.dcc_exp_id
-bio_rep_num = args.bio_rep_num
-tech_rep_num = args.tech_rep_num
+def get_parser():
+  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
+  parser.add_argument("-e","--dcc-exp-id",required=True,help="The experiment to which the replicates belong. Must be set if --all-reps is absent.")
+  parser.add_argument("-b","--bio-rep-num",type=int,help="Print FASTQ ENCFFs for this specified biological replicate number.")
+  parser.add_argument("-t","--tech-rep-num",type=int,help="Print FASTQ ENCFFs for the specified technical replicate number of the specified biological replicate.")
+  return parser
 
-conn = Connection(dcc_username=user_name,dcc_mode=mode)
-REP_DICO = conn.getFastqFileRepNumDico(dcc_exp_id=exp_id)
-
-for b in REP_DICO:
-  if bio_rep_num and b != bio_rep_num:
-    continue
-  for t in REP_DICO[b]:
-    if tech_rep_num and t != tech_rep_num:
+def main():
+  parser = get_parser()
+  args = parser.parse_args()
+  user_name = args.dcc_username
+  mode = args.dcc_mode
+  exp_id = args.dcc_exp_id
+  bio_rep_num = args.bio_rep_num
+  tech_rep_num = args.tech_rep_num
+  
+  conn = Connection(dcc_username=user_name,dcc_mode=mode)
+  REP_DICO = conn.getFastqFileRepNumDico(dcc_exp_id=exp_id)
+  
+  for b in REP_DICO:
+    if bio_rep_num and b != bio_rep_num:
       continue
-    for read_num in REP_DICO[b][t]:
-      encff_json=REP_DICO[b][t][read_num]
-      alias = encff_json["aliases"][0]
-      print("_".join([bio_rep_num,tech_rep_num,read_num]) + "\t" + alias)
-
-
+    for t in REP_DICO[b]:
+      if tech_rep_num and t != tech_rep_num:
+        continue
+      for read_num in REP_DICO[b][t]:
+        encff_json=REP_DICO[b][t][read_num]
+        alias = encff_json["aliases"][0]
+        print("_".join([bio_rep_num,tech_rep_num,read_num]) + "\t" + alias)
+  
+ if __name__ == "__main__":
+  main() 

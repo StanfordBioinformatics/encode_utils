@@ -32,9 +32,10 @@ def get_parser():
   """) 
 
   parser.add_argument("-o","--outfile",required=True,help="""
-    Output file containing two tab-delimited columns:
+    Output file containing three tab-delimited columns for each FASTQ file that is reported:
     
-      1. The experiment identifier (from the input file).
+      1. The accession of the Experiment record that the FASTQ file record belongs to.
+      2. The accession of the FASTQ file record.
       2. The error message stored in the File objects `content_error_detail` property.
 
   """)
@@ -57,7 +58,6 @@ def main():
   for line in fh:
     rec_id = line.strip("\n").split("\t")[0]
     if not rec_id or rec_id.startswith("#"):
-      fout.write(line + "\t\n")
       continue
     rec = conn.get(rec_id,ignore404=False)
     profile = Profile(rec["@id"])
@@ -67,14 +67,16 @@ def main():
 
     if profile_id == EXP_PROFILE_ID:
       fastq_recs = conn.get_fastqfiles_on_exp(rec_id) #List of FASTQ file objects in JSON format.
+      exp_accession = rec["accession"]
     else:
       fastq_recs = [conn.get(rec_id,ignore404=False)]
+      exp_accession = fastq_recs[0]["dataset"].split("/")[-1]
     for fq_rec in fastq_recs:
       status = fq_rec["status"]
       error_msg = ""
       if status == "content error":
         error_msg = fq_rec["content_error_detail"]
-      fout.write("\t".join([rec_id,error_msg]) + "\n")
+        fout.write("\t".join([exp_accession,rec_id,error_msg]) + "\n")
   fout.close()
   fh.close()
   
