@@ -899,11 +899,10 @@ class Connection():
     Returns:
         `list`: Each element is the JSON form of a FASTQ file record.
     """
-    exp_json = self.get(exp_id,ignore404=False)
-    dcc_file_ids = exp_json["original_files"]
     fastq_records_json = []
-    for i in dcc_file_ids:
-      file_json = self.get(ignore404=False,rec_ids=i)
+    exp_json = self.get(exp_id,ignore404=False)
+    files = exp_json["files"]
+    for file_json in files:
       if file_json["file_type"] != "fastq":
         continue #this is not a file object for a FASTQ file.
       fastq_records_json.append(file_json)
@@ -1119,13 +1118,10 @@ class Connection():
     Returns:
         `list`: The de-duplicated list of platforms seen on the experiment's FASTQ files.
     """
-    exp_json = self.get(rec_ids=rec_id,frame=None)
-    files_json = exp_json["original_files"]
+    fastq_files = self.get_fastqfiles_on_exp(rec_id)
     platforms = []
-    for f in files_json:
-      if not f["file_format"] == "fastq":
-        continue
-      platforms.extend(f["platform"]["aliases"])
+    for fastq_json in fastq_files:
+      platforms.extend(fastq_json["platform"]["aliases"])
     return list(set(platforms))
 
   def post_document(self,download_filename,document,document_type,description):

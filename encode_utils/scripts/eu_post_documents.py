@@ -7,7 +7,7 @@
 # nathankw@stanford.edu                                                                                 
 ###                                                                                                    
 
-"""
+description = """
 POSTS documents to ENCODE's document.json schema.
 """
                                                                                                        
@@ -32,7 +32,7 @@ FIELDS[DESC_FN] = None
 REQUIRED_FIELDS = [DOC_FN,TYPE_FN,DESC_FN]
 
 def get_parser():
-  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
+  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
   parser.add_argument("-i","--infile",required=True,help="""The tab-delimited input file with required headerline in first row containing the following fields:
   
       *) document - Required. The local path to the file.
@@ -46,6 +46,8 @@ def get_parser():
   return parser
 
 def main():
+  """Program
+  """
   parser = get_parser()
   args = parser.parse_args()
   infile = args.infile

@@ -7,7 +7,8 @@
 # nathankw@stanford.edu                                                                                 
 ### 
 
-"""Finds FASTQ files with a content error and indicates the error.
+description = """
+Finds FASTQ files with a content error and indicates the error.
 
 Given an input file containing experiment identifiers, one per row, looks up all FASTQ files on the
 experiment to check for content errors. If any FASTQ file object has a `status` property of 
@@ -25,7 +26,7 @@ from encode_utils.profiles import Profile
 
 
 def get_parser():
-  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
+  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
   parser.add_argument("-i","--infile",required=True,help="""
     Input file containing experiment identifiers, one per row. Any line starting with a
     '#' will be skipped.
@@ -42,6 +43,8 @@ def get_parser():
   return parser
 
 def main():
+  """Program
+  """
   EXP_PROFILE_ID = "experiment"
   FILE_PROFILE_ID = "file"
   VALID_PROFILES = [EXP_PROFILE_ID,FILE_PROFILE_ID]
