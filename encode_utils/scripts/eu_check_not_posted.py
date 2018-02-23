@@ -7,12 +7,6 @@
 # nathankw@stanford.edu                                                                                 
 ### 
 
-"""
-Checks if the specified record identifiers are found on the Portal or not by doing a GET request 
-on each one. If a 404 (not found) response is returned, then this identifier is written to the 
-specified output file.
-"""
-
 import argparse
 
 from encode_utils.connection import Connection
@@ -23,7 +17,12 @@ from encode_utils.profiles import Profile
 
 
 def get_parser():
-  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
+  description = """
+    Checks if the specified record identifiers are found on the Portal or not by doing a GET request 
+    on each one. If a 404 (not found) response is returned, then this identifier is written to the 
+    specified output file.
+    """
+  parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=description,formatter_class=argparse.RawTextHelpFormatter)
   parser.add_argument("-i","--infile",required=True,help="""
     Input file containing record identifiers, one per line. Any line starting with a
     '#' will be skipped.
