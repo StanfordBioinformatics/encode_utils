@@ -1,7 +1,7 @@
 eu\_check\_not\_posted
 =========================
 
-.. automodule::
+.. automodule:: encode_utils.scripts.eu_check_not_posted
    :members:
    :undoc-members:
 
