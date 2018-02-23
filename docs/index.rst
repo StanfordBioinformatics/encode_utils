@@ -33,6 +33,7 @@ Scripts
    
     registration <scripts/eu_register>
     scripts/eu_report_fastq_content_errors.rst
+    scripts/eu_check_not_posted.rst
 
 Client API Modules
 ------------------
