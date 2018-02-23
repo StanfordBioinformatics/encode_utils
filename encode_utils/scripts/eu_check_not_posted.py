@@ -36,6 +36,8 @@ def get_parser():
   return parser
 
 def main():
+  """Program
+  """
   parser = get_parser()
   args = parser.parse_args()
   infile = args.infile
