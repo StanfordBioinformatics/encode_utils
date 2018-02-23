@@ -15,7 +15,7 @@ Release [1.1.1](https://github.com/StanfordBioinformatics/encode_utils/releases/
 
 Feb. 12, 2018
 
-Release 1.0.0 is out. 
+Release [1.0.0](https://github.com/StanfordBioinformatics/encode_utils/tree/1.0.0).
 
 # encode_utils
 Tools that are useful to any ENCODE submitting group. Library and scripts are coded in Python.
