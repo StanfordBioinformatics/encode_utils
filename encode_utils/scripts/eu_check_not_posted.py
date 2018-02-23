@@ -25,7 +25,7 @@ from encode_utils.profiles import Profile
 def get_parser():
   parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
   parser.add_argument("-i","--infile",required=True,help="""
-    Input file containing record identifiers, one per row. Any line starting with a
+    Input file containing record identifiers, one per line. Any line starting with a
     '#' will be skipped.
   """) 
 

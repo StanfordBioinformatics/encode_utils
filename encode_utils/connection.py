@@ -890,16 +890,16 @@ class Connection():
         payload[self.ENCID_KEY] = encode_id
       return self.patch(payload=payload,extend_array_values=extend_array_values,raise_403=raise_403)
 
-  def get_fastqfiles_on_exp(self,dcc_exp_id):
+  def get_fastqfiles_on_exp(self,exp_id):
     """Returns a list of all FASTQ file objects in the experiment.
  
     Args:
-        dcc_exp_id: `list` of DCC file IDs or aliases
+        exp_id: `str`. An Experiment identifier.
     
     Returns:
         `list`: Each element is the JSON form of a FASTQ file record.
     """
-    exp_json = self.get(ignore404=False,rec_ids=dcc_exp_id)
+    exp_json = self.get(exp_id,ignore404=False)
     dcc_file_ids = exp_json["original_files"]
     fastq_records_json = []
     for i in dcc_file_ids:
@@ -909,7 +909,7 @@ class Connection():
       fastq_records_json.append(file_json)
     return fastq_records_json
 
-  def get_fastqfile_replicate_hash(self,dcc_exp_id):
+  def get_fastqfile_replicate_hash(self,exp_id):
     """
     Given a DCC experiment ID, gets its JSON representation from the Portal and looks in the 
     `original` property to find FASTQ file objects and creates a `dict` organized by replicate 
@@ -917,7 +917,7 @@ class Connection():
     object's JSON serialization.
 
     Args:
-        dcc_exp_id: `list` of DCC file IDs or aliases
+        exp_id: `str`. An Experiment identifier.
     Returns:
         `dict`: `dict` where each key is a biological_replicate_number.
         The value of each key is another `dict` where each key is a technical_replicate_number.
@@ -925,7 +925,7 @@ class Connection():
         1 for forward reads, 2 for reverse reads.  The value
         for a given key of this most inner dictionary is a list of JSON-serialized file objects.
     """
-    fastq_file_records = self.get_fastqfiles_on_exp(dcc_exp_id)
+    fastq_file_records = self.get_fastqfiles_on_exp(exp_id)
     dico = {}
     for file_json in fastq_file_records:
       brn = file_json["replicate"]["biological_replicate_number"]
