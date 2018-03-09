@@ -18,10 +18,11 @@ from setuptools import setup, find_packages
 SCRIPTS_DIR = "encode_utils/scripts/"
 scripts = glob.glob(os.path.join(SCRIPTS_DIR,"*.py"))
 scripts.remove(os.path.join(SCRIPTS_DIR,"__init__.py"))
+scripts.append("encode_utils/MetaDataRegistration/eu_register.py")
 
 setup(
   name = "encode utils",
-  version = "1.1.3",
+  version = "1.1.4",
   description = "Client and tools for ENCODE data submitters.",
   author = "Nathaniel Watson",
   author_email = "nathankw@stanford.edu",

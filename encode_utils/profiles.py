@@ -54,6 +54,8 @@ def get_profiles():
 
   profile_id_hash = {} #Instead of name as key, profile ID is key.
   for name in profiles: #i.e. name=GeneticModification
+    if name == "@type":
+      continue #A pseudo profile that doesn't count.
     profile_id = profiles[name]["id"].split("/")[-1].split(".json")[0]
     profile_id_hash[profile_id] = profiles[name]
   return profile_id_hash 
