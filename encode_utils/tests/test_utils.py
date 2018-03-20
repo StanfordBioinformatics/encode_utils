@@ -31,10 +31,7 @@ import unittest
 
 from encode_utils import utils
 
-DATA_DIR_NAME = "data"
-for root, dirs, files in os.walk('.'):
-      if DATA_DIR_NAME in dirs:
-        DATA_DIR = os.path.join(root, DATA_DIR_NAME)
+DATA_DIR = "data"
 
 class TestUtils(unittest.TestCase):
   """
