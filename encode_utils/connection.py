@@ -158,6 +158,8 @@ class Connection():
     #: instance method.
     self.secret_key = self._set_api_keys()[1]
     self.auth = (self.api_key,self.secret_key)
+    if not self.api_key or not self.secret_key:
+      self.log_error("WARNING: API keys not set, all functions have no permission")
 
   def _set_dcc_mode(self,dcc_mode=False):
     if not dcc_mode:
@@ -204,8 +206,8 @@ class Connection():
     Returns:
         `tuple`: Two item tuple containing the API Key and the Secret Key
     """
-    api_key = os.environ["DCC_API_KEY"]
-    secret_key = os.environ["DCC_SECRET_KEY"]
+    api_key = os.environ.get("DCC_API_KEY")
+    secret_key = os.environ.get("DCC_SECRET_KEY")
     return api_key,secret_key
 
   def _log_post(self,alias,dcc_id):
