@@ -18,11 +18,7 @@ import encode_utils as eu
 from encode_utils import connection
 from encode_utils import profiles
 
-#DATA_DIR = "data"
-DATA_DIR_NAME = "data"
-for root, dirs, files in os.walk('.'):
-      if DATA_DIR_NAME in dirs:
-        DATA_DIR = os.path.join(root, DATA_DIR_NAME)
+DATA_DIR = "data"
 
 class TestConnection(unittest.TestCase):
   """Tests the ``encode_utils.connection.py`` module.
@@ -43,7 +39,7 @@ class TestConnection(unittest.TestCase):
     """
     payload = {
       self.conn.PROFILE_KEY: profiles.Profile.FILE_PROFILE_ID,
-      profiles.Profile.SUBMITTED_FILE_PROP_NAME: DATA_DIR+"/test_fq_40recs.fastq.gz"
+      profiles.Profile.SUBMITTED_FILE_PROP_NAME: "data/test_fq_40recs.fastq.gz"
     }
     res = self.conn.before_post_file(payload)
     self.assertEquals(res["md5sum"],"a3e7cb3df359d0642ab0edd33ea7e93e")
