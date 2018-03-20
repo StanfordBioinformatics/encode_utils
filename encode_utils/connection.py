@@ -157,9 +157,12 @@ class Connection():
     #: to the value of the `DCC_SECRET_KEY` environment variable in the ``_set_api_keys()`` private 
     #: instance method.
     self.secret_key = self._set_api_keys()[1]
-    self.auth = (self.api_key,self.secret_key)
-    if not self.api_key or not self.secret_key:
-      self.log_error("WARNING: API keys not set, all functions have no permission")
+    if self.api_key and self.secret_key:
+      self.auth = (self.api_key,self.secret_key)
+    else:
+      self.auth = ()
+      self.log_error("WARNING: API keys {} not set, all functions have no permission".format(self.auth))
+
 
   def _set_dcc_mode(self,dcc_mode=False):
     if not dcc_mode:
@@ -171,10 +174,12 @@ class Connection():
     dcc_mode = dcc_mode.lower()
     if dcc_mode not in eu.DCC_MODES:
       #: assume dcc_mode is a valid demo host
-      self.dcc_host = dcc_mode
-      self.dcc_url = 'https://' + dcc_mode + '/'
+      eu.DCC_MODES[dcc_mode] = {
+        'host': dcc_mode,
+        'url': 'https://' + dcc_mode + '/'
+      }
       try: 
-        requests.get(self.dcc_url)
+        requests.get(eu.DCC_MODES[dcc_mode]['url'])
       except Exception as e:
         "'{}': The specified dcc_mode of '{}' is not valid. Should be one of '{}' or a valid demo.encodedcc.org hostname.".format(e, dcc_mode, eu.DCC_MODES.keys())
     return dcc_mode

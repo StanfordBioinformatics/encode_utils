@@ -31,6 +31,11 @@ class TestConnection(unittest.TestCase):
   def setUp(self):
     self.conn = connection.Connection(eu.DCC_DEV_MODE)
 
+
+  def test_arbitrary_host(self):
+    self.conn = connection.Connection(dcc_mode='test.encodedcc.org')
+
+
   def test_before_file_post(self):
     """
     Tests the method ``before_file_post()`` for correctly setting the `md5sum` property of a 
@@ -168,6 +173,11 @@ class TestConnection(unittest.TestCase):
     res = self.conn.make_search_url(search_args=query,limit=1) 
     query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=1&organ_slims=blood&type=Experiment"
     self.assertEquals(res,os.path.join(self.conn.dcc_url,query))
+
+  def test_get(self):
+    res = self.conn.get('experiments/ENCSR502NRF/', frame='object')
+    self.assertEquals(res.get('uuid',""), "e44c59cc-f14a-4722-a9c5-2fe63c2b9533")
+
 
 if __name__ == "__main__":
   unittest.main()
