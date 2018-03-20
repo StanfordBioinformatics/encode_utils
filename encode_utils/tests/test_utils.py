@@ -29,9 +29,10 @@ import json
 import os
 import unittest
 
+import encode_utils.tests
 from encode_utils import utils
 
-DATA_DIR = "data"
+DATA_DIR = encode_utils.tests.DATA_DIR
 
 class TestUtils(unittest.TestCase):
   """
