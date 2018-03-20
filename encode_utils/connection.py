@@ -157,7 +157,12 @@ class Connection():
     #: to the value of the `DCC_SECRET_KEY` environment variable in the ``_set_api_keys()`` private 
     #: instance method.
     self.secret_key = self._set_api_keys()[1]
-    self.auth = (self.api_key,self.secret_key)
+    if self.api_key and self.secret_key:
+      self.auth = (self.api_key,self.secret_key)
+    else:
+      self.auth = ()
+      self.log_error("WARNING: API keys {} not set, all functions have no permission".format(self.auth))
+
 
   def _set_dcc_mode(self,dcc_mode=False):
     if not dcc_mode:
@@ -168,8 +173,15 @@ class Connection():
         raise Exception("You must supply the `dcc_mode` argument or set the environment variable DCC_MODE.")
     dcc_mode = dcc_mode.lower()
     if dcc_mode not in eu.DCC_MODES:
-      raise Exception(
-        "The specified dcc_mode of '{}' is not valid. Should be one of '{}' or '{}'.".format(dcc_mode, eu.DCC_MODES.keys()))
+      #: assume dcc_mode is a valid demo host
+      eu.DCC_MODES[dcc_mode] = {
+        'host': dcc_mode,
+        'url': 'https://' + dcc_mode + '/'
+      }
+      try: 
+        requests.get(eu.DCC_MODES[dcc_mode]['url'])
+      except Exception as e:
+        "'{}': The specified dcc_mode of '{}' is not valid. Should be one of '{}' or a valid demo.encodedcc.org hostname.".format(e, dcc_mode, eu.DCC_MODES.keys())
     return dcc_mode
 
   def _get_logfile_name(self,tag):
@@ -199,8 +211,8 @@ class Connection():
     Returns:
         `tuple`: Two item tuple containing the API Key and the Secret Key
     """
-    api_key = os.environ["DCC_API_KEY"]
-    secret_key = os.environ["DCC_SECRET_KEY"]
+    api_key = os.environ.get("DCC_API_KEY")
+    secret_key = os.environ.get("DCC_SECRET_KEY")
     return api_key,secret_key
 
   def _log_post(self,alias,dcc_id):
