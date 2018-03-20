@@ -168,8 +168,13 @@ class Connection():
         raise Exception("You must supply the `dcc_mode` argument or set the environment variable DCC_MODE.")
     dcc_mode = dcc_mode.lower()
     if dcc_mode not in eu.DCC_MODES:
-      raise Exception(
-        "The specified dcc_mode of '{}' is not valid. Should be one of '{}' or '{}'.".format(dcc_mode, eu.DCC_MODES.keys()))
+      #: assume dcc_mode is a valid demo host
+      self.dcc_host = dcc_mode
+      self.dcc_url = 'https://' + dcc_mode + '/'
+      try: 
+        requests.get(self.dcc_url)
+      except Exception as e:
+        "'{}': The specified dcc_mode of '{}' is not valid. Should be one of '{}' or a valid demo.encodedcc.org hostname.".format(e, dcc_mode, eu.DCC_MODES.keys())
     return dcc_mode
 
   def _get_logfile_name(self,tag):
