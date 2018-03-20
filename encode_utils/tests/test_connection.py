@@ -18,7 +18,11 @@ import encode_utils as eu
 from encode_utils import connection
 from encode_utils import profiles
 
-DATA_DIR = "data"
+#DATA_DIR = "data"
+DATA_DIR_NAME = "data"
+for root, dirs, files in os.walk('.'):
+      if DATA_DIR_NAME in dirs:
+        DATA_DIR = os.path.join(root, DATA_DIR_NAME)
 
 class TestConnection(unittest.TestCase):
   """Tests the ``encode_utils.connection.py`` module.
@@ -27,6 +31,11 @@ class TestConnection(unittest.TestCase):
   def setUp(self):
     self.conn = connection.Connection(eu.DCC_DEV_MODE)
 
+
+  def test_arbitrary_host(self):
+    self.conn = connection.Connection(dcc_mode='test.encodedcc.org')
+
+
   def test_before_file_post(self):
     """
     Tests the method ``before_file_post()`` for correctly setting the `md5sum` property of a 
@@ -34,7 +43,7 @@ class TestConnection(unittest.TestCase):
     """
     payload = {
       self.conn.PROFILE_KEY: profiles.Profile.FILE_PROFILE_ID,
-      profiles.Profile.SUBMITTED_FILE_PROP_NAME: "data/test_fq_40recs.fastq.gz"
+      profiles.Profile.SUBMITTED_FILE_PROP_NAME: DATA_DIR+"/test_fq_40recs.fastq.gz"
     }
     res = self.conn.before_post_file(payload)
     self.assertEquals(res["md5sum"],"a3e7cb3df359d0642ab0edd33ea7e93e")
@@ -164,6 +173,11 @@ class TestConnection(unittest.TestCase):
     res = self.conn.make_search_url(search_args=query,limit=1) 
     query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=1&organ_slims=blood&type=Experiment"
     self.assertEquals(res,os.path.join(self.conn.dcc_url,query))
+
+  def test_get(self):
+    res = self.conn.get('experiments/ENCSR502NRF/', frame='object')
+    self.assertEquals(res.get('uuid',""), "e44c59cc-f14a-4722-a9c5-2fe63c2b9533")
+
 
 if __name__ == "__main__":
   unittest.main()
