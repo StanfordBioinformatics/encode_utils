@@ -43,7 +43,7 @@ class TestConnection(unittest.TestCase):
     profiles.Profile.SUBMITTED_FILE_PROP_NAME: os.path.join(DATA_DIR,"test_fq_40recs.fastq.gz")
     }
     res = self.conn.before_post_file(payload)
-    self.assertEquals(res["md5sum"],"a3e7cb3df359d0642ab0edd33ea7e93e")
+    self.assertEqual(res["md5sum"],"a3e7cb3df359d0642ab0edd33ea7e93e")
 
   def test_get_lookup_ids_from_payload(self):
     """
@@ -60,7 +60,7 @@ class TestConnection(unittest.TestCase):
     }
 
     res = self.conn.get_lookup_ids_from_payload(payload)
-    self.assertEquals(sorted(res),sorted([accession,alias,md5]))
+    self.assertEqual(sorted(res),sorted([accession,alias,md5]))
 
   def test_get_profile_from_payload(self):
     """
@@ -72,7 +72,7 @@ class TestConnection(unittest.TestCase):
     payload = {}
     payload[self.conn.PROFILE_KEY] = "genetic_modification"
     res = self.conn.get_profile_from_payload(payload)
-    self.assertEquals(res,profile_id)
+    self.assertEqual(res,profile_id)
 
   def test_2_get_profile_from_payload(self):
     """
@@ -84,7 +84,7 @@ class TestConnection(unittest.TestCase):
     payload = {}
     payload["@id"] = "genetic_modification"
     res = self.conn.get_profile_from_payload(payload)
-    self.assertEquals(res,profile_id)
+    self.assertEqual(res,profile_id)
 
   def test_3_get_profile_from_payload(self):
     """
@@ -137,7 +137,7 @@ class TestConnection(unittest.TestCase):
     aws_creds["AWS_SECURITY_TOKEN"] = session_token
     aws_creds["UPLOAD_URL"] = upload_url
 
-    self.assertEquals(res,aws_creds)
+    self.assertEqual(res,aws_creds)
 
   def test_make_search_url(self):
     """
@@ -153,7 +153,7 @@ class TestConnection(unittest.TestCase):
 
     res = self.conn.make_search_url(search_args=query)
     query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=all&organ_slims=blood&type=Experiment"
-    self.assertEquals(res,os.path.join(self.conn.dcc_url,query))
+    self.assertEqual(res,os.path.join(self.conn.dcc_url,query))
 
   def test_2_make_search_url(self):
     """
@@ -169,11 +169,11 @@ class TestConnection(unittest.TestCase):
 
     res = self.conn.make_search_url(search_args=query,limit=1)
     query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=1&organ_slims=blood&type=Experiment"
-    self.assertEquals(res,os.path.join(self.conn.dcc_url,query))
+    self.assertEqual(res,os.path.join(self.conn.dcc_url,query))
 
   def test_get(self):
     res = self.conn.get('experiments/ENCSR502NRF/', frame='object')
-    self.assertEquals(res.get('uuid',""), "e44c59cc-f14a-4722-a9c5-2fe63c2b9533")
+    self.assertEqual(res.get('uuid',""), "e44c59cc-f14a-4722-a9c5-2fe63c2b9533")
 
 
 if __name__ == "__main__":
