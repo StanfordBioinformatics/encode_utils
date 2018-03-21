@@ -804,7 +804,7 @@ class Connection():
     self.debug_logger.debug("\nIN patch()")
     encode_id = payload[self.ENCID_KEY]
     try:
-      rec_json = self.get(rec_ids=encode_id,ignore404=False)
+      rec_json = self.get(rec_ids=encode_id,ignore404=False, frame="object")
     except requests.exceptions.HTTPError as e:
       if e.response.status_code == requests.codes.NOT_FOUND:
         self.log_error("Failed to PATCH '{}': Record not found.".format(encode_id))
