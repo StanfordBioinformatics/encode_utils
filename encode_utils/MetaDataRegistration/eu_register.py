@@ -1,32 +1,33 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-  
+# -*- coding: utf-8 -*-
 
-###                                                                                                    
-# © 2018 The Board of Trustees of the Leland Stanford Junior University                              
-# Nathaniel Watson                                                                                      
-# nathankw@stanford.edu                                                                                 
-### 
+###
+# © 2018 The Board of Trustees of the Leland Stanford Junior University
+# Nathaniel Watson
+# nathankw@stanford.edu
+###
 
 """
 Given a tab-delimited input file containing one or more records belonging to one of the profiles
-listed on the ENCODE Portal (such as https://www.encodeproject.org/profiles/biosample.json), 
+listed on the ENCODE Portal (such as https://www.encodeproject.org/profiles/biosample.json),
 either POSTS or PATCHES the records. The default is to POST each record; to PATCH instead, see
 the ``--patch`` option.
 
 When POSTING file records, the md5sum of each file will be calculated for you if you haven't
 already provided the `md5sum` property. Then, after the POST operation completes, the actual file
 will be uploaded to AWS S3. In order for this to work, you must set the `submitted_file_name`
-property to the full, local path to your file to upload.
+property to the full, local path to your file to upload. Alternatively, you can set 
+`submitted_file_name` to and existing S3 object, i.e. s3://mybucket/reads.fastq. 
 
 Note that there is a special 'trick' defined in the ``encode_utils.connection.Connection()``
-class that can be taken advantage of to simplify submission under certain profiles.  
+class that can be taken advantage of to simplify submission under certain profiles.
 It concerns the `attachment` property in any profile that employs it, such as the `document`
-profile.  The trick works as follows: instead of constructing the `attachment` propery object 
+profile.  The trick works as follows: instead of constructing the `attachment` propery object
 value as defined in the schema, simply use a single-key object of the following format::
 
   {"path": "/path/to/myfile"}
 
-and the `attachment` object will be constructed for you. 
+and the `attachment` object will be constructed for you.
 
 |
 """
@@ -49,45 +50,45 @@ if v < (3,3):
   raise Exception("Requires Python 3.3 or greater.")
 
 #: RECORD_ID_FIELD is a special field that won't be skipped in the create_payload() function.
-#: It is used when patching objects to indicate the identifier of the record to patch. 
-RECORD_ID_FIELD = "record_id" 
+#: It is used when patching objects to indicate the identifier of the record to patch.
+RECORD_ID_FIELD = "record_id"
 
 def get_parser():
   parser = argparse.ArgumentParser(parents=[dcc_login_parser],description=__doc__,formatter_class=argparse.RawTextHelpFormatter)
 
   parser.add_argument("-p","--profile_id",required=True,help="""
-    The ID of the profile to submit to, i.e. use 'genetic_modification' for 
-    https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for 
-    type-checking in order to type-cast any values in the input file to the proper type (i.e. some 
+    The ID of the profile to submit to, i.e. use 'genetic_modification' for
+    https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for
+    type-checking in order to type-cast any values in the input file to the proper type (i.e. some
     values need to be submitted as integers, not strings).""")
 
   parser.add_argument("-i","--infile",required=True,help="""
-    The tab-delimited input file with a field-header line as the first line. 
-    Any lines after the header line that start with a '#' will be skipped, as well as any empty lines. 
-    The field names must be 
-    exactly equal to the corresponding property names in the corresponding profile. Non-scematic fields 
-    are allowed as long as they begin with a '#'; they will be skipped. If a property has an 
-    array data type (as indicated in the profile's documentation on the Portal), the array literals 
-    '[' and ']' are optional. Values within the array must be comma-delimited. For example, if a 
+    The tab-delimited input file with a field-header line as the first line.
+    Any lines after the header line that start with a '#' will be skipped, as well as any empty lines.
+    The field names must be
+    exactly equal to the corresponding property names in the corresponding profile. Non-scematic fields
+    are allowed as long as they begin with a '#'; they will be skipped. If a property has an
+    array data type (as indicated in the profile's documentation on the Portal), the array literals
+    '[' and ']' are optional. Values within the array must be comma-delimited. For example, if a
     property takes an array of strings, then you can use either of these as the value:
 
     1) str1,str2,str3
     2) [str1,str2,str3]
 
-    On the other hand, if a property takes a JSON object as a value, then the value you enter must be 
-    valid JSON. This is true anytime you have to specify a JSON object.  Thus, if you are submitting a 
-    genetic_modification and you have two 'introduced_tags' to provide, you can supply them in either 
+    On the other hand, if a property takes a JSON object as a value, then the value you enter must be
+    valid JSON. This is true anytime you have to specify a JSON object.  Thus, if you are submitting a
+    genetic_modification and you have two 'introduced_tags' to provide, you can supply them in either
     of the following two ways:
 
     1) {"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}
     2) [{"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}]
-     
-    When patching objects, you must specify the 'record_id' field to indicate the identifier of the record. 
-    Note that this a special field that is not present in the ENCODE schema, and doesn't use the '#' 
-    prefix to mark it as non-schematic. Here you can specify any valid record identifier 
+
+    When patching objects, you must specify the 'record_id' field to indicate the identifier of the record.
+    Note that this a special field that is not present in the ENCODE schema, and doesn't use the '#'
+    prefix to mark it as non-schematic. Here you can specify any valid record identifier
     (i.e. UUID, accession, alias).
 
-    Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set 
+    Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set
     as fields in the input file, or can be left out, in which case the default values for these
     attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.""")
 
@@ -96,9 +97,9 @@ def get_parser():
     Presence of this option indicates to patch an existing DCC record rather than register a new one.""")
 
   parser.add_argument("-w","--overwrite-array-values",action="store_true",help="""
-    Only has meaning in combination with the --patch option. When this is specified, it means that 
-    any keys with array values will be overwritten on the ENCODE Portal with the corresponding value 
-    to patch. The default action is to extend the array value with the patch value and then to remove 
+    Only has meaning in combination with the --patch option. When this is specified, it means that
+    any keys with array values will be overwritten on the ENCODE Portal with the corresponding value
+    to patch. The default action is to extend the array value with the patch value and then to remove
     any duplicates.""")
 
   return parser
@@ -134,12 +135,12 @@ def main():
 def check_valid_json(prop,val,row_count):
   """
   Runs json.loads(val) to ensure valid JSON.
- 
+
   Args:
       val: str. A string load as JSON.
-      prop: str. Name of the schema property/field that stores the passed in val. 
+      prop: str. Name of the schema property/field that stores the passed in val.
       row_count: int. The line number from the input file that is currently being processed.
-  
+
   Raises:
       ValueError: The input is malformed JSON.
   """
@@ -166,7 +167,7 @@ def create_payloads(profile_id,infile):
   Generates the payload for each row in 'infile'.
 
   Args:
-      profile_id: str. The identifier for a profile on the Portal. For example, use 
+      profile_id: str. The identifier for a profile on the Portal. For example, use
         genetic_modificaiton for the profile https://www.encodeproject.org/profiles/genetic_modification.json.
       infile - str. Path to input file.
 
@@ -174,7 +175,7 @@ def create_payloads(profile_id,infile):
   """
   STR_REGX = reg = re.compile(r'\'|"')
   profile = eup.Profile(profile_id)
-  #Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict). 
+  #Fetch the schema from the ENCODE Portal so we can set attr values to the right type when generating the  payload (dict).
   schema = profile.get_profile()
   schema_props = schema["properties"]
   schema_props.update({RECORD_ID_FIELD:1}) #Not an actual schema property.
@@ -201,14 +202,14 @@ def create_payloads(profile_id,infile):
     line = line.split("\t")
     payload = {}
     payload[euc.Connection.PROFILE_KEY] = profile.profile_id
-    fi_count = -1 
+    fi_count = -1
     for val in line:
       fi_count += 1
       if fi_count in skip_field_indices:
         continue
       val = val.strip()
       if not val:
-        #Then skip. For ex., the biosample schema has a 'date_obtained' property, and if that is 
+        #Then skip. For ex., the biosample schema has a 'date_obtained' property, and if that is
         # empty it'll be treated as a formatting error, and the Portal will return a a 422.
         continue
       field = field_index[fi_count]
@@ -223,7 +224,7 @@ def create_payloads(profile_id,infile):
         item_val_type = schema_props[field]["items"]["type"]
         if item_val_type == "object":
           #Must be valid JSON
-          #Check if user supplied optional JSON array literal. If not, I'll add it. 
+          #Check if user supplied optional JSON array literal. If not, I'll add it.
           if not val.startswith("["):
             val = "[" + val
           if not val.endswith("]"):
@@ -233,7 +234,7 @@ def create_payloads(profile_id,infile):
           #User is allowed to enter values in string literals. I'll remove them if I find them,
           # since I'm splitting on the ',' to create a list of strings anyway:
           val = STR_REGX.sub("",val)
-          #Remove optional JSON array literal since I'm tokenizing and then converting 
+          #Remove optional JSON array literal since I'm tokenizing and then converting
           # to an array regardless.
           if val.startswith("["):
             val = val[1:]
