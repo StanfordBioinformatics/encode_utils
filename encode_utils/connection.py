@@ -1072,7 +1072,7 @@ class Connection():
     be downloaded and then pushed to the S3 bucket.
 
     Args:
-        file_id: `str`. An identifier of a `file` record.
+        file_id: `str`. An identifier of a `file` record on the ENCODE Portal. 
         file_path: `str`. the local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
           If not set, defaults to `None` in which case the local file path will be extracted from the
           record's `submitted_file_name` property.
