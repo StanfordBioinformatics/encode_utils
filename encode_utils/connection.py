@@ -121,13 +121,18 @@ class Connection():
     #: This class adds a file handler, such that all messages send to it are logged to this
     #: file in addition to STDOUT.
     self.debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME)
+   
+    # Be sure to set self.dcc_mode before creating the logging file handlers since the mode is
+    # used as part of the file name.
+
     #: An indication of which Portal instance to use. Set to 'prod' for the production Portal, 
-    #: and 'dev' for the development Portal. Leaving the default of None means to use the value
-    #: of the `DCC_MODE` environment variable.
+    #: and 'dev' for the development Portal. Alternatively, you can set an explicit host, such as
+    #: demo.encodedcc.org. Leaving the default of None means to use the value of the `DCC_MODE` 
+    #: environment variable.
     self.dcc_mode = self._set_dcc_mode(dcc_mode)
     self.dcc_host = eu.DCC_MODES[self.dcc_mode]["host"]
     self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
-   
+
     #Add debug file handler to debug_logger:
     self._add_file_handler(logger=self.debug_logger,level=logging.DEBUG,tag="debug")
 
@@ -147,7 +152,6 @@ class Connection():
     log_level = logging.INFO
     self.post_logger.setLevel(log_level)
     self._add_file_handler(logger=self.post_logger,level=log_level,tag="posted")
-
 
     #: The API key to use when authenticating with the DCC servers. This is set automatically
     #: to the value of the `DCC_API_KEY` environment variable in the ``_set_api_keys()`` private 
@@ -170,18 +174,22 @@ class Connection():
         dcc_mode = os.environ["DCC_MODE"]
         self.debug_logger.debug("Utilizing DCC_MODE environment variable.")
       except KeyError:
-        raise Exception("You must supply the `dcc_mode` argument or set the environment variable DCC_MODE.")
+        print("ERROR: You must supply the `dcc_mode` argument or set the environment variable DCC_MODE.")
+        sys.exit(-1)
     dcc_mode = dcc_mode.lower()
     if dcc_mode not in eu.DCC_MODES:
-      #: assume dcc_mode is a valid demo host
+      # Assume dcc_mode is a valid demo host.
+      url = 'https://' + dcc_mode + '/'
+      try: 
+        requests.get(url, timeout=2)
+      except requests.exceptions.ConnectionError:
+        print("ERROR: The specified dcc_mode of '{}' is not valid. Should be one of '{}' or a valid demo.encodedcc.org hostname.".format(dcc_mode, list(eu.DCC_MODES.keys())))
+        sys.exit(-1)
+
       eu.DCC_MODES[dcc_mode] = {
         'host': dcc_mode,
-        'url': 'https://' + dcc_mode + '/'
+        'url': url
       }
-      try: 
-        requests.get(eu.DCC_MODES[dcc_mode]['url'])
-      except Exception as e:
-        "'{}': The specified dcc_mode of '{}' is not valid. Should be one of '{}' or a valid demo.encodedcc.org hostname.".format(e, dcc_mode, eu.DCC_MODES.keys())
     return dcc_mode
 
   def _get_logfile_name(self,tag):
