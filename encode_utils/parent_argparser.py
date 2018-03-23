@@ -9,5 +9,7 @@
 import argparse
 
 dcc_login_parser = argparse.ArgumentParser(add_help=False)
-dcc_login_parser.add_argument("-m","--dcc-mode",help="The ENCODE Portal site ('prod' or 'dev') to connect to.")
-
+dcc_login_parser.add_argument(
+    "-m",
+    "--dcc-mode",
+    help="The ENCODE Portal site ('prod' or 'dev') to connect to.")

@@ -14,10 +14,10 @@ import json
 import logging
 import sys
 
-#see to it that only upper-case vars get exported
+# see to it that only upper-case vars get exported
 package_path = __path__[0]
 
-#Define constants for a few properties that are common to all ENCODE profiles:
+# Define constants for a few properties that are common to all ENCODE profiles:
 
 #: The award property name that is common to all ENCODE Portal object profiles.
 AWARD_PROP_NAME = "award"
@@ -31,9 +31,9 @@ LAB_PROP_NAME = "lab"
 #: appear in the payload.
 LAB = {}
 try:
-  LAB = {LAB_PROP_NAME: os.environ["DCC_LAB"]}
+    LAB = {LAB_PROP_NAME: os.environ["DCC_LAB"]}
 except KeyError:
-  pass
+    pass
 
 #: str. Stores the prefix to add to each record alias when doing a POST operation.
 #: Most profiles have an 'alias' key, which stores a list of alias names that are
@@ -42,7 +42,7 @@ except KeyError:
 #: prefix value.
 LAB_PREFIX = ""
 if LAB:
-  LAB_PREFIX = LAB[LAB_PROP_NAME] + ":"
+    LAB_PREFIX = LAB[LAB_PROP_NAME] + ":"
 
 #: dict. Stores the award property to the value of the environment variable `DCC_AWARD` to act as
 #: the default award when submiting an object to the Portal.
@@ -51,9 +51,9 @@ if LAB:
 #: ``encode_utils.utils.Profile.AWARDLESS_PROFILES``.
 AWARD = {}
 try:
-  AWARD = {AWARD_PROP_NAME: os.environ["DCC_AWARD"]}
+    AWARD = {AWARD_PROP_NAME: os.environ["DCC_AWARD"]}
 except KeyError:
-  pass
+    pass
 
 #: THE ENCODE Portal URL that points to all the profiles (schemas).
 PROFILES_URL = "https://www.encodeproject.org/profiles/"
@@ -62,8 +62,8 @@ DCC_DEV_MODE = "dev"
 DCC_PROD_MODE = "prod"
 
 DCC_MODES = {
-  DCC_DEV_MODE: {"host": "test.encodedcc.org","url": "https://test.encodedcc.org"},
-  DCC_PROD_MODE: {"host": "www.encodeproject.org","url": "https://www.encodeproject.org"}
+    DCC_DEV_MODE: {"host": "test.encodedcc.org", "url": "https://test.encodedcc.org"},
+    DCC_PROD_MODE: {"host": "www.encodeproject.org", "url": "https://www.encodeproject.org"}
 }
 
 #: The timeout in seconds when making HTTP requests via the ``requests`` module.
