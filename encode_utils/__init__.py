@@ -72,7 +72,7 @@ DCC_MODES = {
 }
 
 #: The timeout in seconds when making HTTP requests via the ``requests`` module.
-TIMEOUT = 20
+TIMEOUT = 200
 
 #: The name of the debug ``logging`` instance.
 DEBUG_LOGGER_NAME = "debug"
