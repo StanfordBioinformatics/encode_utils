@@ -1288,6 +1288,9 @@ class Connection():
         Raises:
             encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
         """
+        import boto3
+        s3 = boto3.client('s3')
+
         self.debug_logger.debug("\nIN upload_file()\n")
         upload_credentials = self.get_upload_credentials(file_id)
         if not upload_credentials:
@@ -1310,28 +1313,39 @@ class Connection():
                 md5sum = euu.calculate_md5sum(file_path)
                 self.patch({self.ENCID_KEY: file_rec["@id"], "md5sum": md5sum})
 
-        cmd = "aws s3 cp {file_path} {upload_url}".format(
-            file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
-        self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
-        if self.check_dry_run():
-            return 
-        popen = subprocess.Popen(cmd,
-                                 shell=True,
-                                 env=os.environ.update(aws_creds),
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-        stdout, stderr = popen.communicate()
-        stdout = stdout.decode("utf-8")
-        stderr = stderr.decode("utf-8")
-        retcode = popen.returncode
-        if retcode:
-            error_msg = "Failed to upload file '{}' for {}.".format(file_path, file_id)
-            self.log_error(error_msg)
-            error_msg = (" Subprocess command '{cmd}' failed with return code '{retcode}'."
-                         " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
-                cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr)
-            self.debug_logger.debug(error_msg)
-            raise FileUploadFailed(error_msg)
+        parse = urllib.parse.urlparse(file_path)
+        if parse.scheme != 's3':
+            cmd = "aws s3 cp {file_path} {upload_url}".format(
+                file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
+            self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
+            if self.check_dry_run():
+                return 
+            popen = subprocess.Popen(cmd,
+                                     shell=True,
+                                     env=os.environ.update(aws_creds),
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+            stdout, stderr = popen.communicate()
+            stdout = stdout.decode("utf-8")
+            stderr = stderr.decode("utf-8")
+            retcode = popen.returncode
+            if retcode:
+                error_msg = "Failed to upload file '{}' for {}.".format(file_path, file_id)
+                self.log_error(error_msg)
+                error_msg = (" Subprocess command '{cmd}' failed with return code '{retcode}'."
+                             " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
+                    cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr)
+                self.debug_logger.debug(error_msg)
+                raise FileUploadFailed(error_msg)
+        else:
+            copy_source = {
+                'Bucket': parse.netloc,
+                'Key': parse.path.lstrip('/')
+            }
+            parse_upload = urllib.parse.urlparse(aws_creds["UPLOAD_URL"])
+            err = s3.copy(copy_source, parse_upload.netloc, parse_upload.path.lstrip('/'))
+            self.debug_logger.debug('boto Copy: {}'.format(err))
+
         self.debug_logger.debug("AWS upload successful.")
 
     def get_platforms_on_experiment(self, rec_id):
