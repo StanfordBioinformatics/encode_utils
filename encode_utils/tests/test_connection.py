@@ -175,6 +175,14 @@ class TestConnection(unittest.TestCase):
         res = self.conn.get('experiments/ENCSR502NRF/', frame='object')
         self.assertEqual(res.get('uuid', ""), "e44c59cc-f14a-4722-a9c5-2fe63c2b9533")
 
+    def test_dry_run_enabled(self):
+        """
+        Tests the method ``check_dry_run`` for returning True when the ``Connection`` class is
+        instantiated in dry-run mode.
+        """
+        self.conn = connection.Connection(eu.DCC_DEV_MODE,True) 
+        self.assertEqual(True, self.conn.check_dry_run())
+        
 
 if __name__ == "__main__":
     unittest.main()
