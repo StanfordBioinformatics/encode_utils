@@ -117,7 +117,7 @@ class Connection():
     #: Constant
     PATCH = "patch"
 
-    def __init__(self, dcc_mode=None):
+    def __init__(self, dcc_mode=None, dry_run=False):
 
         #: A reference to the `debug` logging instance that was created earlier in ``encode_utils.debug_logger``.
         #: This class adds a file handler, such that all messages send to it are logged to this
@@ -134,6 +134,13 @@ class Connection():
         self.dcc_mode = self._set_dcc_mode(dcc_mode)
         self.dcc_host = eu.DCC_MODES[self.dcc_mode]["host"]
         self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
+
+        #: Set to True to prevent any server-side changes on the ENCODE Portal, i.e. PUT, POST, 
+        #: PATCH, DELETE requests will not be sent to the Portal. After-POST and after-PATCH
+        #: hooks (see the instance method :meth:`after_submit_hooks`) will not be run either in 
+        #: this case. You can turn off this dry-run feature by calling the instance method
+        #: :meth:`set_live_run`.
+        self.dry_run = dry_run
 
         # Add debug file handler to debug_logger:
         self._add_file_handler(logger=self.debug_logger, level=logging.DEBUG, tag="debug")
@@ -154,6 +161,8 @@ class Connection():
         log_level = logging.INFO
         self.post_logger.setLevel(log_level)
         self._add_file_handler(logger=self.post_logger, level=log_level, tag="posted")
+
+        self.check_dry_run() #If on, signal this in self.debug_logger.
 
         #: The API key to use when authenticating with the DCC servers. This is set automatically
         #: to the value of the `DCC_API_KEY` environment variable in the ``_set_api_keys()`` private
@@ -239,6 +248,24 @@ class Connection():
         """
         entry = alias + "\t" + dcc_id
         self.post_logger.info(entry)
+
+    def check_dry_run(self):
+        """
+        Checks if the dry-run feature is enabled, and if so, logs the fact. This is mainly meant to
+        be called by other methods that are designed to make modifications on the ENCODE Portal. 
+
+        Returns:
+            `True`: The dry-run feature is enabled.
+            `False`: The dry-run feature is turned off.
+        """
+        if self.dry_run:
+            self.debug_logger.debug("DRY RUN is enabled.")
+            return True
+        return False
+
+    def set_live_run(self):
+        """Disables the dry-run feature."""
+        self.dry_run = False
 
     def log_error(self, msg):
         """Sends 'msg' to both ``self.error_logger`` and ``self.debug_logger``.
@@ -407,16 +434,17 @@ class Connection():
         return lookup_ids
 
     # def delete(self,rec_id):
-    #  """Not supported at present by the DCC - Only wranglers and delete objects.
-    #  """
-    #  url = os.path.join(self.dcc_url,rec_id)
-    #  self.logger.info(
-    #    (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
-    #  response = requests.delete(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
-    #  pdb.set_trace()
-    #  if response.ok:
-    #    return response.json()
-    #  response.raise_for_status()
+    #    """Not supported at present by the DCC - Only wranglers can delete objects.
+    #    """
+    #    url = os.path.join(self.dcc_url,rec_id)
+    #    self.logger.info(
+    #      (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
+    #    if self.dry_run:
+    #        return {}  
+    #    response = requests.delete(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
+    #    if response.ok:
+    #        return response.json()
+    #    response.raise_for_status()
 
     def get(self, rec_ids, ignore404=True, frame=None):
         """GET a record from the Portal.
@@ -512,7 +540,8 @@ class Connection():
     def after_submit_hooks(self, rec_id, profile_id, method=""):
         """
         Calls after-POST and after-PATCH hooks. This method is called from both the ``post()`` and
-        ``patch()`` instance methods.
+        ``patch()`` instance methods. Returns the None object immediately if the dry-run feature
+        is enabled.
 
         Some hooks only run if you are doing a PATCH, others if you are only doing a POST. Then there
         are some that run if you are doing either operation. Each hook that is called
@@ -524,6 +553,8 @@ class Connection():
             method: str. One of ``self.POST`` or ``self.PATCH``, or the empty string to indicate which
                 registered hooks to look through.
         """
+        if self.check_dry_run():
+            return 
         # Check allowed_methods. Will matter later when there are POST-specific
         # and PATCH-specific hooks.
         allowed_methods = [self.POST, self.PATCH, ""]
@@ -703,8 +734,8 @@ class Connection():
             payload: `dict`. The data to submit.
 
         Returns:
-            `dict`: The JSON response from the POST operation, or GET operation If the resource already
-            exist on the Portal.
+            `dict`: The JSON response from the POST operation, or GET operation If the resource 
+            already existx on the Portal. The dict will be empty if the dry-run feature is enabled. 
 
         Raises:
             encode_utils.connection.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
@@ -754,6 +785,8 @@ class Connection():
             ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
              " payload:\n\n{payload}\n\n").format(alias=alias, url=url, payload=euu.print_format_dict(payload)))
 
+        if self.check_dry_run():
+            return {}
         response = requests.post(url,
                                  auth=self.auth,
                                  timeout=eu.TIMEOUT,
@@ -807,7 +840,8 @@ class Connection():
                 `False` means to replace the value on the Portal with what's in the payload.
 
         Returns:
-            `dict`: The JSON response from the PATCH operation.
+            `dict`: The JSON response from the PATCH operation.  The dict will be empty if 
+            the dry-run feature is enabled.
 
         Raises:
             KeyError: The payload doesn't have the key ``self.ENCID_KEY`` set AND there aren't
@@ -853,6 +887,8 @@ class Connection():
              " {url} and this payload:\n\n{payload}\n\n").format(
                  encode_id=encode_id, url=url, payload=euu.print_format_dict(payload)))
 
+        if self.check_dry_run():
+            return {}
         response = requests.patch(url, auth=self.auth, timeout=eu.TIMEOUT, headers=euu.REQUEST_HEADERS_JSON,
                                   json=payload, verify=False)
         response_json = response.json()
@@ -1087,6 +1123,9 @@ class Connection():
         Uses the AWS CLI to upload a local file or existing S3 object to the Portal for the indicated
         file record.
 
+        If the dry-run feature is enabled, then this method will return prior to launching the
+        upload command. 
+
         Unfortunately, it doesn't appear that pulling a file into S3 is supported through the AWS API;
         only existing S3 objects or local files can be pushed to a S3 bucket. External files must first
         be downloaded and then pushed to the S3 bucket.
@@ -1120,6 +1159,8 @@ class Connection():
         cmd = "aws s3 cp {file_path} {upload_url}".format(
             file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
+        if self.check_dry_run():
+            return 
         popen = subprocess.Popen(cmd,
                                  shell=True,
                                  env=os.environ.update(aws_creds),

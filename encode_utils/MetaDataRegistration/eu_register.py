@@ -60,6 +60,11 @@ def get_parser():
         description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
 
+    parser.add_argument("-d", "--dry-run", action="store_true", help="""
+    Set this option to enable the dry-run feature, such that no modifications are performed on the
+    ENCODE Portal.  This is useful if you'd like to inspect the logs or ensure the validity of
+    your input file.""")
+
     parser.add_argument("-p", "--profile_id", required=True, help="""
     The ID of the profile to submit to, i.e. use 'genetic_modification' for
     https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for
@@ -113,10 +118,11 @@ def main():
     args = parser.parse_args()
     profile_id = args.profile_id
     dcc_mode = args.dcc_mode
+    dry_run = args.dry_run
     overwrite_array_values = args.overwrite_array_values
 
     if dcc_mode:
-        conn = euc.Connection(dcc_mode)
+        conn = euc.Connection(dcc_mode, dry_run)
     else:
         # Default dcc_mode taken from environment variable DCC_MODE.
         conn = euc.Connection()
