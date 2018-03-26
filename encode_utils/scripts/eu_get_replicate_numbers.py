@@ -7,7 +7,7 @@
 # nathankw@stanford.edu
 ###
 
-description = """
+"""
 Given an input file with replicate IDs, one per line, retrieves the attributes
 biological_replicate_number and technical_replicate_number. An output file is created in
 tab-delimited format with these two additional columns appended to the original lines.
@@ -23,7 +23,7 @@ from encode_utils.parent_argparser import dcc_login_parser
 def get_parser():
     parser = argparse.ArgumentParser(
         parents=[dcc_login_parser],
-        description=description,
+        description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-i", "--infile", required=True, help="""
     Input file containing replicate identifiers (one per line), i.e. alias, UUID, or @id.

@@ -7,7 +7,7 @@
 # nathankw@stanford.edu
 ###
 
-description = """
+"""
 Retrieves the aliases for the given set of DCC record identifiers.
 """
 
@@ -21,7 +21,7 @@ from encode_utils.parent_argparser import dcc_login_parser
 def get_parser():
     parser = argparse.ArgumentParser(
         parents=[dcc_login_parser],
-        description=description,
+        description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-i", "--infile", required=True, help="""
     Input file containing ENCODE object identifiers (one per line), i.e. UUID, accession, or @id.

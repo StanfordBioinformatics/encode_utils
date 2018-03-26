@@ -5,6 +5,3 @@ eu\_report\_fastq\_content\_errors
    :module: encode_utils.scripts.eu_report_fastq_content_errors
    :func: get_parser
    :prog: report_fastq_content_errors.py
-
-.. automodule:: encode_utils.scripts.eu_report_fastq_content_errors
-   :members:

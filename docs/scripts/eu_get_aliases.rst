@@ -5,6 +5,3 @@ eu\_get\_aliases
    :module: encode_utils.scripts.eu_get_aliases
    :func: get_parser
    :prog: eu_get_aliases.py
-
-.. automodule:: encode_utils.scripts.eu_get_aliases
-   :members:

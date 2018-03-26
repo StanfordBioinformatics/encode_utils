@@ -7,7 +7,7 @@
 # nathankw@stanford.edu
 ###
 
-description = """
+"""
 Given an ENCODE experiment identifier, Prints the FASTQ ENCFF identifiers for the specified
 replicate and technical replicates, or all replicates. Also prints the replicate numbers. For
 each FASTQ identifer, the following is printed to stdout:
@@ -32,7 +32,7 @@ from encode_utils.parent_argparser import dcc_login_parser
 def get_parser():
     parser = argparse.ArgumentParser(
         parents=[dcc_login_parser],
-        description=description,
+        description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-e", "--exp-id", required=True, help="""
     The experiment to which the replicates belong. Must be set if --all-reps is absent.

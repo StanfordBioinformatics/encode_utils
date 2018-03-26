@@ -7,7 +7,7 @@
 # nathankw@stanford.edu
 ###
 
-description = """Sets the `File.controlled_by` property for all FASTQ File records on an Experiment.
+"""Sets the `File.controlled_by` property for all FASTQ File records on an Experiment.
 
 An experiment can have multiple controls. This script will only work if:
 
@@ -47,7 +47,7 @@ from encode_utils.parent_argparser import dcc_login_parser
 def get_parser():
     parser = argparse.ArgumentParser(
         parents=[dcc_login_parser],
-        description=description,
+        description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-e", "--exp-id", required=True, help="""
     An identifier of an Experiment record whose FASTQ File objects need to have their

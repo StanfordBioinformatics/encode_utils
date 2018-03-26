@@ -7,7 +7,7 @@
 # nathankw@stanford.edu
 ###
 
-description = """
+"""
 Finds FASTQ files with a content error and indicates the error.
 
 Given an input file containing experiment identifiers, one per row, looks up all FASTQ files on the
@@ -29,7 +29,7 @@ from encode_utils.profiles import Profile
 def get_parser():
     parser = argparse.ArgumentParser(
         parents=[dcc_login_parser],
-        description=description,
+        description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-i", "--infile", required=True, help="""
     Input file containing experiment identifiers, one per row. Any line starting with a
