@@ -162,7 +162,7 @@ class Connection():
         self.post_logger.setLevel(log_level)
         self._add_file_handler(logger=self.post_logger, level=log_level, tag="posted")
 
-        self.check_dry_run() #If on, signal this in self.debug_logger.
+        self.check_dry_run() #If on, signal this in the logs.
 
         #: The API key to use when authenticating with the DCC servers. This is set automatically
         #: to the value of the `DCC_API_KEY` environment variable in the ``_set_api_keys()`` private
@@ -259,13 +259,14 @@ class Connection():
             `False`: The dry-run feature is turned off.
         """
         if self.dry_run:
-            self.debug_logger.debug("DRY RUN is enabled.")
+            self.log_error("DRY RUN is enabled.")
             return True
         return False
 
     def set_live_run(self):
-        """Disables the dry-run feature."""
+        """Disables the dry-run feature and logs the fact."""
         self.dry_run = False
+        self.log_error("DRY RUN is disabled.") 
 
     def log_error(self, msg):
         """Sends 'msg' to both ``self.error_logger`` and ``self.debug_logger``.
