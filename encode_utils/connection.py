@@ -263,6 +263,11 @@ class Connection():
             return True
         return False
 
+    def set_dry_run(self):
+        """Enables the dry-run feature and logs the fact."""
+        self.dry_run = True
+        self.log_error("DRY RUN is enabled")
+
     def set_live_run(self):
         """Disables the dry-run feature and logs the fact."""
         self.dry_run = False
