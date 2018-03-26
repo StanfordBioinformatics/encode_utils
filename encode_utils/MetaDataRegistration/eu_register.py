@@ -56,6 +56,7 @@ RECORD_ID_FIELD = "record_id"
 
 def get_parser():
     parser = argparse.ArgumentParser(
+        description = __doc__,
         parents=[dcc_login_parser],
         formatter_class=argparse.RawTextHelpFormatter)
 
