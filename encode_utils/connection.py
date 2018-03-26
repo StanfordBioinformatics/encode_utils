@@ -7,20 +7,16 @@
 ###
 
 import base64
-import datetime
 import json
 import logging
 import mimetypes
 import os
-import pdb
 import re
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import subprocess
 import sys
-import time
 import urllib
-import urllib3
 
 # inhouse libraries
 import encode_utils as eu
