@@ -57,7 +57,6 @@ RECORD_ID_FIELD = "record_id"
 def get_parser():
     parser = argparse.ArgumentParser(
         parents=[dcc_login_parser],
-        description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument("-d", "--dry-run", action="store_true", help="""
