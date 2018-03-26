@@ -54,7 +54,7 @@ calling directory.  Three log files are created:
   2. An error log file that contains only terse error messages. This is your first stop for checking
      to see if any errors occurred. Anything that is written to this file is also written to STDOUT,
      hence the debug log as well.
-  3. A POST log file, which only logs new rocords that are successfully added to the ENCODE Portal.
+  3. A POST log file, which only logs new records that are successfully added to the ENCODE Portal.
      Everything written to this file is also written to STDOUT, hence the debug log as well.
 
 These log files are specific to the host that you connect to. Each host will have a different trio
