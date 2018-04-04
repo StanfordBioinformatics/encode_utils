@@ -821,12 +821,32 @@ class Connection():
             self.after_submit_hooks(encid, profile_id, method=self.POST)
             return response_json
         elif response.status_code == requests.codes.CONFLICT:
-            log_msg = "Will not post {} because it already exists.".format(alias)
+            self.debug_logger.debug(response_json)
+            log_msg = "Will not post {} due to a conflict error from the Portal (i.e. it may already exist).".format(alias)
+            # In the case of paired-end FASTQ files, it could also mean that there was a conflict
+            # related to the 'paired_with' property, i.e. the latter is already linked to a FASTQ
+            # file, which could even have been set to a deleted state on the Portal. The server
+            # response in either case would look something like this:
+            #
+            # {
+            #   'detail': "Keys conflict: [('file:paired_with', 'f39320d9-0970-4369-b680-5965a5e85b6f')]", 
+            #   'description': 'There was a conflict when trying to complete your request.',
+            #   'code': 409, 
+            #   '@type': ['HTTPConflict', 'Error'], 
+            #   'title': 'Conflict', 
+            #   'status': 'error'}
+            # }
+            #
             self.log_error(log_msg)
             if no_alias:
                 return {}
             else:
-                return self.get(rec_ids=alias, ignore404=False)
+                try:
+                    return self.get(rec_ids=alias, ignore404=False)
+                except requests.exceptions.HTTPError as err:
+                    if err.response.status_code == requests.codes.NOT_FOUND: 
+                        self.debug_logger.debug("NOT FOUND")
+                        return {}
         else:
             message = "Failed to POST {alias}".format(alias=alias)
             self.log_error(message)
