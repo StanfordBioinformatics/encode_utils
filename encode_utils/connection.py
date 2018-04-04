@@ -733,10 +733,13 @@ class Connection():
 
         Args:
             payload: `dict`. The data to submit.
-            require_aliases: `bool`.  `True` means that the 'aliases' property is to not be required in 
-                `payload`. This is the default, since submitting labs should include at least one
-                 alias per record being submitted to the Portal for traceabilty purposes in the
-                 submitting lab. Set to False to disable this requirement. 
+            require_aliases: `bool`.  `True` means that the 'aliases' property is to be required in 
+                `payload`. This is the default and it is highly recommended not to change this 
+                 because it'll be easy to create duplicates on the server if accidentally POSTING
+                 the same payload again.  For example, you can easily create the same biosample
+                 as many times as you want on the Portal when not providing an alias.  Furthermore,
+                 submitting labs should include at least one alias per record being submitted 
+                 to the Portal for traceabilty purposes in the submitting lab. 
 
         Returns:
             `dict`: The JSON response from the POST operation, or GET operation If the resource 

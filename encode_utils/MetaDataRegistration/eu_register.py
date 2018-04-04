@@ -66,10 +66,13 @@ def get_parser():
     your input file.""")
 
     parser.add_argument("--no-aliases", action="store_true", help="""
-    Set this option for doing a POST when your input file doesn't contain an 'aliases' column.
+    Setting this option is NOT advised. Set this option for doing a POST when your input file 
+    doesn't contain an 'aliases' column, even though this property is supported in the corresponding
+    ENCODE profile.
     When POSTING a record to a profile that includes the 'aliases' property, this package requires
-    the 'aliases' property be used for traceability purposes. This is the recommended default. Thus,
-    setting this option relaxes this stringency.""")
+    the 'aliases' property be used for traceability purposes and because without this property, 
+    it'll be very easy to create duplicate objects on the Portal.  For example, you can easily 
+    create the same biosample as many times as you want on the Portal when not providing an alias.""")
 
     parser.add_argument("-p", "--profile_id", required=True, help="""
     The ID of the profile to submit to, i.e. use 'genetic_modification' for
