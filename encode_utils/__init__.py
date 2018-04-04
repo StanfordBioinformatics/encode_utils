@@ -22,6 +22,11 @@ package_path = __path__[0]
 #: The award property name that is common to all ENCODE Portal object profiles.
 AWARD_PROP_NAME = "award"
 
+#: The aliases property name that is common to almost all ENCODE Portal object profiles.
+#: Notably, the following profiles lack this property as of 2018-04-03:
+#: ['access_key_admin', 'publication', 'award', 'organism', 'page', 'image', 'user', 'lab']
+ALIAS_PROP_NAME = "aliases"
+
 #: The lab property name that is common to all ENCODE Portal object profiles.
 LAB_PROP_NAME = "lab"
 

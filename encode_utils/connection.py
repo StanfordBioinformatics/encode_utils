@@ -737,7 +737,12 @@ class Connection():
 
         Returns:
             `dict`: The JSON response from the POST operation, or GET operation If the resource 
-            already existx on the Portal. The dict will be empty if the dry-run feature is enabled. 
+            already exist on the Portal. The dict will be empty if the dry-run feature is enabled. 
+            It will also be empty if you are attempting to POST to a profile that doesn't include
+            the aliases property (see ``encode_utils.profiles.Profile.NO_ALIAS_PROFILE_IDS``) AND there
+            was a conflict because the record already exists on the Portal, because in this case,
+            there isn't an alias to do a GET request on and the existing record on the Portal isn't
+            indicated.
 
         Raises:
             encode_utils.connection.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
@@ -782,7 +787,12 @@ class Connection():
         except KeyError:
             pass
 
-        alias = payload["aliases"][0]
+        no_alias = False #Use this to check later if doing a GET
+        if profile_id in eup.Profile.NO_ALIAS_PROFILE_IDS:
+            alias = "N/A"
+            no_alias = True
+        else:
+            alias = payload["aliases"][0]
         self.debug_logger.debug(
             ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
              " payload:\n\n{payload}\n\n").format(alias=alias, url=url, payload=euu.print_format_dict(payload)))
@@ -813,8 +823,10 @@ class Connection():
         elif response.status_code == requests.codes.CONFLICT:
             log_msg = "Will not post {} because it already exists.".format(alias)
             self.log_error(log_msg)
-            rec_json = self.get(rec_ids=alias, ignore404=False)
-            return rec_json
+            if no_alias:
+                return {}
+            else:
+                return self.get(rec_ids=alias, ignore404=False)
         else:
             message = "Failed to POST {alias}".format(alias=alias)
             self.log_error(message)

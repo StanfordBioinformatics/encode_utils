@@ -48,7 +48,7 @@ def get_profiles():
     profiles = requests.get(eu.PROFILES_URL + "?format=json",
                             timeout=eu.TIMEOUT,
                             headers=euu.REQUEST_HEADERS_JSON).json()
-    # Remove the "private" profiles, since thiese have differing semantics.
+    # Remove the "private" profiles, since these have differing semantics.
     private_profiles = [x for x in profiles if x.startswith("_")]  # i.e. _subtypes
     for i in private_profiles:
         profiles.pop(i)
@@ -88,9 +88,13 @@ class Profile:
     #: ``encode_utils.connection.Connection.post()`` to determine whether to set defaults for the
     #: `lab` and `award` properties of a given profile.
     AWARDLESS_PROFILE_IDS = []
+    NO_ALIAS_PROFILE_IDS = []
     for profile_id in PROFILES:
-        if eu.AWARD_PROP_NAME not in PROFILES[profile_id]["properties"]:
+        profile_props = PROFILES[profile_id]["properties"]
+        if eu.AWARD_PROP_NAME not in profile_props:
             AWARDLESS_PROFILE_IDS.append(profile_id)
+        if eu.ALIAS_PROP_NAME not in profile_props:
+            NO_ALIAS_PROFILE_IDS.append(profile_id)
 
     #: Constant storing the `file.json` profile's ID.
     #: This is asserted for inclusion in ``Profile.PROFILES``.
