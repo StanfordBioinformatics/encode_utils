@@ -287,7 +287,7 @@ class Connection():
             `list`: The aliases.
         """
         record = self.get(ignore404=False, dcc_id=dcc_id)
-        aliases = record["aliases"]
+        aliases = record[eu.ALIAS_PROP_NAME]
         for index in range(len(aliases)):
             alias = aliases[index]
             if strip_alias_prefix:
@@ -419,8 +419,8 @@ class Connection():
         lookup_ids = []
         if self.ENCID_KEY in payload:
             lookup_ids.append(payload[self.ENCID_KEY])
-        if "aliases" in payload:
-            lookup_ids.extend(payload["aliases"])
+        if eu.ALIAS_PROP_NAME in payload:
+            lookup_ids.extend(payload[eu.ALIAS_PROP_NAME])
         if "md5sum" in payload:
             # The case for file objects.
             lookup_ids.append(payload["md5sum"])
@@ -587,10 +587,9 @@ class Connection():
         Returns:
             `dict`: The potentially modified payload.
         """
-        aliases_prop = "aliases"
-        if not aliases_prop in payload:
+        if not eu.ALIAS_PROP_NAME in payload:
             return payload
-        payload[aliases_prop] = euu.add_alias_prefix(payload[aliases_prop])
+        payload[eu.ALIAS_PROP_NAME] = euu.add_alias_prefix(payload[eu.ALIAS_PROP_NAME])
         return payload
 
     def before_submit_attachment(self, payload):
@@ -718,7 +717,7 @@ class Connection():
 
         return payload
 
-    def post(self, payload):
+    def post(self, payload, require_aliases=True):
         """POST a record to the Portal.
 
         Requires that you include in the payload the non-schematic key ``self.PROFILE_KEY`` to
@@ -734,6 +733,10 @@ class Connection():
 
         Args:
             payload: `dict`. The data to submit.
+            require_aliases: `bool`.  `True` means that the 'aliases' property is to not be required in 
+                `payload`. This is the default, since submitting labs should include at least one
+                 alias per record being submitted to the Portal for traceabilty purposes in the
+                 submitting lab. Set to False to disable this requirement. 
 
         Returns:
             `dict`: The JSON response from the POST operation, or GET operation If the resource 
@@ -751,6 +754,10 @@ class Connection():
                 default set by the environment variable `DCC_LAB`.
             encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok, with
                 the exception of a conflict (409) which is only logged.
+
+        Side effects:
+            self.PROFILE_KEY will be popped out of the payload if present, otherwise, the key "@id" 
+            will be popped out. Furthermore, self.ENCID_KEY will be popped out if present in the payload.
         """
         self.debug_logger.debug("\nIN post().")
         # Make sure we have a payload that can be converted to valid JSON, and
@@ -788,11 +795,16 @@ class Connection():
             pass
 
         no_alias = False #Use this to check later if doing a GET
-        if profile_id in eup.Profile.NO_ALIAS_PROFILE_IDS:
+        alias = payload.get(eu.ALIAS_PROP_NAME)
+        if not alias and (profile_id in eup.Profile.NO_ALIAS_PROFILE_IDS or not require_aliases):
             alias = "N/A"
             no_alias = True
         else:
-            alias = payload["aliases"][0]
+            raise Exception(
+                ("Missing property '{}' in payload {}. This is required by default for the profiles"
+                 " that include this property, and can be disabled by setting the `require_aliases`"
+                 " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
+                
         self.debug_logger.debug(
             ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
              " payload:\n\n{payload}\n\n").format(alias=alias, url=url, payload=euu.print_format_dict(payload)))
@@ -1229,7 +1241,7 @@ class Connection():
         fastq_files = self.get_fastqfiles_on_exp(rec_id)
         platforms = []
         for fastq_json in fastq_files:
-            platforms.extend(fastq_json["platform"]["aliases"])
+            platforms.extend(fastq_json["platform"][eu.ALIAS_PROP_NAME])
         return list(set(platforms))
 
     def post_document(self, download_filename, document, document_type, description):
@@ -1259,7 +1271,7 @@ class Connection():
         # Post information
         payload = {}
         payload[self.PROFILE_KEY] = "document"
-        payload["aliases"] = [document_alias]
+        payload[eu.ALIAS_PROP_NAME] = [document_alias]
         payload["document_type"] = document_type
         payload["description"] = description
 

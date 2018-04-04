@@ -65,6 +65,12 @@ def get_parser():
     ENCODE Portal.  This is useful if you'd like to inspect the logs or ensure the validity of
     your input file.""")
 
+    parser.add_argument("--no-aliases", action="store_true", help="""
+    Set this option for doing a POST when your input file doesn't contain an 'aliases' column.
+    When POSTING a record to a profile that includes the 'aliases' property, this package requires
+    the 'aliases' property be used for traceability purposes. This is the recommended default. Thus,
+    setting this option relaxes this stringency.""")
+
     parser.add_argument("-p", "--profile_id", required=True, help="""
     The ID of the profile to submit to, i.e. use 'genetic_modification' for
     https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for
@@ -102,7 +108,7 @@ def get_parser():
     attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.""")
 
     parser.add_argument("--patch", action="store_true", help="""
-    Presence of this option indicates to patch an existing DCC record rather than register a new one.""")
+    Presence of this option indicates to PATCH an existing DCC record rather than register a new one.""")
 
     parser.add_argument("-w", "--overwrite-array-values", action="store_true", help="""
     Only has meaning in combination with the --patch option. When this is specified, it means that
@@ -119,6 +125,7 @@ def main():
     profile_id = args.profile_id
     dcc_mode = args.dcc_mode
     dry_run = args.dry_run
+    no_aliases = args.no_aliases
     overwrite_array_values = args.overwrite_array_values
 
     if dcc_mode:
@@ -132,7 +139,7 @@ def main():
     gen = create_payloads(profile_id=profile_id, infile=infile)
     for payload in gen:
         if not patch:
-            conn.post(payload)
+            conn.post(payload, require_aliases=not no_aliases)
         else:
             record_id = payload.get(RECORD_ID_FIELD, False)
             if not record_id:
