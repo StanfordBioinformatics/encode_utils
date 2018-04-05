@@ -179,7 +179,7 @@ Removing properties from a record
 
 This feature is implemented via the PUT HTTP method, which works by replacing the existing record 
 on the Portal with a new representation. You just need to specify a list of property names to be removed.
- A GET on the record is first made with the query parameter ``frame=edit``, and the properties that
+A GET on the record is first made with the query parameter ``frame=edit``, and the properties that
 you indicate for removal are popped out of the returned JSON representation of the record.  This
 updated JSON representation is then sent to the Portal via a PUT operation.
 
