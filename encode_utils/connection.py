@@ -1137,7 +1137,6 @@ class Connection():
             raise Exception(("Command {cmd} failed with return code {retcode}. stdout is {stdout} and"
                              " stderr is {stderr}.").format(cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr))
         response = json.loads(stdout)
-        self.debug_logger.debug(response)
         if "code" in response:
             # Then problem occurred.
             code = response["code"]
@@ -1164,8 +1163,10 @@ class Connection():
             # You also get this when the file object no-longer has read access (was
             # archived by wranglers).
 
-        graph = response["@graph"][0]
-        return response["@graph"][0]["upload_credentials"]
+        #Don't log the full response as it contains sensative security information.
+        upload_creds = response["@graph"][0]["upload_credentials"]
+        self.debug_logger.debug("Upload to: " + upload_creds["upload_url"])
+        return upload_creds
 
     def upload_file(self, file_id, file_path=None):
         """
