@@ -178,15 +178,15 @@ Removing properties from a record
 ---------------------------------
 
 This feature is implemented via the PUT HTTP method, which works by replacing the existing record 
-on the Portal with a new representation. You just need to specify a list of property names to removed.
-A GET on the record is first made with the query parameter ``frame=edit``, and the properties that
+on the Portal with a new representation. You just need to specify a list of property names to be removed.
+ A GET on the record is first made with the query parameter ``frame=edit``, and the properties that
 you indicate for removal are popped out of the returned JSON representation of the record.  This
 updated JSON representation is then sent to the Portal via a PUT operation.
 
 For example, say you have a biosample record and you want to remove the `pooled_from` property.
-This property stores a list of other biosample records. You can't just empty the list interactivly
+This property stores a list of other biosample records.  You can't just empty out the list interactivly
 in the Portal, or programaticaly via a PATCH operation since this property, when present, can't be
-emtpy. This is where the PUT HTTP method comes in handy.  Let's look at an example::
+emtpy.  This is where the PUT HTTP method comes in handy.  Let's look at an example::
 
   conn = Connection("dev")
   conn.remove_props(rec_id="ENCBS133ZSU",props=["pooled_from"])
@@ -199,9 +199,9 @@ such as properties that are:
   2. read-only, and
   3. non-submittable. 
 
-as indicated in the profile (JSON schema) for the record of interst. The Portal would most likely
+as indicated in the profile (JSON schema) of the record of interst. The Portal would most likely
 reject or silently ignore any attempt to remove such properties, nonetheless, to be a good citizen,
 this client performs these checks regardless for good measure.
 
-It should also be noted that some properties simply can't be deleted.  For example, and attempt
+It should also be noted that some properties simply can't be deleted.  For example, any attempt
 to delete the `aliases` property will only empty out its list. 

@@ -1,5 +1,5 @@
 eu\_get\_replicate\_numbers
-=========================
+===========================
 
 .. argparse::
    :module: encode_utils.scripts.eu_get_replicate_numbers
