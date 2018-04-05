@@ -117,6 +117,12 @@ class Profile:
     #: Constant storing a property name of the `file.json` profile.
     #: The stored name is asserted for inclusion in the set of `File` properties.
     MD5SUM_NAME_PROP_NAME = "md5sum"
+    #: Constant storing the name of the property in a JSON object sub-schema that indicates whether
+    #: the object is read only. 
+    READ_ONLY_FLAG = "readonly"
+    #: Constant storing the name of the property in a JSON object sub-schema that indicates whether 
+    #: the object is submittable.
+    NOT_SUBMITTABLE_FLAG = "notSubmittable"
     try:
         assert(MD5SUM_NAME_PROP_NAME in PROFILES[FILE_PROFILE_ID]["properties"])
     except AssertionError:
@@ -132,6 +138,8 @@ class Profile:
         #: The normalized version of the passed-in `profile_id` to ``self.__init__()``. The normalization
         #: is neccessary in order to match the format of the profile IDs in ``Profile.PROFILES``.
         self.profile_id = self._set_profile_id(profile_id)
+        #: The JSON schema for the profile.  Also accessible via the helper method `self.get_profile()`.
+        self.schema = Profile.PROFILES[self.profile_id] 
 
     def _set_profile_id(self, profile_id):
         """
@@ -139,7 +147,7 @@ class Profile:
         ``Profile.PROFILES``, and ensures that the normalized profile ID is a member of this list.
 
         Args:
-            profile_id: `str`. The value of the ``profile_id`` argument in self.__init__()``.
+            profile_id: `str`. The value of the ``profile_id`` argument in ``self.__init__()``.
 
         Returns:
             `str`: The normalized profile ID.
@@ -156,10 +164,81 @@ class Profile:
                 raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
         return profile_id
 
+    def properties(self):
+        """Returns all properties defined in the profile's schema.
+
+        Returns:
+            `dict`: The value of the schema's "properties" key.
+        """
+        return self.schema["properties"]
+
+    def property(self,prop):
+        """Returns the JSON schema of the specifed property name.
+
+        Args:
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+        Returns:
+            `dict`: The JSON schema for the indicated property.
+        """
+        return self.properties()[prop]
+
+    def required_properties(self):
+        """
+        Returns the list of required properties to submit when creating a new record under the
+        given profile.
+
+        Returns:
+            `list`: The list of required properties.
+        """
+        return self.schema["required"]
+
+    def is_prop_not_submittable(self, prop):
+        """
+        Indicates whether the provided property name is one that a user can submit when creating
+        or updating a record.
+
+        Args:
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+        Returns:
+            `bool`: `True` if this is a non-submittable property, `False` otherwise. 
+        """
+        if self.NOT_SUBMITTABLE_FLAG in self.property(prop):
+            return True
+        return False
+
+    def is_prop_read_only(self, prop):
+        """
+        Indicates whether the provided property name is one that is read-only and hence can't be
+        modified by the end-user.
+
+        Args:
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+        Returns:
+            `bool`: `True` if this is a read-only property, `False` otherwise. 
+        """
+        if self.READ_ONLY_FLAG in self.property(prop):
+            return True
+        return False
+   
+    def is_prop_required(self, prop):
+        """
+        Indicates whether the provided property name is one that is required to specify when
+        creating a new record.
+
+        Args:
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+        Returns:
+            `bool`: `True` if this is a required property, `False` otherwise. 
+        """
+        if prop in self.required_properties():
+            return True
+        return False
+
+
     def get_profile(self):
         """Provides the JSON schema for the specified profile ID.
 
         Returns:
-            `dict`: `dict` representing the profile's JSON schema.
+            `dict`: `dict` being the value of `self.schema`, which is the profile's JSON schema. 
         """
-        return Profile.PROFILES[self.profile_id]
+        return self.schema

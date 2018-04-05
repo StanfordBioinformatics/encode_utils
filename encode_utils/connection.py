@@ -448,7 +448,7 @@ class Connection():
     #        return response.json()
     #    response.raise_for_status()
 
-    def get(self, rec_ids, ignore404=True, frame=None):
+    def get(self, rec_ids, ignore404=True, frame="object"):
         """GET a record from the Portal.
 
         Looks up a record in the Portal and performs a GET request, returning the JSON serialization of
@@ -459,6 +459,9 @@ class Connection():
             rec_ids: `str` or `list`. Must be a `list` if you want to supply more than one identifier.
                 For a few example identifiers, you can use a uuid, accession, ..., or even the value of
                 a record's `@id` property.
+
+            frame: `str`. A value for the frame query parameter, i.e. 'object', 'edit'. See
+                https://www.encodeproject.org/help/rest-api/ for details.
             ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
                 Portal.  In this case, If set to `True`, then an empty `dict` will be returned.
                 If set to `False`, then an Exception will be raised.
@@ -468,6 +471,7 @@ class Connection():
             `dict`: The JSON response. Will be empty if no record was found AND ``ignore404=True``.
 
         Raises:
+            Exception: If the server responds with a FORBIDDEN status. 
             requests.exceptions.HTTPError: The status code is not ok, and the
                 cause isn't due to a 404 (not found) status code when ``ignore404=True``.
         """
@@ -494,6 +498,7 @@ class Connection():
             raise Exception(
                 "Access to ENCODE record {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
         elif requests.codes.NOT_FOUND in status_codes:
+            self.debug_logger.debug("NOT FOUND")
             if ignore404:
                 return {}
         # At this point in the code, the response is not okay.
@@ -689,7 +694,9 @@ class Connection():
         Args:
             payload: `dict`. The payload to POST or PATCH.
             method: `str`. One of "post" or "patch", or the empty string to indicate which registered
-                hooks to look through.
+                hooks to call. Some hooks are agnostic to the HTTP method, and these hooks are
+                always called. Setting `method` to the empty string means to only call these
+                agnostic hooks.
 
         Returns:
             `dict`: The potentially modified payload that has been passed through all applicable
@@ -765,7 +772,7 @@ class Connection():
         self.debug_logger.debug("\nIN post().")
         # Make sure we have a payload that can be converted to valid JSON, and
         # tuples become arrays, ...
-        json.loads(json.dumps(payload))
+        payload = json.loads(json.dumps(payload))
         profile_id = self.get_profile_from_payload(payload)
         payload[self.PROFILE_KEY] = profile_id
         url = os.path.join(self.dcc_url, profile_id)
@@ -799,15 +806,17 @@ class Connection():
 
         no_alias = False #Use this to check later if doing a GET
         alias = payload.get(eu.ALIAS_PROP_NAME)
-        if not alias and (profile_id in eup.Profile.NO_ALIAS_PROFILE_IDS or not require_aliases):
-            alias = "N/A"
-            no_alias = True
-        else:
-            raise Exception(
-                ("Missing property '{}' in payload {}. This is required by default for the profiles"
-                 " that include this property, and can be disabled by setting the `require_aliases`"
-                 " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
+        if not alias:
+            if profile_id in eup.Profile.NO_ALIAS_PROFILE_IDS or not require_aliases:
+                alias = ["N/A"]
+                no_alias = True
+            else:
+                raise Exception(
+                    ("Missing property '{}' in payload {}. This is required by default for the profiles"
+                     " that include this property, and can be disabled by setting the `require_aliases`"
+                     " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
                 
+        alias = alias[0]
         self.debug_logger.debug(
             ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
              " payload:\n\n{payload}\n\n").format(alias=alias, url=url, payload=euu.print_format_dict(payload)))
@@ -856,12 +865,7 @@ class Connection():
             if no_alias:
                 return {}
             else:
-                try:
-                    return self.get(rec_ids=alias, ignore404=False)
-                except requests.exceptions.HTTPError as err:
-                    if err.response.status_code == requests.codes.NOT_FOUND: 
-                        self.debug_logger.debug("NOT FOUND")
-                        return {}
+                return self.get(rec_ids=alias, ignore404=True)
         else:
             message = "Failed to POST {alias}".format(alias=alias)
             self.log_error(message)
@@ -900,17 +904,12 @@ class Connection():
         """
         # Make sure we have a payload that can be converted to valid JSON, and
         # tuples become arrays, ...
-        json.loads(json.dumps(payload))
+        payload = json.loads(json.dumps(payload))
         self.debug_logger.debug("\nIN patch()")
         encode_id = payload[self.ENCID_KEY]
-        try:
-            rec_json = self.get(rec_ids=encode_id, ignore404=False, frame="object")
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == requests.codes.NOT_FOUND:
-                self.log_error("Failed to PATCH '{}': Record not found.".format(encode_id))
-                return {}
-            else:
-                raise
+        rec_json = self.get(rec_ids=encode_id, frame="edit", ignore404=True)
+        if not rec_json:
+            return {}
 
         if extend_array_values:
             for key in payload:
@@ -960,6 +959,63 @@ class Connection():
         self.debug_logger.debug("<<<<<< DCC PATCH RESPONSE: ")
         self.debug_logger.debug(euu.print_format_dict(response_json))
         response.raise_for_status()
+
+    def remove_props(self, rec_id, props=[]):
+        """Runs a PUT request to remove properties of interest on the specified record.
+
+        Note that before-submit and after-submit hooks are not run here as they would be in 
+        `self.path()` or `self.post()` (:meth:`before_submit_hooks` and :meth:`after_submit_hooks`
+        are not called).
+
+        Args:
+            rec_id: `str`. An identifier for the record on the Portal.
+            props: `list`. The properties to remove from the record. 
+
+        Raises:
+
+        Returns:
+            `dict`. Contains the JSON returned from the PUT request.
+            
+        """
+        self.debug_logger.debug("\nIN remove_props()")
+        rec_json = self.get(rec_ids=rec_id, frame="object", ignore404=False)
+        profile = eup.Profile(rec_json["@id"])
+        del rec_json
+        editable_json = self.get(rec_ids=rec_id, frame="edit", ignore404=False)
+        # For good house-keeping, check for any props that we definitely aren't allowed to remove,
+        # and raise an Exception if one is present in the supplied 'props' list. Some properties,
+        # such as accession, submitted_by, ..., still show up in a GET with 'frame="edit"', and
+        # the Portal will most likely complain or silently disallow an attempt to remove such
+        # properites. Nonetheless, a well-behaved client shouln't send naughty requests, so some
+        # checking is performed below for good measure:
+        for prop in props:
+            if profile.is_prop_required(prop):
+                raise Exception("Can't remove required property")
+            elif profile.is_prop_not_submittable(prop):
+                raise Exception("Can't remove non-submittable property.")
+            elif profile.is_prop_read_only(prop):
+                raise Exception("Can't remove read-only property.")
+            else:
+                # Then it is safe to remove this property.
+                editable_json.pop(prop)
+            
+        url = os.path.join(self.dcc_url, rec_id)
+        self.debug_logger.debug("Attempting to remove properties {} from record '{}' by sending a PUT request with payload {}.".format(props, rec_id, euu.print_format_dict(editable_json)))
+        if self.check_dry_run():
+            return 
+        response = requests.put(
+            url,
+            auth=self.auth, 
+            timeout=eu.TIMEOUT, 
+            headers=euu.REQUEST_HEADERS_JSON,
+            json=editable_json, 
+            verify=False
+        )
+        response.raise_for_status()
+        self.debug_logger.debug("Success")
+        response_json = response.json() 
+        return response_json
+
 
     def send(self, payload, error_if_not_found=False, extend_array_values=True, raise_403=True):
         """
@@ -1198,7 +1254,7 @@ class Connection():
             return
         aws_creds = self.extract_aws_upload_credentials(upload_credentials)
         if not file_path:
-            file_rec = self.get(rec_ids=file_id)
+            file_rec = self.get(rec_ids=file_id,ignore404=False)
             try:
                 file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
             except KeyError:  # submitted_file_name property not set:
