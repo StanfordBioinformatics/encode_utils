@@ -490,7 +490,7 @@ class Connection():
 
         Looks up a record in the Portal and performs a GET request, returning the JSON serialization of
         the object. You supply a list of identifiers for a specific record, and the Portal will be
-        searched for each identifier in turn until one is either found or the list is exhaused.
+        searched for each identifier in turn until one is either found or the list is exhausted.
 
         Args:
             rec_ids: `str` or `list`. Must be a `list` if you want to supply more than one identifier.

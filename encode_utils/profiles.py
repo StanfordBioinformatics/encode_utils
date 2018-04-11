@@ -140,6 +140,22 @@ class Profile:
         self.profile_id = self._set_profile_id(profile_id)
         #: The JSON schema for the profile.  Also accessible via the helper method `self.get_profile()`.
         self.schema = Profile.PROFILES[self.profile_id] 
+        #: Equivalent to the 'properties' property in the schema. 
+        self.properties = self.schema["properties"]
+        #: A list of the property names that are non-writable. These are determined as properties
+        #: in the schema whose subschemas include the property ``Profile.NOT_SUBMITTABLE_FLAG`` or
+        #: the property ``Profile.READ_ONLY_FLAG``. 
+        self.non_writable_props = []
+
+        #: A list of the property names that are writable, which are those that don't fall into the
+        #: self.non_writable_props category.
+        self.writable_props = []
+
+        for i in self.properties:
+            if self.is_prop_not_submittable(i) or self.is_prop_read_only(i):
+                self.non_writable_props.append(i)
+            else:
+                self.writable_props.append(i)
 
     def _set_profile_id(self, profile_id):
         """
@@ -164,23 +180,36 @@ class Profile:
                 raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
         return profile_id
 
-    def properties(self):
-        """Returns all properties defined in the profile's schema.
-
-        Returns:
-            `dict`: The value of the schema's "properties" key.
+    def filter_non_writable_props(self, rec_json, keep_identifying=False):
         """
-        return self.schema["properties"]
+        Filters out the non-writable properties from a record, using ``self.non_writable_props`` as 
+        a filtering basis. 
+
+        Args:
+            rec_json: `dict`. The JSON serialization of a record that belongs to the profile 
+              encapsulated through this instance.
+            keep_identifying: `bool`. Setting this to True means to retain keys that are in the 
+              `identifyingProperties` object property of the schema. 
+        Returns:
+            `dict`: The input minus any keys that aren't writable. 
+        """
+        for key in list(rec_json):
+            if keep_identifying and self.is_prop_identifying(key):
+                continue
+            if key in self.non_writable_props:
+                rec_json.pop(key)
+        return rec_json
+
 
     def property(self,prop):
         """Returns the JSON schema of the specifed property name.
 
         Args:
-            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties``.
         Returns:
             `dict`: The JSON schema for the indicated property.
         """
-        return self.properties()[prop]
+        return self.properties[prop]
 
     def required_properties(self):
         """
@@ -192,13 +221,27 @@ class Profile:
         """
         return self.schema["required"]
 
+    def is_prop_identifying(self, prop):
+        """
+        Indicates whether the provided property name is listed as an identifying property in the 
+        schema (see the schema property 'identifyingProperties').
+
+        Args: 
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties``.
+        Returns:
+            `bool`: `True` if this is a identifying property, `False` otherwise. 
+        """
+        if prop in self.schema["identifyingProperties"]:
+            return True
+        return False
+
     def is_prop_not_submittable(self, prop):
         """
         Indicates whether the provided property name is one that a user can submit when creating
         or updating a record.
 
         Args:
-            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties``.
         Returns:
             `bool`: `True` if this is a non-submittable property, `False` otherwise. 
         """
@@ -212,7 +255,7 @@ class Profile:
         modified by the end-user.
 
         Args:
-            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties``.
         Returns:
             `bool`: `True` if this is a read-only property, `False` otherwise. 
         """
@@ -226,14 +269,13 @@ class Profile:
         creating a new record.
 
         Args:
-            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties()``.
+            prop: `str`. The name of a property found in the the `dict` returned by ``self.properties``.
         Returns:
             `bool`: `True` if this is a required property, `False` otherwise. 
         """
         if prop in self.required_properties():
             return True
         return False
-
 
     def get_profile(self):
         """Provides the JSON schema for the specified profile ID.
