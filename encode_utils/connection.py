@@ -966,7 +966,7 @@ class Connection():
             # Some client software may add this key in; won't hurt to remove it.
             payload.pop(self.PROFILE_KEY)
 
-        url = os.path.join(self.dcc_url, encode_id)
+        url = os.path.join(self.dcc_url, encode_id.lstrip("/"))
         self.debug_logger.debug(
             ("<<<<<< PATCHING {encode_id} To DCC with URL"
              " {url} and this payload:\n\n{payload}\n\n").format(
@@ -1261,7 +1261,7 @@ class Connection():
         self.debug_logger.debug("Upload to: " + upload_creds["upload_url"])
         return upload_creds
 
-    def upload_file(self, file_id, file_path=None):
+    def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
         Uses the AWS CLI to upload a local file or existing S3 object to the Portal for the indicated
         file record.
@@ -1278,6 +1278,11 @@ class Connection():
             file_path: `str`. the local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
               If not set, defaults to `None` in which case the local file path will be extracted from the
               record's `submitted_file_name` property.
+            set_md5sum: `bool`. True means to also calculate the md5sum and set the file record's md5sum
+              property on the Portal (this currently is only implemented for local files, not S3). 
+              This will always take place whenever the property isn't yet and when uploading a
+              local file.
+              set.
 
         Raises:
             encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
@@ -1290,14 +1295,18 @@ class Connection():
             self.log_error(msg)
             return
         aws_creds = self.extract_aws_upload_credentials(upload_credentials)
+        file_rec = self.get(rec_ids=file_id,ignore404=False)
         if not file_path:
-            file_rec = self.get(rec_ids=file_id,ignore404=False)
             try:
                 file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
             except KeyError:  # submitted_file_name property not set:
-                pass
-            if not file_path:
                 raise Exception("No file path specified.")
+        file_rec_md5sum = file_rec.get("md5sum")
+        if not file_rec_md5sum or set_md5sum:
+            if not file_path.startswith("s3"):
+                # md5sum calc. supported at present only for local files.
+                md5sum = euu.calculate_md5sum(file_path)
+                self.patch({self.ENCID_KEY: file_rec["@id"], "md5sum": md5sum})
 
         cmd = "aws s3 cp {file_path} {upload_url}".format(
             file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
