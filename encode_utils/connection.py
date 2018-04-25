@@ -34,7 +34,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 class AwardPropertyMissing(Exception):
     """
     Raised when the `award` property isn't set in the payload when doing a POST, and a default isn't
-    set by the environment variable `DDCC_AWARD` either.
+    set by the environment variable `DCC_AWARD` either.
     """
     message = ("The property '{}' is missing from the payload and a default isn't set either. To"
                " store a default, set the DCC_AWARD environment variable.")
