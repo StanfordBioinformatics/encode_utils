@@ -930,8 +930,8 @@ class Connection():
                 `False` means to replace the value on the Portal with what's in the payload.
 
         Returns:
-            `dict`: The JSON response from the PATCH operation.  The dict will be empty if 
-            the dry-run feature is enabled.
+            `dict`: The JSON response from the PATCH operation, or an empty dict if the record doesn't
+                    exist on the Portal. Will also be an empty dict if the dry-run feature is enabled.
 
         Raises:
             KeyError: The payload doesn't have the key ``self.ENCID_KEY`` set AND there aren't
@@ -944,6 +944,7 @@ class Connection():
         payload = json.loads(json.dumps(payload))
         self.debug_logger.debug("\nIN patch()")
         encode_id = payload[self.ENCID_KEY]
+        # Ensure that the record exists on the Portal:
         rec_json = self.get(rec_ids=encode_id, frame="edit", ignore404=True)
         if not rec_json:
             return {}
@@ -1305,6 +1306,7 @@ class Connection():
         if not file_rec_md5sum or set_md5sum:
             if not file_path.startswith("s3"):
                 # md5sum calc. supported at present only for local files.
+                self.debug_logger.debug("Calculating md5sum for {}".format(os.path.basename(file_path)))
                 md5sum = euu.calculate_md5sum(file_path)
                 self.patch({self.ENCID_KEY: file_rec["@id"], "md5sum": md5sum})
 
@@ -1388,6 +1390,15 @@ class Connection():
 
         response = self.post(payload=payload)
         return response['uuid']
+
+#    def download_document(self, document_id):
+#        """Downloads the specified document to the local directory.
+#        
+#        Args:
+#            document_id: `str`. A DCC document identifier (uuid, alias, or md5sum). 
+#        """
+#        doc_json = self.get(rec_ids=document_id, ignore404=False)
+        #doc = self.get(j
 
     def link_document(self, rec_id, document_id):
         """

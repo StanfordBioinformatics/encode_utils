@@ -12,6 +12,7 @@ Contains utilities that don't require authorization on the DCC servers.
 
 import hashlib
 import json
+import jsonschema
 import logging
 import os
 import requests
@@ -27,6 +28,20 @@ REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
 #: An error ``logging`` instance.
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
+
+def err_context(payload, schema):
+    try:
+        jsonschema.validate(payload,schema)
+    except jsonschema.exceptions.ValidationError as err:
+        messages = []
+        schema_paths = []
+        for i in err.context:
+            messages.append(i.message)
+            schema_paths.append(list(i.absolute_schema_path))
+        context = {}
+        for i in range(len(schema_paths)):
+            context["->".join([str(x) for x in schema_paths[i]])] = messages[i]
+        return context
 
 
 def calculate_md5sum(file_path):
