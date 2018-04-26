@@ -75,7 +75,7 @@ class Profile:
         profile_id: str. Typically the value of a record's `@id` property. It will be
           normalized to match the syntax of the profile ID keys in the `dict`
           ``encode_utils.profiles.Profile.PROFILES`` (which is set to the return value of
-          the function ``encode_utils.profiles.Profile``). You can also pass in the pre-normalized
+          the function ``encode_utils.profiles.Profile``). You can also pass in the already normalized
           profile ID.
     """
     # Constant (`dict`) set to the return value of the function ``encode_utils.profiles.get_profiles()``.

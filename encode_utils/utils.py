@@ -158,11 +158,9 @@ def add_alias_prefix(aliases, prefix=False):
     """
     if not prefix:
         prefix = eu.LAB_PREFIX
-        if not prefix:
-            return aliases  # Nothing to do.
     else:
-        if not prefix.endswith(":"):
-            prefix += ":"
+        # Make sure colon is at the end and don't re-add it if already present
+        prefix = prefix.strip(":") + ":"
 
     res = []
     for i in aliases:
@@ -170,6 +168,8 @@ def add_alias_prefix(aliases, prefix=False):
             # A prefix is already set.
             res.append(i)
         else:
+            if not prefix:
+                raise Exception("Alias '{}' does not have a lab prefix set, and a default could not be determined.".format(i))
             res.append(prefix + i)
     return res
 
