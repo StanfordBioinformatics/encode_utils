@@ -786,21 +786,16 @@ class Connection():
                  to the Portal for traceabilty purposes in the submitting lab. 
 
         Returns:
-            `dict`: The JSON response from the POST operation, or GET operation If the resource 
-            already exist on the Portal. The dict will be empty if the dry-run feature is enabled. 
-            It will also be empty if you are attempting to POST to a profile that doesn't include
-            the aliases property (see ``encode_utils.profiles.Profile.NO_ALIAS_PROFILE_IDS``) AND there
-            was a conflict because the record already exists on the Portal, because in this case,
-            there isn't an alias to do a GET request on and the existing record on the Portal isn't
-            indicated.
+            `dict`: The JSON response from the POST operation, or the existing record if it already
+            exists on the Portal (where a GET on any of it's aliases, when provided in the payload, 
+            finds the existing record). 
 
         Raises:
             encode_utils.connection.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
                 defualt set by the environment variable `DCC_AWARD`.
             encode_utils.connection.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
                 default set by the environment variable `DCC_LAB`.
-            encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok, with
-                the exception of a conflict (409) which is only logged.
+            encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok.
 
         Side effects:
             self.PROFILE_KEY will be popped out of the payload if present, otherwise, the key "@id" 
@@ -842,10 +837,10 @@ class Connection():
             pass
 
         no_alias = False #Use this to check later if doing a GET
-        alias = payload.get(eu.ALIAS_PROP_NAME)
-        if not alias:
+        aliases = payload.get(eu.ALIAS_PROP_NAME)
+        if not aliases:
             if profile_id in eup.Profile.NO_ALIAS_PROFILE_IDS or not require_aliases:
-                alias = ["N/A"]
+                aliases = ["N/A"]
                 no_alias = True
             else:
                 raise Exception(
@@ -853,10 +848,10 @@ class Connection():
                      " that include this property, and can be disabled by setting the `require_aliases`"
                      " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
                 
-        alias = alias[0]
+        first_alias = aliases[0]
         self.debug_logger.debug(
             ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
-             " payload:\n\n{payload}\n\n").format(alias=alias, url=url, payload=euu.print_format_dict(payload)))
+             " payload:\n\n{payload}\n\n").format(alias=first_alias, url=url, payload=euu.print_format_dict(payload)))
 
         if self.check_dry_run():
             return {}
@@ -864,7 +859,8 @@ class Connection():
                                  auth=self.auth,
                                  timeout=eu.TIMEOUT,
                                  headers=euu.REQUEST_HEADERS_JSON,
-                                 json=payload, verify=False)
+                                 json=payload, 
+                                 verify=False)
         #response_json = response.json()["@graph"][0]
         response_json = response.json()
 
@@ -877,13 +873,12 @@ class Connection():
             except KeyError:
                 # Some objects don't have an accession, i.e. replicates.
                 encid = response_json["uuid"]
-            self._log_post(alias=alias, dcc_id=encid)
+            self._log_post(alias=first_alias, dcc_id=encid)
             # Run 'after' hooks:
             self.after_submit_hooks(encid, profile_id, method=self.POST)
             return response_json
         elif response.status_code == requests.codes.CONFLICT:
             self.debug_logger.debug(response_json)
-            log_msg = "Will not post {} due to a conflict error from the Portal (i.e. it may already exist).".format(alias)
             # In the case of paired-end FASTQ files, it could also mean that there was a conflict
             # related to the 'paired_with' property, i.e. the latter is already linked to a FASTQ
             # file, which could even have been set to a deleted state on the Portal. The server
@@ -898,13 +893,18 @@ class Connection():
             #   'status': 'error'}
             # }
             #
-            self.log_error(log_msg)
             if no_alias:
-                return {}
+                response.raise_for_status()
             else:
-                return self.get(rec_ids=alias, ignore404=True)
+                existing_record = self.get(rec_ids=aliases, ignore404=True)
+                if not existing_record:
+                    response.raise_for_status() 
+                else:
+                    self.log_error("Will not POST '{}' since it already exists with aliases '{}'.".format(first_alias, existing_record["aliases"]))
+                    return existing_record
+                   
         else:
-            message = "Failed to POST {alias}".format(alias=alias)
+            message = "Failed to POST {alias}".format(alias=first_alias)
             self.log_error(message)
             self.debug_logger.debug("<<<<<< DCC POST RESPONSE: ")
             self.debug_logger.debug(euu.print_format_dict(response_json))
