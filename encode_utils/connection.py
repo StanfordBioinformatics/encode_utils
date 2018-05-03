@@ -347,7 +347,7 @@ class Connection():
             `list`: The search results.
 
         Raises:
-            requests.exceptions.HTTPError: The status code is not ok and != 404.
+            `requests.exceptions.HTTPError`: The status code is not ok and != 404.
 
         Example:
             Given we have the following dictionary *d* of key and value pairs::
@@ -508,8 +508,8 @@ class Connection():
             `dict`: The JSON response. Will be empty if no record was found AND ``ignore404=True``.
 
         Raises:
-            Exception: If the server responds with a FORBIDDEN status. 
-            requests.exceptions.HTTPError: The status code is not ok, and the
+            `Exception`: If the server responds with a FORBIDDEN status. 
+            `requests.exceptions.HTTPError`: The status code is not ok, and the
                 cause isn't due to a 404 (not found) status code when ``ignore404=True``.
         """
         if isinstance(rec_ids, str):
@@ -1390,15 +1390,64 @@ class Connection():
 
         response = self.post(payload=payload)
         return response['uuid']
+     
+    def download(self, rec_id, directory=None):
+        """
+        Downloads the contents of the specified file or document object from the ENCODE Portal to 
+        either the calling directory or the indicated download directory. The downloaded file will 
+        be named as it is on the Portal. 
 
-#    def download_document(self, document_id):
-#        """Downloads the specified document to the local directory.
-#        
-#        Args:
-#            document_id: `str`. A DCC document identifier (uuid, alias, or md5sum). 
-#        """
-#        doc_json = self.get(rec_ids=document_id, ignore404=False)
-        #doc = self.get(j
+        Args:
+            
+           rec_id: `str`. A DCC identifier for a file or document record on the Portal.
+           directory: `str`. The full path to the directory in which to download the file. If not
+               specified, then the file will be downloaded in the calling directory.
+
+        Returns:
+            `str`. The full path to the downloaded file.
+        """
+        rec = self.get(rec_id, ignore404=False)
+        # Check whether we need to download a Document or File record.
+        rec_type = rec["@type"]
+        if "Document" in rec_type:
+            file_type = False
+            # There is a bug on the ENCODE Portal where setting the auth results in a 400 status
+            # since documents are using some other type of authorization protocol. 
+            auth = ()
+        elif "File" in rec_type:
+            file_type = True
+            auth = self.auth
+        else:
+            raise Exception("This method can only download records of type 'File' and 'Document'; '{}' is neither of these.".format(rec_id))
+        # Formulate download URL:
+        if file_type:
+            url = os.path.join(self.dcc_url, rec["href"].lstrip("/"))
+        else:
+            url = os.path.join(self.dcc_url, "documents", rec["uuid"], rec["attachment"]["href"])
+        r = requests.get(
+            url,
+            auth=auth,
+            stream = True,
+            timeout=eu.TIMEOUT,
+            verify=False)
+        r.raise_for_status()
+        content_length = r.headers.get("Content-Length")
+        self.debug_logger.debug("Downloading file {} from URL {}.".format(rec_id, url))
+        if content_length:
+            self.debug_logger.debug("Download size: {:,.0f} bytes.".format(int(content_length)))
+        if file_type:
+            filename = r.headers["Content-Disposition"].split("filename=")[-1]
+        else:
+            filename = rec["attachment"]["download"]
+        if directory:
+            filename = os.path.join(directory,filename)
+        fout = open(filename, "wb")
+        # Download in chunks of 512 bytes
+        for line in r.iter_content(chunk_size=512):
+            fout.write(line)
+        fout.close()
+        self.debug_logger.debug("Download complete: {}.".format(filename))
+        return filename
 
     def link_document(self, rec_id, document_id):
         """

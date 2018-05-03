@@ -182,6 +182,24 @@ class TestConnection(unittest.TestCase):
         """
         self.conn = connection.Connection(eu.DCC_DEV_MODE,True) 
         self.assertEqual(True, self.conn.check_dry_run())
+
+    def test_bedfile_download(self):
+        """
+        Tests the method ``download`` for downloading a tiny BED file record (ENCFF815QOR) of size 44 KB. 
+        in this directory.
+        """
+        filepath = self.conn.download(rec_id="ENCFF815QOR", directory=os.getcwd())
+        self.assertTrue(os.stat(filepath).st_size > 0)
+
+    def test_doc_download(self):
+        """
+        Tests the method ``download`` for downloading a document record (michael-snyder:P-17) in
+        this directory.
+        """
+        filepath = self.conn.download(rec_id="michael-snyder:P-17", directory=os.getcwd())
+        self.assertTrue(os.stat(filepath).st_size > 0)
+        
+        
         
 
 if __name__ == "__main__":
