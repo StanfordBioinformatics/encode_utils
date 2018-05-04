@@ -1,4 +1,6 @@
 .nfs*
+*.gz
+*.pdf
 *.pyc
 /dcc_submitters.json
 *.txt

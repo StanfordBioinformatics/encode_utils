@@ -137,6 +137,8 @@ def main():
         # Default dcc_mode taken from environment variable DCC_MODE.
         conn = euc.Connection()
 
+    # Put conn into submit mode:
+    conn.set_submission(True)
     infile = args.infile
     patch = args.patch
     gen = create_payloads(profile_id=profile_id, infile=infile)

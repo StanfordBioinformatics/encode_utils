@@ -113,7 +113,7 @@ class Connection():
     #: Constant
     PATCH = "patch"
 
-    def __init__(self, dcc_mode=None, dry_run=False):
+    def __init__(self, dcc_mode=None, dry_run=False, submission=False):
 
         #: A reference to the `debug` logging instance that was created earlier in ``encode_utils.debug_logger``.
         #: This class adds a file handler, such that all messages send to it are logged to this
@@ -159,6 +159,15 @@ class Connection():
         self._add_file_handler(logger=self.post_logger, level=log_level, tag="posted")
 
         self.check_dry_run() #If on, signal this in the logs.
+
+        #: Indicates whether this class is being use to submit objects to the Portal. The main 
+        #: effect of setting this option to True is to update the default behavior of the
+        #: ``self.get()`` method, such that it it fetches its payload through the databsse directly 
+        #: rather than any index. That is useful when you are submitting several inter-dependent
+        #: objects in turn and the new objects haven't yet had time to be indexed (otherwise you risk 
+        #: getting a 404 response back meaning "Resource Not Found". This attribute can be also set 
+        #: via the instance method ``self.set_submission``. 
+        self.set_submission(submission) #sets self.submission attribute.
 
         #: The API key to use when authenticating with the DCC servers. This is set automatically
         #: to the value of the `DCC_API_KEY` environment variable in the ``_set_api_keys()`` private
@@ -244,6 +253,18 @@ class Connection():
         """
         entry = alias + "\t" + dcc_id
         self.post_logger.info(entry)
+
+    def set_submission(self, status):
+        """Sets the boolean value of the ``self.submission`` attribute.
+
+        Args:
+            status: `bool`. 
+        """
+        self.submission = status
+        if self.submission: 
+            self.debug_logger.debug("Connection.submission=True: In submission mode.")
+        else:
+            self.debug_logger.debug("Connection.submission=False: In non-submission mode.")
 
     def check_dry_run(self):
         """
@@ -517,7 +538,9 @@ class Connection():
         status_codes = {}  # key is return code, value is the record ID
         for r in rec_ids:
             r = r.strip("/")
-            url = os.path.join(self.dcc_url, r, "?format=json&datastore=database")
+            url = os.path.join(self.dcc_url, r, "?format=json")
+            if self.submission:
+                url += "&datastore=database"
             if frame:
                 url += "&frame={frame}".format(frame=frame)
             self.debug_logger.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
