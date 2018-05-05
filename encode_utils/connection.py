@@ -1241,11 +1241,11 @@ class Connection():
         aws_creds["UPLOAD_URL"] = creds["upload_url"]
         return aws_creds
 
-    def get_upload_credentials(self, file_id, regen=True):
+    def get_upload_credentials(self, file_id):
         """
         Similar to ``self.extract_aws_upload_credentials()``, but it goes a step further in that it is
         capable of regenerating the upload credentials if they aren't currently present in the file
-        record unless you specifiy regen=False
+        record.
 
         Args:
             file_id: `str`. A file object identifier (i.e. accession, uuid, alias, md5sum).
@@ -1259,17 +1259,7 @@ class Connection():
         try:
             creds = file_json["upload_credentials"]
         except KeyError:
-            if regen:
-                creds = self.regenerate_aws_upload_creds(file_id)
-            else:
-                url = os.path.join(self.dcc_url, "files", file_json["accession"], "upload")
-                r = requests.get(
-                    url,
-                    auth=self.auth,
-                    stream = True,
-                    timeout=eu.TIMEOUT,)
-                r.raise_for_status()
-                creds = r.json()['@graph'][0].get('upload_credentials', {})
+            creds = self.regenerate_aws_upload_creds(file_id)
             # Will be None if forbidden.
 
         # URL example from dev Portal:
@@ -1384,30 +1374,6 @@ class Connection():
                 md5sum = euu.calculate_md5sum(file_path)
                 self.patch({self.ENCID_KEY: file_rec["@id"], "md5sum": md5sum})
 
-<<<<<<< HEAD
-        cmd = "aws s3 cp {file_path} {upload_url}".format(
-            file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
-        self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
-        if self.check_dry_run():
-            return
-        popen = subprocess.Popen(cmd,
-                                 shell=True,
-                                 env=os.environ.update(aws_creds),
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-        stdout, stderr = popen.communicate()
-        stdout = stdout.decode("utf-8")
-        stderr = stderr.decode("utf-8")
-        retcode = popen.returncode
-        if retcode:
-            error_msg = "Failed to upload file '{}' for {}.".format(file_path, file_id)
-            self.log_error(error_msg)
-            error_msg = (" Subprocess command '{cmd}' failed with return code '{retcode}'."
-                         " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
-                cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr)
-            self.debug_logger.debug(error_msg)
-            raise FileUploadFailed(error_msg)
-=======
         parse = urllib.parse.urlparse(file_path)
         if parse.scheme != 's3':
             cmd = "aws s3 cp {file_path} {upload_url}".format(
@@ -1441,7 +1407,6 @@ class Connection():
             err = s3.copy(copy_source, parse_upload.netloc, parse_upload.path.lstrip('/'))
             self.debug_logger.debug('boto Copy: {}'.format(err))
 
->>>>>>> try using boto to aws cp directly
         self.debug_logger.debug("AWS upload successful.")
 
     def get_platforms_on_experiment(self, rec_id):
@@ -1500,13 +1465,8 @@ class Connection():
 
         response = self.post(payload=payload)
         return response['uuid']
-<<<<<<< HEAD
 
     def download(self, rec_id, directory=None):
-=======
-     
-    def download(self, rec_id, directory=None, redirect=True):
->>>>>>> changes for check bucket
         """
         Downloads the contents of the specified file or document object from the ENCODE Portal to
         either the calling directory or the indicated download directory. The downloaded file will
@@ -1544,12 +1504,8 @@ class Connection():
             auth=auth,
             stream = True,
             timeout=eu.TIMEOUT,
-            verify=False,
-            allow_redirects=redirect)
+            verify=False)
         r.raise_for_status()
-        if not redirect:
-            self.debug_logger.debug("Getting file download descriptor {} from URL {}.".format(rec_id, url))
-            return r
         content_length = r.headers.get("Content-Length")
         self.debug_logger.debug("Downloading file {} from URL {}.".format(rec_id, url))
         if content_length:
