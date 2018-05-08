@@ -485,7 +485,7 @@ class Connection():
     #        return response.json()
     #    response.raise_for_status()
 
-    def get(self, rec_ids, ignore404=True, frame="object"):
+    def get(self, rec_ids, ignore404=True, frame="object", datastore='database'):
         """GET a record from the Portal.
 
         Looks up a record in the Portal and performs a GET request, returning the JSON serialization of
@@ -517,7 +517,7 @@ class Connection():
         status_codes = {}  # key is return code, value is the record ID
         for r in rec_ids:
             r = r.strip("/")
-            url = os.path.join(self.dcc_url, r, "?format=json&datastore=database")
+            url = os.path.join(self.dcc_url, r, "?format=json&datastore={}".format(datastore))
             if frame:
                 url += "&frame={frame}".format(frame=frame)
             self.debug_logger.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
@@ -1180,7 +1180,7 @@ class Connection():
         aws_creds["UPLOAD_URL"] = creds["upload_url"]
         return aws_creds
 
-    def get_upload_credentials(self, file_id, regen=True):
+    def get_upload_credentials(self, file_id, regen=True, datastore='database'):
         """
         Similar to ``self.extract_aws_upload_credentials()``, but it goes a step further in that it is
         capable of regenerating the upload credentials if they aren't currently present in the file
@@ -1194,14 +1194,14 @@ class Connection():
              returned by ``self.regenerate_aws_upload_creds``, which tries to generate the value for
              this property.
         """
-        file_json = self.get(file_id, ignore404=False)
+        file_json = self.get(file_id, ignore404=False, datastore='elasticsearch')
         try:
             creds = file_json["upload_credentials"]
         except KeyError:
             if regen:
                 creds = self.regenerate_aws_upload_creds(file_id)
             else:
-                url = os.path.join(self.dcc_url, "files", file_json["accession"], "upload")
+                url = urllib.parse.urljoin(self.dcc_url, file_json["@id"]+"upload")
                 r = requests.get(
                     url,
                     auth=self.auth,

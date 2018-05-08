@@ -28,6 +28,14 @@ def get_parser():
     return parser
 
 
+def add_to_storage(storage, acc, status, fmt, size):
+
+    storage[status] = storage.get(status, {})
+    storage[status][fmt] = storage[status].get(fmt, 0)
+    storage[status][fmt] += size
+
+    return storage
+
 def main():
 
     """Program
@@ -48,8 +56,25 @@ def main():
     s3 = boto3.client('s3')
 
     storage = {}
+    added = {}
+    logfh = open('files.log.tsv', 'r+')
+
+    for old in logfh.readlines():
+        (acc, status, fmt, size) = old.split('\t')
+        storage = add_to_storage(storage, acc, status, fmt, int(size))
+        added[acc] = size
     for f in all_files:
-        creds = conn.get_upload_credentials(f['accession'], regen=False)
+        if not f.get('accession'):
+            print("FILE: {} \nhas no accession".format(f))
+            # note these should be typcially counted, they are Reference file, maybe use @id as key?
+            f['accession'] = f['@id']
+        if added.get(f['accession'], 0):
+            print("FILE: {} already counted, skipping".format(f['accession']))
+            continue
+        creds = conn.get_upload_credentials(f['accession'], regen=False, datastore='elasticsearch')
+        if not creds or not creds.get('upload_url'):
+            print("FILE {} has never been uploaded, skipping".format(f['accession']))
+            continue
         full_path = creds['upload_url']
         parse = urlparse(full_path)
         bucket = parse.netloc
@@ -57,11 +82,14 @@ def main():
         try:
             s3res = s3.head_object(Bucket=bucket, Key=key)
         except Exception as e:
-            print("S3 error:{}".format(e))
+            print("FILE: {}; S3 error:{}".format(f['accession'], e))
             continue
-        storage[f['status']] = storage.get(f['status'], {})
-        storage[f['status']][f['file_format']] = storage[f['status']].get(f['file_format'],0)
-        storage[f['status']][f['file_format']] += s3res['ContentLength']
+
+        storage = add_to_storage(storage, f['accession'], f['status'], f['file_format'], s3res['ContentLength'])
+
+        logfh.write("\t".join([f['accession'], f['status'], f['file_format'], str(s3res['ContentLength'])]))
+        logfh.write("\n")
+        logfh.flush()
 
     fh = open('sizes.tsv', 'w')
     first = list(storage.values())[0]
