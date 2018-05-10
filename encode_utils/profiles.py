@@ -150,7 +150,6 @@ class Profile:
         #: A list of the property names that are writable, which are those that don't fall into the
         #: self.non_writable_props category.
         self.writable_props = []
-
         for i in self.properties:
             if self.is_prop_not_submittable(i) or self.is_prop_read_only(i):
                 self.non_writable_props.append(i)

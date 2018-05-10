@@ -205,7 +205,6 @@ def create_payloads(profile_id, infile):
     # right type when generating the  payload (dict).
     schema = profile.get_profile()
     schema_props = schema["properties"]
-    schema_props.update({RECORD_ID_FIELD: 1})  # Not an actual schema property.
     field_index = {}
     fh = open(infile, 'r')
     header_fields = fh.readline().strip("\n").split("\t")
@@ -217,9 +216,10 @@ def create_payloads(profile_id, infile):
             skip_field_indices.append(fi_count)
             continue
         if field not in schema_props:
-            raise Exception(
-                "Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(
-                    field, profile.profile_id))
+            if field != RECORD_ID_FIELD:
+                raise Exception(
+                    "Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(
+                        field, profile.profile_id))
         field_index[fi_count] = field
 
     line_count = 1  # already read header line

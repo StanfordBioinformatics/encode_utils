@@ -506,7 +506,7 @@ class Connection():
     #        return response.json()
     #    response.raise_for_status()
 
-    def get(self, rec_ids, ignore404=True, frame="object"):
+    def get(self, rec_ids, ignore404=True, frame=None):
         """GET a record from the Portal.
 
         Looks up a record in the Portal and performs a GET request, returning the JSON serialization of
@@ -1006,9 +1006,9 @@ class Connection():
             self.debug_logger.debug("Success.")
             response_json = response_json["@graph"][0]
             uuid = response_json["uuid"]
-            profile = eup.Profile(response_json["@id"])
+            profile_id = eup.Profile(response_json["@id"]).profile_id
             # Run 'after' hooks:
-            self.after_submit_hooks(uuid, profile.profile_id, method=self.PATCH)
+            self.after_submit_hooks(uuid, profile_id, method=self.PATCH)
             return response_json
         elif response.status_code == requests.codes.FORBIDDEN:
             # Don't have permission to PATCH this object.
