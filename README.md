@@ -14,6 +14,8 @@ May 10, 2018
 
 Release [1.4.1](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/1.4.1)
 
+***
+
 May 4, 2018
 
 Release [1.4.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/1.4.0).
