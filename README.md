@@ -10,6 +10,12 @@ API and script documentation are available on [Read the Docs](http://encode-util
 
 # Latest news
 
+May 21, 2018
+
+Release [1.5.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/1.5.0)
+
+***
+
 May 10, 2018
 
 Release [1.4.1](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/1.4.1)
