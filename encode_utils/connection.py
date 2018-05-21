@@ -45,6 +45,11 @@ class FileUploadFailed(Exception):
     Raised when the AWS CLI returns a non-zero exit status.
     """
 
+class MissingAlias(Exception):
+    """
+    Raised when POSTING a payload that doesn't contain the 'aliases' property and the argument
+    require_aliases in Connection.post() is set to False.
+    """
 
 class LabPropertyMissing(Exception):
     """
@@ -262,9 +267,9 @@ class Connection():
         """
         self.submission = status
         if self.submission: 
-            self.debug_logger.debug("Connection.submission=True: In submission mode.")
+            self.debug_logger.debug("submission=True: In submission mode.")
         else:
-            self.debug_logger.debug("Connection.submission=False: In non-submission mode.")
+            self.debug_logger.debug("submission=False: In non-submission mode.")
 
     def check_dry_run(self):
         """
@@ -818,6 +823,8 @@ class Connection():
                 defualt set by the environment variable `DCC_AWARD`.
             encode_utils.connection.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
                 default set by the environment variable `DCC_LAB`.
+            encode_utils.connection.MissingAlias: The argument 'require_aliases' is set to False and
+                the 'aliases' property is missing in the payload. 
             encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok.
 
         Side effects:
@@ -866,11 +873,22 @@ class Connection():
                 aliases = ["N/A"]
                 no_alias = True
             else:
-                raise Exception(
+                raise MissingAlias(
                     ("Missing property '{}' in payload {}. This is required by default for the profiles"
                      " that include this property, and can be disabled by setting the `require_aliases`"
                      " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
                 
+        # Validate the payload against the schema
+        self.debug_logger.debug("Validating the payload against the schema")
+        validation_error = euu.err_context(payload=payload, schema=eup.Profile.PROFILES[profile_id])
+        if validation_error:
+            self.log_error("Invalid schema instance of the {} profile.".format(profile_id)) 
+            self.debug_logger.debug("Payload is: {}".format(euu.print_format_dict(payload)))
+            self.log_error(validation_error[0]) # The top-level validation message
+            if validation_error[1]: # The validation context can be empty
+                self.debug_logger.debug(euu.print_format_dict(validation_error[1]))
+            raise Exception(euu.print_format_dict(validation_error[0]))
+
         first_alias = aliases[0]
         self.debug_logger.debug(
             ("<<<<<< POSTING {alias} To DCC with URL {url} and this"

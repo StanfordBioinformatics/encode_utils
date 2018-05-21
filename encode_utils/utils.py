@@ -30,9 +30,22 @@ DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
 
 def err_context(payload, schema):
+    """
+    Validates the schema instance against the provided JSON schema.
+
+    Args:
+        payload: dict. 
+        schema: dict. 
+
+    Returns:
+        `None` if there aren't any instance validation errors. Otherwise, a two-item tuple
+        where the first item is the main error message; the second is a dictionary-based
+        error hash that contains the contextual errors. This latter item may be emtpy. 
+    """
     try:
         jsonschema.validate(payload,schema)
     except jsonschema.exceptions.ValidationError as err:
+        main_msg = err.message
         messages = []
         schema_paths = []
         for i in err.context:
@@ -41,7 +54,7 @@ def err_context(payload, schema):
         context = {}
         for i in range(len(schema_paths)):
             context["->".join([str(x) for x in schema_paths[i]])] = messages[i]
-        return context
+        return main_msg, context
 
 
 def calculate_md5sum(file_path):
