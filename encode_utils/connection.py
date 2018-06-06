@@ -121,7 +121,7 @@ class Connection():
     def __init__(self, dcc_mode=None, dry_run=False, submission=False):
 
         #: A reference to the `debug` logging instance that was created earlier in ``encode_utils.debug_logger``.
-        #: This class adds a file handler, such that all messages send to it are logged to this
+        #: This class adds a file handler, such that all messages sent to it are logged to this
         #: file in addition to STDOUT.
         self.debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME)
 
@@ -136,9 +136,9 @@ class Connection():
         self.dcc_host = eu.DCC_MODES[self.dcc_mode]["host"]
         self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
 
-        #: Set to True to prevent any server-side changes on the ENCODE Portal, i.e. PUT, POST, 
+        #: Set to True to prevent any server-side changes on the ENCODE Portal, i.e. PUT, POST,
         #: PATCH, DELETE requests will not be sent to the Portal. After-POST and after-PATCH
-        #: hooks (see the instance method :meth:`after_submit_hooks`) will not be run either in 
+        #: hooks (see the instance method :meth:`after_submit_hooks`) will not be run either in
         #: this case. You can turn off this dry-run feature by calling the instance method
         #: :meth:`set_live_run`.
         self.dry_run = dry_run
@@ -165,13 +165,13 @@ class Connection():
 
         self.check_dry_run() #If on, signal this in the logs.
 
-        #: Indicates whether this class is being use to submit objects to the Portal. The main 
+        #: Indicates whether this class is being use to submit objects to the Portal. The main
         #: effect of setting this option to True is to update the default behavior of the
-        #: ``self.get()`` method, such that it it fetches its payload through the databsse directly 
+        #: ``self.get()`` method, such that it it fetches its payload through the databsse directly
         #: rather than any index. That is useful when you are submitting several inter-dependent
-        #: objects in turn and the new objects haven't yet had time to be indexed (otherwise you risk 
-        #: getting a 404 response back meaning "Resource Not Found". This attribute can be also set 
-        #: via the instance method ``self.set_submission``. 
+        #: objects in turn and the new objects haven't yet had time to be indexed (otherwise you risk
+        #: getting a 404 response back meaning "Resource Not Found". This attribute can be also set
+        #: via the instance method ``self.set_submission``.
         self.set_submission(submission) #sets self.submission attribute.
 
         #: The API key to use when authenticating with the DCC servers. This is set automatically
@@ -219,6 +219,17 @@ class Connection():
         return dcc_mode
 
     def _get_logfile_name(self, tag):
+        """
+        Creates a name for a log file that is meant to be used in a call to
+        ``logging.FileHandler``. The log file name will incldue the path to the log directory given
+        by the `LOG_DIR` constant. The format of the file name is: 'log_$HOST_$TAG.txt', where
+        $HOST is the hostname part of the URL given by ``self.URL``, and $TAG is the value of the
+        'tag' argument. The log directory will be created if need be.
+
+        Args:
+            tag: `str`. A tag name to add to at the end of the log file name for clarity on the
+                log file's purpose.
+        """
         if not os.path.exists(LOG_DIR):
             os.mkdir(LOG_DIR)
         filename = "log_eu_" + self.dcc_mode + "_" + tag + ".txt"
@@ -227,8 +238,17 @@ class Connection():
 
     def _add_file_handler(self, logger, level, tag):
         """
-        Creates a logger that logs messages at the ERROR level or greater. There is a single handler,
-        which logs its messages to a file by the name of log_eu_$DCC_MODE_error.txt.
+        Adds a ``logging.FileHandler`` handler to the specified ``logging`` instance that will log
+        the messages it receives at the specified error level or greater.  The log file name will
+        be of the form log_$HOST_$TAG.txt, where $HOST is the hostname part of the URL given
+        by ``self.URL``, and $TAG is the value of the 'tag' argument.
+
+        Args:
+            logger: The `logging.Logger` instance to add the `logging.FileHandler` to.
+            level:  `int`. A logging level (i.e. given by one of the constants `logging.DEBUG`,
+                `logging.INFO`, `logging.WARNING`, `logging.ERROR`, `logging.CRITICAL`).
+            tag: `str`. A tag name to add to at the end of the log file name for clarity on the
+                log file's purpose.
         """
         f_formatter = logging.Formatter('%(asctime)s:%(name)s:\t%(message)s')
         filename = self._get_logfile_name(tag)
@@ -263,10 +283,10 @@ class Connection():
         """Sets the boolean value of the ``self.submission`` attribute.
 
         Args:
-            status: `bool`. 
+            status: `bool`.
         """
         self.submission = status
-        if self.submission: 
+        if self.submission:
             self.debug_logger.debug("submission=True: In submission mode.")
         else:
             self.debug_logger.debug("submission=False: In non-submission mode.")
@@ -274,7 +294,7 @@ class Connection():
     def check_dry_run(self):
         """
         Checks if the dry-run feature is enabled, and if so, logs the fact. This is mainly meant to
-        be called by other methods that are designed to make modifications on the ENCODE Portal. 
+        be called by other methods that are designed to make modifications on the ENCODE Portal.
 
         Returns:
             `True`: The dry-run feature is enabled.
@@ -293,7 +313,7 @@ class Connection():
     def set_live_run(self):
         """Disables the dry-run feature and logs the fact."""
         self.dry_run = False
-        self.log_error("DRY RUN is disabled.") 
+        self.log_error("DRY RUN is disabled.")
 
     def log_error(self, msg):
         """Sends 'msg' to both ``self.error_logger`` and ``self.debug_logger``.
@@ -359,14 +379,14 @@ class Connection():
         """
         Searches the Portal using the provided query parameters, which will first be URL encoded.
         The user can pass in the query parameters and values via the `search_args` argument, or
-        pass in a URL directly that contains a query string via the `url` argument, or provide 
+        pass in a URL directly that contains a query string via the `url` argument, or provide
         values for both arguments in which case the query parameters will be merged with values in
-        `search_args` taking precedence. 
+        `search_args` taking precedence.
 
         Args:
             search_args: `dict`. The key and value query parameters.
             url: `str`. A URL used to search for records interactively in the ENCODE Portal. The
-                query will be extracted from the URL. 
+                query will be extracted from the URL.
             limit: `int`. The number of search results to return. Don't specify if you want all.
 
         Returns:
@@ -394,7 +414,7 @@ class Connection():
             # Format query string into list of tuples:
             url_obj = urllib.parse.urlsplit(url)
             query_list = urllib.parse.parse_qsl(url_obj.query)
-            # Ex: If the query string is originally 
+            # Ex: If the query string is originally
             #
             # "?type=Biosample&lab.title=Michael+Snyder%2C+Stanford&award.rfa=ENCODE4&biosample_type=tissue"
             #
@@ -402,7 +422,7 @@ class Connection():
             #
             # [('type', 'Biosample'), ('lab.title', 'Michael Snyder, Stanford'), ('award.rfa', 'ENCODE4'), ('biosample_type', 'tissue')]
             #
-            # Convert query_list into a dict. Note that I could have used urllib.parse.parse_qs 
+            # Convert query_list into a dict. Note that I could have used urllib.parse.parse_qs
             # above instead of urllib.parse.parse_qsl, in which case it would look like this:
             #
             # {'type': ['Biosample'], 'lab.title': ['Michael Snyder, Stanford'], 'award.rfa': ['ENCODE4'], 'biosample_type': ['tissue']}
@@ -411,7 +431,7 @@ class Connection():
             # become url encoded too.
             #
             # Convert query_list into a dict:
-            
+
             query_dict = {}
             for key,val in query_list:
                 query_dict[key] = val
@@ -420,7 +440,7 @@ class Connection():
             query_dict.update(search_args)
             search_args = query_dict
             del query_dict
-                
+
         url = self.make_search_url(search_args=search_args, limit=limit)
         self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
         response = requests.get(url,
@@ -505,7 +525,7 @@ class Connection():
     #    self.logger.info(
     #      (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
     #    if self.dry_run:
-    #        return {}  
+    #        return {}
     #    response = requests.delete(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
     #    if response.ok:
     #        return response.json()
@@ -534,7 +554,7 @@ class Connection():
             `dict`: The JSON response. Will be empty if no record was found AND ``ignore404=True``.
 
         Raises:
-            `Exception`: If the server responds with a FORBIDDEN status. 
+            `Exception`: If the server responds with a FORBIDDEN status.
             `requests.exceptions.HTTPError`: The status code is not ok, and the
                 cause isn't due to a 404 (not found) status code when ``ignore404=True``.
         """
@@ -626,7 +646,7 @@ class Connection():
                 registered hooks to look through.
         """
         if self.check_dry_run():
-            return 
+            return
         # Check allowed_methods. Will matter later when there are POST-specific
         # and PATCH-specific hooks.
         allowed_methods = [self.POST, self.PATCH, ""]
@@ -805,18 +825,18 @@ class Connection():
 
         Args:
             payload: `dict`. The data to submit.
-            require_aliases: `bool`.  `True` means that the 'aliases' property is to be required in 
-                 `payload`. This is the default and it is highly recommended not to change this 
+            require_aliases: `bool`.  `True` means that the 'aliases' property is to be required in
+                 `payload`. This is the default and it is highly recommended not to change this
                  because it'll be easy to create duplicates on the server if accidentally POSTING
                  the same payload again.  For example, you can easily create the same biosample
                  as many times as you want on the Portal when not providing an alias.  Furthermore,
-                 submitting labs should include at least one alias per record being submitted 
-                 to the Portal for traceabilty purposes in the submitting lab. 
+                 submitting labs should include at least one alias per record being submitted
+                 to the Portal for traceabilty purposes in the submitting lab.
 
         Returns:
             `dict`: The JSON response from the POST operation, or the existing record if it already
-            exists on the Portal (where a GET on any of it's aliases, when provided in the payload, 
-            finds the existing record). 
+            exists on the Portal (where a GET on any of it's aliases, when provided in the payload,
+            finds the existing record).
 
         Raises:
             encode_utils.connection.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
@@ -824,11 +844,11 @@ class Connection():
             encode_utils.connection.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
                 default set by the environment variable `DCC_LAB`.
             encode_utils.connection.MissingAlias: The argument 'require_aliases' is set to False and
-                the 'aliases' property is missing in the payload. 
+                the 'aliases' property is missing in the payload.
             encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok.
 
         Side effects:
-            self.PROFILE_KEY will be popped out of the payload if present, otherwise, the key "@id" 
+            self.PROFILE_KEY will be popped out of the payload if present, otherwise, the key "@id"
             will be popped out. Furthermore, self.ENCID_KEY will be popped out if present in the payload.
         """
         self.debug_logger.debug("\nIN post().")
@@ -877,12 +897,12 @@ class Connection():
                     ("Missing property '{}' in payload {}. This is required by default for the profiles"
                      " that include this property, and can be disabled by setting the `require_aliases`"
                      " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
-                
+
         # Validate the payload against the schema
         self.debug_logger.debug("Validating the payload against the schema")
         validation_error = euu.err_context(payload=payload, schema=eup.Profile.PROFILES[profile_id])
         if validation_error:
-            self.log_error("Invalid schema instance of the {} profile.".format(profile_id)) 
+            self.log_error("Invalid schema instance of the {} profile.".format(profile_id))
             self.debug_logger.debug("Payload is: {}".format(euu.print_format_dict(payload)))
             self.log_error(validation_error[0]) # The top-level validation message
             if validation_error[1]: # The validation context can be empty
@@ -900,7 +920,7 @@ class Connection():
                                  auth=self.auth,
                                  timeout=eu.TIMEOUT,
                                  headers=euu.REQUEST_HEADERS_JSON,
-                                 json=payload, 
+                                 json=payload,
                                  verify=False)
         #response_json = response.json()["@graph"][0]
         response_json = response.json()
@@ -926,11 +946,11 @@ class Connection():
             # response in either case would look something like this:
             #
             # {
-            #   'detail': "Keys conflict: [('file:paired_with', 'f39320d9-0970-4369-b680-5965a5e85b6f')]", 
+            #   'detail': "Keys conflict: [('file:paired_with', 'f39320d9-0970-4369-b680-5965a5e85b6f')]",
             #   'description': 'There was a conflict when trying to complete your request.',
-            #   'code': 409, 
-            #   '@type': ['HTTPConflict', 'Error'], 
-            #   'title': 'Conflict', 
+            #   'code': 409,
+            #   '@type': ['HTTPConflict', 'Error'],
+            #   'title': 'Conflict',
             #   'status': 'error'}
             # }
             #
@@ -939,11 +959,11 @@ class Connection():
             else:
                 existing_record = self.get(rec_ids=aliases, ignore404=True)
                 if not existing_record:
-                    response.raise_for_status() 
+                    response.raise_for_status()
                 else:
                     self.log_error("Will not POST '{}' since it already exists with aliases '{}'.".format(first_alias, existing_record["aliases"]))
                     return existing_record
-                   
+
         else:
             message = "Failed to POST {alias}".format(alias=first_alias)
             self.log_error(message)
@@ -1042,19 +1062,19 @@ class Connection():
     def remove_props(self, rec_id, props=[]):
         """Runs a PUT request to remove properties of interest on the specified record.
 
-        Note that before-submit and after-submit hooks are not run here as they would be in 
+        Note that before-submit and after-submit hooks are not run here as they would be in
         `self.path()` or `self.post()` (:meth:`before_submit_hooks` and :meth:`after_submit_hooks`
         are not called).
 
         Args:
             rec_id: `str`. An identifier for the record on the Portal.
-            props: `list`. The properties to remove from the record. 
+            props: `list`. The properties to remove from the record.
 
         Raises:
 
         Returns:
             `dict`. Contains the JSON returned from the PUT request.
-            
+
         """
         self.debug_logger.debug("\nIN remove_props()")
         rec_json = self.get(rec_ids=rec_id, frame="object", ignore404=False)
@@ -1077,22 +1097,22 @@ class Connection():
             else:
                 # Then it is safe to remove this property.
                 editable_json.pop(prop)
-            
+
         url = os.path.join(self.dcc_url, rec_id)
         self.debug_logger.debug("Attempting to remove properties {} from record '{}' by sending a PUT request with payload {}.".format(props, rec_id, euu.print_format_dict(editable_json)))
         if self.check_dry_run():
-            return 
+            return
         response = requests.put(
             url,
-            auth=self.auth, 
-            timeout=eu.TIMEOUT, 
+            auth=self.auth,
+            timeout=eu.TIMEOUT,
             headers=euu.REQUEST_HEADERS_JSON,
-            json=editable_json, 
+            json=editable_json,
             verify=False
         )
         response.raise_for_status()
         self.debug_logger.debug("Success")
-        response_json = response.json() 
+        response_json = response.json()
         return response_json
 
 
@@ -1309,7 +1329,7 @@ class Connection():
         file record.
 
         If the dry-run feature is enabled, then this method will return prior to launching the
-        upload command. 
+        upload command.
 
         Unfortunately, it doesn't appear that pulling a file into S3 is supported through the AWS API;
         only existing S3 objects or local files can be pushed to a S3 bucket. External files must first
@@ -1321,7 +1341,7 @@ class Connection():
               If not set, defaults to `None` in which case the local file path will be extracted from the
               record's `submitted_file_name` property.
             set_md5sum: `bool`. True means to also calculate the md5sum and set the file record's md5sum
-              property on the Portal (this currently is only implemented for local files, not S3). 
+              property on the Portal (this currently is only implemented for local files, not S3).
               This will always take place whenever the property isn't yet and when uploading a
               local file.
               set.
@@ -1355,7 +1375,7 @@ class Connection():
             file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
         if self.check_dry_run():
-            return 
+            return
         popen = subprocess.Popen(cmd,
                                  shell=True,
                                  env=os.environ.update(aws_creds),
@@ -1431,15 +1451,15 @@ class Connection():
 
         response = self.post(payload=payload)
         return response['uuid']
-     
+
     def download(self, rec_id, directory=None):
         """
-        Downloads the contents of the specified file or document object from the ENCODE Portal to 
-        either the calling directory or the indicated download directory. The downloaded file will 
-        be named as it is on the Portal. 
+        Downloads the contents of the specified file or document object from the ENCODE Portal to
+        either the calling directory or the indicated download directory. The downloaded file will
+        be named as it is on the Portal.
 
         Args:
-            
+
            rec_id: `str`. A DCC identifier for a file or document record on the Portal.
            directory: `str`. The full path to the directory in which to download the file. If not
                specified, then the file will be downloaded in the calling directory.
@@ -1453,7 +1473,7 @@ class Connection():
         if "Document" in rec_type:
             file_type = False
             # There is a bug on the ENCODE Portal where setting the auth results in a 400 status
-            # since documents are using some other type of authorization protocol. 
+            # since documents are using some other type of authorization protocol.
             auth = ()
         elif "File" in rec_type:
             file_type = True

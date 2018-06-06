@@ -40,7 +40,7 @@ def err_context(payload, schema):
     Returns:
         `None` if there aren't any instance validation errors. Otherwise, a two-item tuple
         where the first item is the main error message; the second is a dictionary-based
-        error hash that contains the contextual errors. This latter item may be emtpy. 
+        error hash that contains the contextual errors. This latter item may be empty. 
     """
     try:
         jsonschema.validate(payload,schema)
