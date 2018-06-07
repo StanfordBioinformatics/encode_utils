@@ -1253,7 +1253,8 @@ class Connection():
              returned by ``self.regenerate_aws_upload_creds``, which tries to generate the value for
              this property.
         """
-        file_json = self.get(file_id, ignore404=False, datastore='elasticsearch')
+        file_json = self.get(file_id, ignore404=False, datastore=datastore)
+        
         try:
             creds = file_json["upload_credentials"]
         except KeyError:
