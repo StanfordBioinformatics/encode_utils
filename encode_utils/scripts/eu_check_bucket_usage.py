@@ -16,6 +16,7 @@ from encode_utils.parent_argparser import dcc_login_parser
 # dcc_login_parser  contains the arguments needed for logging in to the
 # ENCODE Portal, including which env.
 import boto3
+import requests
 from urllib.parse import urlparse
 
 
@@ -69,11 +70,16 @@ def main():
             # note these should be typcially counted, they are Reference file, maybe use @id as key?
             f['accession'] = f['@id']
         if added.get(f['accession'], 0):
-            print("FILE: {} already counted, skipping".format(f['accession']))
+            print("FILE: {} \nalready counted, skipping".format(f['accession']))
             continue
-        creds = conn.get_upload_credentials(f['accession'], regen=False, datastore='elasticsearch')
+        try:
+            creds = conn.get_upload_credentials(f['uuid'], regen=False, datastore='elasticsearch')
+        except requests.exceptions.HTTPError:
+            print("FILE {} \ncannot be found by get_upload_credentials".format(f))
+            continue
+            
         if not creds or not creds.get('upload_url'):
-            print("FILE {} has never been uploaded, skipping".format(f['accession']))
+            print("FILE {} \nhas never been uploaded, skipping".format(f['accession']))
             continue
         full_path = creds['upload_url']
         parse = urlparse(full_path)
