@@ -1243,7 +1243,7 @@ class Connection():
         """
         Similar to ``self.extract_aws_upload_credentials()``, but it goes a step further in that it is
         capable of regenerating the upload credentials if they aren't currently present in the file
-        record.
+        record unless you specifiy regen=False
 
         Args:
             file_id: `str`. A file object identifier (i.e. accession, uuid, alias, md5sum).
@@ -1474,8 +1474,8 @@ class Connection():
 
         response = self.post(payload=payload)
         return response['uuid']
-
-    def download(self, rec_id, directory=None):
+     
+    def download(self, rec_id, directory=None, redirect=True):
         """
         Downloads the contents of the specified file or document object from the ENCODE Portal to
         either the calling directory or the indicated download directory. The downloaded file will
@@ -1513,8 +1513,12 @@ class Connection():
             auth=auth,
             stream = True,
             timeout=eu.TIMEOUT,
-            verify=False)
+            verify=False,
+            allow_redirects=redirect)
         r.raise_for_status()
+        if not redirect:
+            self.debug_logger.debug("Getting file download descriptor {} from URL {}.".format(rec_id, url))
+            return r
         content_length = r.headers.get("Content-Length")
         self.debug_logger.debug("Downloading file {} from URL {}.".format(rec_id, url))
         if content_length:
