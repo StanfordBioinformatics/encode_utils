@@ -15,6 +15,8 @@ from encode_utils.connection import Connection
 from encode_utils.parent_argparser import dcc_login_parser
 # dcc_login_parser  contains the arguments needed for logging in to the
 # ENCODE Portal, including which env.
+import boto3
+from urllib.parse import urlparse
 
 
 def get_parser():
@@ -22,17 +24,7 @@ def get_parser():
         parents=[dcc_login_parser],
         description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-e", "--exp-id", required=True, help="""
-    The experiment to which the replicates belong. Must be set if --all-reps is absent.
-  """)
-    parser.add_argument("-b", "--bio-rep-num", type=int, help="""
-    Print FASTQ ENCFFs for this specified biological replicate number.
-  """)
 
-    parser.add_argument("-t", "--tech-rep-num", type=int, help="""
-    Print FASTQ ENCFFs for the specified technical replicate number of the specified biological
-    replicate.
-  """)
     return parser
 
 
@@ -43,23 +35,44 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
     mode = args.dcc_mode
-    exp_id = args.exp_id
-    bio_rep_num = args.bio_rep_num
-    tech_rep_num = args.tech_rep_num
 
     conn = Connection(mode)
-    rep_dico = conn.get_fastqfile_replicate_hash(exp_id)
+    search_args = {
+        "type": 'File',
+        "format": 'json',
+        "no_file_available": 'false',
+        "frame": 'object'
+    }
+    all_files = conn.search(search_args=search_args, limit='all')
 
-    for b in rep_dico:
-        if bio_rep_num and b != bio_rep_num:
+    s3 = boto3.client('s3')
+
+    storage = {}
+    for f in all_files:
+        creds = conn.get_upload_credentials(f['accession'], regen=False)
+        full_path = creds['upload_url']
+        parse = urlparse(full_path)
+        bucket = parse.netloc
+        key = parse.path.lstrip('/')
+        try:
+            s3res = s3.head_object(Bucket=bucket, Key=key)
+        except Exception as e:
+            print("S3 error:{}".format(e))
             continue
-        for t in rep_dico[b]:
-            if tech_rep_num and t != tech_rep_num:
-                continue
-            for read_num in rep_dico[b][t]:
-                for fastq_json in rep_dico[b][t][read_num]:
-                    alias = fastq_json["aliases"][0]
-                    print("_".join([str(b), str(t), str(read_num)]) + "\t" + alias)
+        storage[f['status']] = storage.get(f['status'], {})
+        storage[f['status']][f['file_format']] = storage[f['status']].get(f['file_format'],0)
+        storage[f['status']][f['file_format']] += s3res['ContentLength']
+
+    fh = open('sizes.tsv', 'w')
+    first = list(storage.values())[0]
+    fh.write("\t".join(list(first.keys())+['total'])+'\n')
+    for stats in storage.keys():
+        tot = 0
+        for size in storage[stats].values():
+            tot += size
+        sizes = list(storage[stats].values())+[tot]
+        fh.write("\t".join([str(x) for x in sizes])+'\n')
+
 
 
 if __name__ == "__main__":
