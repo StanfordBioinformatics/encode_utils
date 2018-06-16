@@ -371,6 +371,7 @@ class Connection():
         # Convert dict to list of two-item tuples since order of search arguments will be preserved
         # this way per the documentation (easier for the corresponding test case).
         search = sorted(search_args.items())
+        # urllib doens't contain the parse() method until you import urllib3 (weird, but that's what I noticed). 
         query = urllib.parse.urlencode(search)
         url = os.path.join(self.dcc_url, "search/?") + query
         return url
@@ -384,7 +385,8 @@ class Connection():
         `search_args` taking precedence.
 
         Args:
-            search_args: `dict`. The key and value query parameters.
+            search_args: `dict`. The key and value query parameters. To support a != style query,
+                append "!" to the key, i.e. {"key!": "val"}.
             url: `str`. A URL used to search for records interactively in the ENCODE Portal. The
                 query will be extracted from the URL.
             limit: `int`. The number of search results to return. Don't specify if you want all.
@@ -416,16 +418,16 @@ class Connection():
             query_list = urllib.parse.parse_qsl(url_obj.query)
             # Ex: If the query string is originally
             #
-            # "?type=Biosample&lab.title=Michael+Snyder%2C+Stanford&award.rfa=ENCODE4&biosample_type=tissue"
+            # "?type=Biosample&lab.title=Michael+Snyder%2C+Stanford&award.rfa=ENCODE4&biosample_type!=tissue"
             #
             # then query_list looks like this:
             #
-            # [('type', 'Biosample'), ('lab.title', 'Michael Snyder, Stanford'), ('award.rfa', 'ENCODE4'), ('biosample_type', 'tissue')]
+            # [('type', 'Biosample'), ('lab.title', 'Michael Snyder, Stanford'), ('award.rfa', 'ENCODE4'), ('biosample_type!', 'tissue')]
             #
             # Convert query_list into a dict. Note that I could have used urllib.parse.parse_qs
             # above instead of urllib.parse.parse_qsl, in which case it would look like this:
             #
-            # {'type': ['Biosample'], 'lab.title': ['Michael Snyder, Stanford'], 'award.rfa': ['ENCODE4'], 'biosample_type': ['tissue']}
+            # {'type': ['Biosample'], 'lab.title': ['Michael Snyder, Stanford'], 'award.rfa': ['ENCODE4'], 'biosample_type!': ['tissue']}
             #
             # but that causes problems when calling urllib.parse.urlencode, since the list literals
             # become url encoded too.
@@ -531,7 +533,7 @@ class Connection():
     #        return response.json()
     #    response.raise_for_status()
 
-    def get(self, rec_ids, ignore404=True, frame=None):
+    def get(self, rec_ids, database=False, ignore404=True, frame=None):
         """GET a record from the Portal.
 
         Looks up a record in the Portal and performs a GET request, returning the JSON serialization of
@@ -542,7 +544,8 @@ class Connection():
             rec_ids: `str` or `list`. Must be a `list` if you want to supply more than one identifier.
                 For a few example identifiers, you can use a uuid, accession, ..., or even the value of
                 a record's `@id` property.
-
+            database: `bool`. If True, then search the database directly instead of the Elasticsearch.
+                 indices. Always True when in submission mode (`self.submission` is True).  
             frame: `str`. A value for the frame query parameter, i.e. 'object', 'edit'. See
                 https://www.encodeproject.org/help/rest-api/ for details.
             ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
@@ -558,13 +561,15 @@ class Connection():
             `requests.exceptions.HTTPError`: The status code is not ok, and the
                 cause isn't due to a 404 (not found) status code when ``ignore404=True``.
         """
+        if self.submission:
+            database = True
         if isinstance(rec_ids, str):
             rec_ids = [rec_ids]
         status_codes = {}  # key is return code, value is the record ID
         for r in rec_ids:
             r = r.strip("/")
             url = os.path.join(self.dcc_url, r, "?format=json")
-            if self.submission:
+            if database:
                 url += "&datastore=database"
             if frame:
                 url += "&frame={frame}".format(frame=frame)
@@ -1239,7 +1244,7 @@ class Connection():
         aws_creds = {}
         aws_creds["AWS_ACCESS_KEY_ID"] = creds["access_key"]
         aws_creds["AWS_SECRET_ACCESS_KEY"] = creds["secret_key"]
-        aws_creds["AWS_SECURITY_TOKEN"] = creds["session_token"]
+        aws_creds["AWS_SESSION_TOKEN"] = creds["session_token"]
         aws_creds["UPLOAD_URL"] = creds["upload_url"]
         return aws_creds
 
@@ -1257,7 +1262,10 @@ class Connection():
              returned by ``self.regenerate_aws_upload_creds``, which tries to generate the value for
              this property.
         """
-        file_json = self.get(file_id, ignore404=False)
+        # Be sure to set database=True so that the database is searched instead of Elasticsearch, as
+        # the latter doesn't store the upload_credentials. Must also set frame="object" for this 
+        # to work. 
+        file_json = self.get(file_id, frame="object", database=True, ignore404=False)
         try:
             creds = file_json["upload_credentials"]
         except KeyError:
@@ -1281,28 +1289,32 @@ class Connection():
             could not be issued.
         """
         self.debug_logger.debug("Using curl to generate new file upload credentials")
-        cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
-               " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
-               " | python3 -m json.tool").format(api_key=self.api_key, secret_key=self.secret_key, host=self.dcc_host, file_id=file_id)
-        self.debug_logger.debug("curl command: '{}'".format(cmd))
-        popen = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = popen.communicate()  # each is a bytes object.
-        stdout = stdout.decode("utf-8")
-        stderr = stderr.decode("utf-8")
-        retcode = popen.returncode
-        if retcode:
-            raise Exception(("Command {cmd} failed with return code {retcode}. stdout is {stdout} and"
-                             " stderr is {stderr}.").format(cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr))
-        response = json.loads(stdout)
-        if "code" in response:
-            # Then problem occurred.
-            code = response["code"]
-            self.log_error(
-                "Unable to reissue upload credentials for {}: Code {}.".format(
-                    file_id, code))
-            return {}
+        # Don't use curl since it 
+        #   1) requires that all users have it installed, and 
+        #   2) only works for the most recent versions when interacting with the ENCODE servers. 
 
-            # For ex, response would look like this for a 404.
+#        cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
+#               " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
+#               " | python3 -m json.tool").format(api_key=self.api_key, secret_key=self.secret_key, host=self.dcc_host, file_id=file_id)
+
+        response = requests.post(
+            os.path.join(self.dcc_url, "files", file_id, "@@upload"),
+            auth=self.auth,
+            headers=euu.REQUEST_HEADERS_JSON,
+            json = {},
+            timeout=eu.TIMEOUT)
+        response_json = response.json()
+        if response.ok:
+            self.debug_logger.debug("Success: upload credentials for '{}' regerated.".format(file_id))
+            upload_creds = response_json["@graph"][0]["upload_credentials"]
+            return upload_creds
+        else:
+            err_msg = "Error: unable to re-issue upload credentials for '{}'".format(file_id)
+            self.log_error(err_msg)
+            self.debug_logger.debug(euu.print_format_dict(response_json))
+            response.raise_for_status()
+
+            # For ex: response would look like this for a 404.
 
             # {
             #     "@type": [
@@ -1321,25 +1333,27 @@ class Connection():
             # archived by wranglers).
 
         #Don't log the full response as it contains sensative security information.
-        upload_creds = response["@graph"][0]["upload_credentials"]
-        self.debug_logger.debug("Upload to: " + upload_creds["upload_url"])
-        return upload_creds
 
     def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
-        Uses the AWS CLI to upload a local file or existing S3 object to the Portal for the indicated
-        file record.
+        Uses the AWS CLI to upload a file to the Portal for the indicated file record. The file
+        to upload can be specified in one of the following ways;
+ 
+          1. Path to a local file,
+          2. S3 object, or
+          3. Google Storage object. 
+
+        For the last option listed, the user must have gsutil insalled with credentials configured (
+        see https://github.com/StanfordBioinformatics/encode_utils/wiki/could-to-cloud-file-transfers
+        for more details). 
 
         If the dry-run feature is enabled, then this method will return prior to launching the
         upload command.
 
-        Unfortunately, it doesn't appear that pulling a file into S3 is supported through the AWS API;
-        only existing S3 objects or local files can be pushed to a S3 bucket. External files must first
-        be downloaded and then pushed to the S3 bucket.
-
         Args:
             file_id: `str`. An identifier of a `file` record on the ENCODE Portal.
-            file_path: `str`. the local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt).
+            file_path: `str`. The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt),
+              or a Google Storage object (i.e. gs://mybucket/test.txt). 
               If not set, defaults to `None` in which case the local file path will be extracted from the
               record's `submitted_file_name` property.
             set_md5sum: `bool`. True means to also calculate the md5sum and set the file record's md5sum
@@ -1373,9 +1387,13 @@ class Connection():
                 md5sum = euu.calculate_md5sum(file_path)
                 self.patch({self.ENCID_KEY: file_rec["@id"], "md5sum": md5sum})
 
-        cmd = "aws s3 cp {file_path} {upload_url}".format(
-            file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
-        self.debug_logger.debug("Running command {cmd}.".format(cmd=cmd))
+        cmd_args = "{file_path} {upload_url}".format(file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
+        if file_path.startswith("gs://"):
+            cmd = "gsutil cp"
+        else:
+            cmd = "aws s3 cp"
+        cmd += " " + cmd_args
+        self.debug_logger.debug("Running command '{cmd}'.".format(cmd=cmd))
         if self.check_dry_run():
             return
         popen = subprocess.Popen(cmd,
