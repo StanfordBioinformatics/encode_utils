@@ -1341,7 +1341,7 @@ class Connection():
  
           1. Path to a local file,
           2. S3 object, or
-          3. Google Storage object. 
+          3. Google Storage object (Not yet supported; see ticket at https://github.com/GoogleCloudPlatform/gsutil/issues/535)
 
         For the last option listed, the user must have gsutil insalled with credentials configured (
         see https://github.com/StanfordBioinformatics/encode_utils/wiki/could-to-cloud-file-transfers
