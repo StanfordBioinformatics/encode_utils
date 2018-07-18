@@ -11,6 +11,7 @@ import json
 import logging
 import mimetypes
 import os
+import pdb
 import re
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -353,64 +354,41 @@ class Connection():
             return True
         return False
 
-    def make_search_url(self, search_args, limit=None):
+    def make_search_url(self, search_args):
         """Creates a URL encoded URL given the search arguments.
 
         Args:
-            search_args: `dict`. The key and value query parameters.
-            limit: `int`. The number of search results to return. Don't specify if you want all.
+            search_args: `list` of two-item tuples of the form ``[(key, val), (key, val), ...]``.
 
         Returns:
             `str`: The URL containing the URL encoded query.
         """
-        if not limit:
-            search_args["limit"] = "all"
-        else:
-            search_args["limit"] = str(limit)
-
-        # Convert dict to list of two-item tuples since order of search arguments will be preserved
-        # this way per the documentation (easier for the corresponding test case).
-        search = sorted(search_args.items())
         # urllib doens't contain the parse() method until you import urllib3 (weird, but that's what I noticed). 
-        query = urllib.parse.urlencode(search)
+        query = urllib.parse.urlencode(search_args)
         url = os.path.join(self.dcc_url, "search/?") + query
         return url
 
-    def search(self, search_args={}, url=None, limit=None):
+    def search(self, search_args=[], url=None, limit=None):
         """
         Searches the Portal using the provided query parameters, which will first be URL encoded.
         The user can pass in the query parameters and values via the `search_args` argument, or
         pass in a URL directly that contains a query string via the `url` argument, or provide
-        values for both arguments in which case the query parameters will be merged with values in
-        `search_args` taking precedence.
+        values for both arguments in which case the query parameters specified in `search_args` will
+        be added to the query parameters given in the URL.
 
         Args:
-            search_args: `dict`. The key and value query parameters. To support a != style query,
-                append "!" to the key, i.e. {"key!": "val"}.
+            search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...] ``. 
+                To support a != style query, append "!" to the key name.
             url: `str`. A URL used to search for records interactively in the ENCODE Portal. The
                 query will be extracted from the URL.
-            limit: `int`. The number of search results to return. Don't specify if you want all.
+            limit: `int`. The number of search results to send from the server. The default means 
+                to return all results.
 
         Returns:
             `list`: The search results.
 
         Raises:
             `requests.exceptions.HTTPError`: The status code is not ok and != 404.
-
-        Example:
-            Given we have the following dictionary *d* of key and value pairs::
-
-                {"type": "experiment",
-                 "searchTerm": "ENCLB336TVW",
-                 "format": "json",
-                 "frame": "object",
-                 "datastore": "database"
-                }
-
-            We can call the method as::
-
-                search_encode(search_args=d)
-
         """
         if url:
             # Format query string into list of tuples:
@@ -418,11 +396,11 @@ class Connection():
             query_list = urllib.parse.parse_qsl(url_obj.query)
             # Ex: If the query string is originally
             #
-            # "?type=Biosample&lab.title=Michael+Snyder%2C+Stanford&award.rfa=ENCODE4&biosample_type!=tissue"
+            # ?type=Experiment&assay_title=ChIP-seq&award.rfa=ENCODE4&lab.title=Michael+Snyder%2C+Stanford&status=in+progress&status=submitted"
             #
             # then query_list looks like this:
             #
-            # [('type', 'Biosample'), ('lab.title', 'Michael Snyder, Stanford'), ('award.rfa', 'ENCODE4'), ('biosample_type!', 'tissue')]
+            # [('assay_title', 'ChIP-seq'), ('award.rfa', 'ENCODE4'), ('lab.title', 'Michael Snyder, Stanford'), ('status', 'in progress'), ('status', 'submitted'), ('type', 'Experiment')]
             #
             # Convert query_list into a dict. Note that I could have used urllib.parse.parse_qs
             # above instead of urllib.parse.parse_qsl, in which case it would look like this:
@@ -432,18 +410,21 @@ class Connection():
             # but that causes problems when calling urllib.parse.urlencode, since the list literals
             # become url encoded too.
             #
-            # Convert query_list into a dict:
-
-            query_dict = {}
-            for key,val in query_list:
-                query_dict[key] = val
             # Merge the search_args dict into the query_list, overwriting values in query_list
             # if same keys are present:
-            query_dict.update(search_args)
-            search_args = query_dict
-            del query_dict
+            if search_args:
+                query_list.extend(search_args)
+        else:
+            query_list = search_args
+        query_list = sorted(query_list)
+        params = [x[0] for x in query_list]
+        if "limit" not in params:
+            if not limit:
+                query_list.append(("limit", "all"))
+            else:
+                query_list.append(("limit", str(limit)))
 
-        url = self.make_search_url(search_args=search_args, limit=limit)
+        url = self.make_search_url(search_args=query_list)
         self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
         response = requests.get(url,
                                 auth=self.auth,
