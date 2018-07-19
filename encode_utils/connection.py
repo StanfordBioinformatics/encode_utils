@@ -1315,6 +1315,42 @@ class Connection():
 
         #Don't log the full response as it contains sensative security information.
 
+    def copy_file_to_gcp(self, file_id, bucket_name, bucket_dir_path=None):
+        """
+        Copies a file from the Portal to a GCP bucket. The GCP environment variable 
+        GOOGLE_APPLICATION_CREDENTIALS must be set for this to work, which points to the credentials
+        file (in JSON format) of a GCP service account.  A service account can be created in GCP Console.
+        For more details, see the section "Creating a service account" at https://cloud.google.com/docs/authentication/production.
+
+        This method works by downloadind the file locally first, then using the google-cloud-storage
+        Pyton client to upload the local file to GCP. This is better than streaming the file over, since
+        streaming doesn't allow for integrity checks as documented at https://cloud.google.com/storage/docs/streaming.
+        """
+        from google.cloud import storage
+        # GOOGLE_APPLICATION_CREDENTIALS must be set in environment since 'credentials' keyword
+        # argument isn't being passed in below to storage.Client(). This variable stores the path
+        # to a GCP service account credentials in JSON format (which can be created from the GCP 
+        # Console from within the "IAM & admin" section. 
+        storage_client = storage.Client() 
+        bucket = storage_client.bucket(bucket_name)
+#        rec = self.get(file_id, ignore404=False) 
+        accession = "ENCFF128WKJ"
+#        try:
+#            accession = rec["accession"]
+#        except KeyError:
+#            # Documents to have this key.
+#            # Note that downloading documents still isn't supported due to a server-side bug,
+#            # as noted in the download() method. 
+#            accession = rec["aliases"][0]
+        downloaded_path = self.download(rec_id=file_id)
+        dest_name = os.path.basename(downloaded_path)
+        if bucket_dir_path:
+            dest_name = os.path.join(bucket_dir_path, dest_name)
+        new_blob = bucket.blob(dest_name)
+        new_blob.upload_from_filename("utils.py")
+        #os.remove(path)
+        
+
     def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
         Uses the AWS CLI to upload a file to the Portal for the indicated file record. The file
@@ -1453,7 +1489,7 @@ class Connection():
         response = self.post(payload=payload)
         return response['uuid']
 
-    def download(self, rec_id, directory=None):
+    def download(self, rec_id, get_stream=False, directory=None):
         """
         Downloads the contents of the specified file or document object from the ENCODE Portal to
         either the calling directory or the indicated download directory. The downloaded file will
@@ -1505,6 +1541,8 @@ class Connection():
             filename = os.path.join(directory,filename)
         fout = open(filename, "wb")
         # Download in chunks of 512 bytes
+        if get_stream:
+            return r
         for line in r.iter_content(chunk_size=512):
             fout.write(line)
         fout.close()
