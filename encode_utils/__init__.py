@@ -71,6 +71,9 @@ DCC_MODES = {
     DCC_PROD_MODE: {"host": "www.encodeproject.org", "url": "https://www.encodeproject.org"}
 }
 
+ENCODE_PROD_S3BUCKET="encode-files"
+ENCODE_TEST_S3BUCKET="encoded-files-dev"
+
 #: The timeout in seconds when making HTTP requests via the ``requests`` module.
 TIMEOUT = 20
 

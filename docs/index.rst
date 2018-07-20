@@ -38,6 +38,7 @@ Scripts
     scripts/eu_get_replicate_fastq_encffs.rst
     scripts/eu_get_replicate_numbers.rst
     scripts/eu_report_fastq_content_errors.rst
+    scripts/eu_s3_to_gcp.rst
 
 Client API Modules
 ------------------
@@ -45,6 +46,7 @@ Client API Modules
 .. toctree::
    :maxdepth: 3
 
+   cloud_transfers
    encode_utils
    utils
    connection

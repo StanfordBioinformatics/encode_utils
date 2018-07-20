@@ -20,6 +20,7 @@ import sys
 import urllib
 
 # inhouse libraries
+import encode_utils.cloud_transfers as euct
 import encode_utils as eu
 import encode_utils.profiles as eup
 import encode_utils.utils as euu
@@ -369,7 +370,7 @@ class Connection():
         Returns:
             `str`: The URL containing the URL encoded query.
         """
-        # urllib doens't contain the parse() method until you import urllib3 (weird, but that's what I noticed). 
+        # urllib doens't contain the parse() method until you import urllib3 (weird, but that's what I noticed).
         query = urllib.parse.urlencode(search_args)
         url = os.path.join(self.dcc_url, "search/?") + query
         return url
@@ -383,11 +384,11 @@ class Connection():
         be added to the query parameters given in the URL.
 
         Args:
-            search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...] ``. 
+            search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...] ``.
                 To support a != style query, append "!" to the key name.
             url: `str`. A URL used to search for records interactively in the ENCODE Portal. The
                 query will be extracted from the URL.
-            limit: `int`. The number of search results to send from the server. The default means 
+            limit: `int`. The number of search results to send from the server. The default means
                 to return all results.
 
         Returns:
@@ -532,7 +533,7 @@ class Connection():
                 For a few example identifiers, you can use a uuid, accession, ..., or even the value of
                 a record's `@id` property.
             database: `bool`. If True, then search the database directly instead of the Elasticsearch.
-                 indices. Always True when in submission mode (`self.submission` is True).  
+                 indices. Always True when in submission mode (`self.submission` is True).
             frame: `str`. A value for the frame query parameter, i.e. 'object', 'edit'. See
                 https://www.encodeproject.org/help/rest-api/ for details.
             ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
@@ -1250,8 +1251,8 @@ class Connection():
              this property.
         """
         # Be sure to set database=True so that the database is searched instead of Elasticsearch, as
-        # the latter doesn't store the upload_credentials. Must also set frame="object" for this 
-        # to work. 
+        # the latter doesn't store the upload_credentials. Must also set frame="object" for this
+        # to work.
         file_json = self.get(file_id, frame="object", database=True, ignore404=False)
         try:
             creds = file_json["upload_credentials"]
@@ -1276,9 +1277,9 @@ class Connection():
             could not be issued.
         """
         self.debug_logger.debug("Using curl to generate new file upload credentials")
-        # Don't use curl since it 
-        #   1) requires that all users have it installed, and 
-        #   2) only works for the most recent versions when interacting with the ENCODE servers. 
+        # Don't use curl since it
+        #   1) requires that all users have it installed, and
+        #   2) only works for the most recent versions when interacting with the ENCODE servers.
 
 #        cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
 #               " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
@@ -1322,125 +1323,118 @@ class Connection():
 
         #Don't log the full response as it contains sensative security information.
 
-
-    def copy_file_to_gcp(self, s3bucket):
-        #See example at https://cloud.google.com/storage-transfer/docs/create-client and
-        # https://github.com/GoogleCloudPlatform/python-docs-samples/blob/master/storage/transfer_service/aws_request.py.
-        import googleapiclient.discovery
-        client = googleapiclient.discovery.build('storagetransfer', 'v1')
-        params = {}
-        params["awsS3DataSource"] = {
-            "bucketName": "pulsar-encode-assets",
-            "awsAccessKey": {
-                "accessKeyId": os.environ["AWS_ACCESS_KEY_ID"],
-                "secretAccessKey": os.environ["AWS_SECRET_ACCESS_KEY"]
-            }
-        }
-        params["gcsDataSink"] = {
-            "bucketName": "nathankw1"
-        }
-        params["objectConditions"] = {
-            "cat.png"
-        }
-            
-        result = storagetransfer.transferJobs().create(body=transfer_job).execute()
-        print('Returned transferJob: {}'.format(json.dumps(result, indent=4)))
-
-
-    def copy_file_to_gcp(self, s3obj, gcp_dest, aws_creds=()):
+    def copy_files_to_gcp(self, file_ids, gcp_bucket, gcp_project, description="", aws_creds=()):
         """
-        Can't use the Google Storage Transfer API (https://cloud.google.com/storage-transfer/docs/create-url-list)
-        since it doesn't work on a per-file basis. That is good for transferring entire buckets, or 
-        for specifying a list of files to transfer in a TSV file. In the latter case, the file URIs 
-        are restricted to starting with HTTP or HTTPS, and must be publicly accessible. 
+        Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage
+        Transfer Service. The transfer is scheduled to run in upto 1 minute from the time
+        this method is called.
+
+        AWS Credentials are fetched from the environment via the variables `AWS_ACCESS_KEY_ID` and
+        `AWS_SECRET_ACCESS_KEY`, unless passed explicitly to the aws_creds argument.
+
+        Google credentials are fetched from the environment via the variable
+        GOOGLE_APPLICATION_CREDENTIALS.  This should be set to the JSON file provided to you
+        by the GCP Console when you create a service account; see
+        https://cloud.google.com/docs/authentication/getting-started for more details. Note that
+        the service account that you create must have at least the two roles below:
+            1) Project role with access level of Editor or greater.
+            2) Storage role with access level of Storage Object Creator or greater.
+
+        Note1: If this is the first time that you are using the Google Storage Transfer Service on
+        your GCP bucket, it won't work just yet as you'll get an error that reads:
+
+          Failed to obtain the location of the destination Google Cloud Storage (GCS) bucket due to
+          insufficient permissions.  Please verify that the necessary permissions have been granted.
+          (Google::Apis::ClientError)
+
+        To resolve this, I recommend that you go into the GCP Console and run a manual transfer there,
+        as this adds the missing permission that you need. I personaly don't know how to add it
+        otherwise, or even know what it is that's being added, but there you go!
+
+        Note2: If a file transfer doens't work (i.e. it doesn't exist in source bucket or incorrect
+        path provided), I'm not aware of a way to know that w/o explicitely having to inspect the GCP
+        bucket for presence/absence of the file. Even in the GCP Console, the Tranfer job stil shows as green
+        and doesn't indicate any sort of failure.
+
         Args:
-            s3obj: `str`. The S3 object to copy to GCP. Needs to be the full object path in the S3 bucket. 
-            gcp_dest: `str`. The GCP bucket (including any path information) to copy the S3 object to.
-            aws_creds: `tuple` containing the AWS_ACCESS_KEY_ID, followed by the AWS_SECRET_ACCESS_KEY.
-                       The default is to fetch those values from environment variables.
-                       Unfortunatly, GCP doesn't support AWS pre-signed URLs, but when it does this 
-                       method will accept a third item in the tuple, being the AWS_SESSION_TOKEN.
+            file_ids: `list`. One or more ENCODE files to transfer. They can be any valid ENCODE File
+                object identifier. Don't mix ENCODE files from across buckets.
+            gcp_bucket: `str`. The name of the GCP bucket.
+            gcp_project: `str`. The GCP project that is associated with gcp_bucket. Can be given
+                in either integer form  or the user-friendly name form (i.e. sigma-night-207122)
+            description: `str`. The description to show when querying transfers via the
+                 Google Storage Transfer API, or via the GCP Console. May be left empty, in which
+                 case the default description will be the value of the first S3 file name to transfer.
+            aws_creds: `tuple`. Ideally, your AWS credentials will be stored in the environment.
+                For additional flexability though, you can specify them here as well in the form
+                ``(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)``.
         """
-        # GOOGLE_APPLICATION_CREDENTIALS must be set in environment since 'credentials' keyword
-        # argument isn't being passed in below to storage.Client(). This variable stores the path
-        # to a GCP service account credentials in JSON format (which can be created from the GCP 
-        # Console from within the "IAM & admin" section. 
-        cmd = "gsutil cp '{}' '{}'".format(s3obj, gcp_dest)
-        self.debug_logger.debug("Running command '{}'.".format(cmd))
-        if self.check_dry_run():
-            return
-        environ = os.environ
-        if aws_creds:
-            environ.update(aws_creds)
-      
-        popen = subprocess.Popen(cmd,
-                                 shell=True,
-                                 env=environ,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-        stdout, stderr = popen.communicate()
-        stdout = stdout.decode("utf-8")
-        stderr = stderr.decode("utf-8")
-        retcode = popen.returncode
-        if retcode:
-            error_msg = "Copy to GCP failed."
-            self.log_error(error_msg)
-            error_msg = (" Subprocess command '{cmd}' failed with return code '{retcode}'."
-                         " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
-                cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr)
-            self.debug_logger.debug(error_msg)
-            raise S3ToGCPFailed(error_msg)
-        self.debug_logger.debug("Copy to GCP successful.")
-        
+        s3_paths = []
+        accessions = []
+        for i in file_ids:
+            rec = self.get(rec_ids=i, ignore404=False)
+            accessions.append(rec["accession"])
+            s3_paths.append(rec["href"])
+         # Check first accession to determine what S3 bucket to use:
+        if accessions[0].startswith("ENCFF"):
+            s3_bucket = eu.ENCODE_PROD_S3BUCKET
+        else:
+            s3_bucket = eu.ENCODE_TEST_S3BUCKET
+        euct.copy_files_to_gcp(s3_bucket=s3_bucket, s3_paths=s3_paths, gcp_bucket=gcp_bucket,
+                              gcp_project=gcp_project, description=description, aws_creds=aws_creds)
 
-    def defunct_copy_file_to_gcp(self, file_id, bucket_name, bucket_dir_path=None):
-        """
-        Copies a file from the Portal to a GCP bucket. The GCP environment variable 
-        GOOGLE_APPLICATION_CREDENTIALS must be set for this to work, which points to the credentials
-        file (in JSON format) of a GCP service account.  A service account can be created in GCP Console.
-        For more details, see the section "Creating a service account" at https://cloud.google.com/docs/authentication/production.
 
-        This method works by downloadind the file locally first, then using the google-cloud-storage
-        Pyton client to upload the local file to GCP. This is better than streaming the file over, since
-        streaming doesn't allow for integrity checks as documented at https://cloud.google.com/storage/docs/streaming.
-        """
-        from google.cloud import storage
-        # GOOGLE_APPLICATION_CREDENTIALS must be set in environment since 'credentials' keyword
-        # argument isn't being passed in below to storage.Client(). This variable stores the path
-        # to a GCP service account credentials in JSON format (which can be created from the GCP 
-        # Console from within the "IAM & admin" section. 
-        storage_client = storage.Client() 
-        bucket = storage_client.bucket(bucket_name)
-#        rec = self.get(file_id, ignore404=False) 
-        accession = "ENCFF128WKJ"
-#        try:
-#            accession = rec["accession"]
-#        except KeyError:
-#            # Documents to have this key.
-#            # Note that downloading documents still isn't supported due to a server-side bug,
-#            # as noted in the download() method. 
-#            accession = rec["aliases"][0]
-        downloaded_path = self.download(rec_id=file_id)
-        dest_name = os.path.basename(downloaded_path)
-        if bucket_dir_path:
-            dest_name = os.path.join(bucket_dir_path, dest_name)
-        new_blob = bucket.blob(dest_name)
-        new_blob.upload_from_filename("utils.py")
-        #os.remove(path)
-        
+#    def gsutil_copy_file_to_gcp(self, s3obj, gcp_dest, aws_creds=()):
+#        """
+#        Uses gsutil.
+#
+#        Args:
+#            s3obj: `str`. The S3 object to copy to GCP. Needs to be the full object path in the S3 bucket.
+#            gcp_dest: `str`. The GCP bucket (including any path information) to copy the S3 object to.
+#            aws_creds: `tuple` containing the AWS_ACCESS_KEY_ID, followed by the AWS_SECRET_ACCESS_KEY.
+#                       The default is to fetch those values from environment variables.
+#                       Unfortunatly, GCP doesn't support AWS pre-signed URLs, but when it does this
+#                       method will accept a third item in the tuple, being the AWS_SESSION_TOKEN.
+#        """
+#        cmd = "gsutil cp '{}' '{}'".format(s3obj, gcp_dest)
+#        self.debug_logger.debug("Running command '{}'.".format(cmd))
+#        if self.check_dry_run():
+#            return
+#        environ = os.environ
+#        if aws_creds:
+#            environ.update(aws_creds)
+#
+#        popen = subprocess.Popen(cmd,
+#                                 shell=True,
+#                                 env=environ,
+#                                 stdout=subprocess.PIPE,
+#                                 stderr=subprocess.PIPE)
+#        stdout, stderr = popen.communicate()
+#        stdout = stdout.decode("utf-8")
+#        stderr = stderr.decode("utf-8")
+#        retcode = popen.returncode
+#        if retcode:
+#            error_msg = "Copy to GCP failed."
+#            self.log_error(error_msg)
+#            error_msg = (" Subprocess command '{cmd}' failed with return code '{retcode}'."
+#                         " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
+#                cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr)
+#            self.debug_logger.debug(error_msg)
+#            raise S3ToGCPFailed(error_msg)
+#        self.debug_logger.debug("Copy to GCP successful.")
 
     def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
         Uses the AWS CLI to upload a file to the Portal for the indicated file record. The file
         to upload can be specified in one of the following ways;
- 
+
           1. Path to a local file,
           2. S3 object, or
           3. Google Storage object (Not yet supported; see ticket at https://github.com/GoogleCloudPlatform/gsutil/issues/535)
 
         For the last option listed, the user must have gsutil insalled with credentials configured (
         see https://github.com/StanfordBioinformatics/encode_utils/wiki/could-to-cloud-file-transfers
-        for more details). 
+        for more details).
 
         If the dry-run feature is enabled, then this method will return prior to launching the
         upload command.
@@ -1448,7 +1442,7 @@ class Connection():
         Args:
             file_id: `str`. An identifier of a `file` record on the ENCODE Portal.
             file_path: `str`. The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt),
-              or a Google Storage object (i.e. gs://mybucket/test.txt). 
+              or a Google Storage object (i.e. gs://mybucket/test.txt).
               If not set, defaults to `None` in which case the local file path will be extracted from the
               record's `submitted_file_name` property.
             set_md5sum: `bool`. True means to also calculate the md5sum and set the file record's md5sum
@@ -1461,7 +1455,7 @@ class Connection():
             encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
         """
         self.debug_logger.debug("\nIN upload_file()\n")
-        #upload_credentials = self.get_upload_credentials(file_id) # Don't use this - they may have expired. 
+        #upload_credentials = self.get_upload_credentials(file_id) # Don't use this - they may have expired.
         upload_credentials = self.regenerate_aws_upload_creds(file_id)
         aws_creds = self.extract_aws_upload_credentials(upload_credentials)
         file_rec = self.get(rec_ids=file_id,ignore404=False)

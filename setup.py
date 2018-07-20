@@ -30,6 +30,7 @@ setup(
   packages = find_packages(),
   install_requires = [
     "awscli",
+    "google-api-python-client",
     "requests",
     "urllib3"],
   scripts = scripts,
