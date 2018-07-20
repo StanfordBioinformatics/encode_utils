@@ -78,6 +78,12 @@ class RecordNotFound(Exception):
     """
     pass
 
+class S3ToGCPFailed(Exception):
+    """
+    Raised when a file from an ENCODE S3 bucket fails to copy to a GCP bucket path.
+    """
+    pass
+
 
 class Connection():
     """Handles communication with the Portal regarding data submission and retrieval.
@@ -1284,13 +1290,14 @@ class Connection():
             headers=euu.REQUEST_HEADERS_JSON,
             json = {},
             timeout=eu.TIMEOUT)
-        response_json = response.json()
         if response.ok:
+            response_json = response.json()
             self.debug_logger.debug("Success: upload credentials for '{}' regerated.".format(file_id))
             upload_creds = response_json["@graph"][0]["upload_credentials"]
             return upload_creds
         else:
-            err_msg = "Error: unable to re-issue upload credentials for '{}'".format(file_id)
+            status_code = response.status_code
+            err_msg = "Error {}: unable to re-issue upload credentials for '{}'".format(status_code, file_id)
             self.log_error(err_msg)
             self.debug_logger.debug(euu.print_format_dict(response_json))
             response.raise_for_status()
@@ -1315,7 +1322,78 @@ class Connection():
 
         #Don't log the full response as it contains sensative security information.
 
-    def copy_file_to_gcp(self, file_id, bucket_name, bucket_dir_path=None):
+
+    def copy_file_to_gcp(self, s3bucket):
+        #See example at https://cloud.google.com/storage-transfer/docs/create-client and
+        # https://github.com/GoogleCloudPlatform/python-docs-samples/blob/master/storage/transfer_service/aws_request.py.
+        import googleapiclient.discovery
+        client = googleapiclient.discovery.build('storagetransfer', 'v1')
+        params = {}
+        params["awsS3DataSource"] = {
+            "bucketName": "pulsar-encode-assets",
+            "awsAccessKey": {
+                "accessKeyId": os.environ["AWS_ACCESS_KEY_ID"],
+                "secretAccessKey": os.environ["AWS_SECRET_ACCESS_KEY"]
+            }
+        }
+        params["gcsDataSink"] = {
+            "bucketName": "nathankw1"
+        }
+        params["objectConditions"] = {
+            "cat.png"
+        }
+            
+        result = storagetransfer.transferJobs().create(body=transfer_job).execute()
+        print('Returned transferJob: {}'.format(json.dumps(result, indent=4)))
+
+
+    def copy_file_to_gcp(self, s3obj, gcp_dest, aws_creds=()):
+        """
+        Can't use the Google Storage Transfer API (https://cloud.google.com/storage-transfer/docs/create-url-list)
+        since it doesn't work on a per-file basis. That is good for transferring entire buckets, or 
+        for specifying a list of files to transfer in a TSV file. In the latter case, the file URIs 
+        are restricted to starting with HTTP or HTTPS, and must be publicly accessible. 
+        Args:
+            s3obj: `str`. The S3 object to copy to GCP. Needs to be the full object path in the S3 bucket. 
+            gcp_dest: `str`. The GCP bucket (including any path information) to copy the S3 object to.
+            aws_creds: `tuple` containing the AWS_ACCESS_KEY_ID, followed by the AWS_SECRET_ACCESS_KEY.
+                       The default is to fetch those values from environment variables.
+                       Unfortunatly, GCP doesn't support AWS pre-signed URLs, but when it does this 
+                       method will accept a third item in the tuple, being the AWS_SESSION_TOKEN.
+        """
+        # GOOGLE_APPLICATION_CREDENTIALS must be set in environment since 'credentials' keyword
+        # argument isn't being passed in below to storage.Client(). This variable stores the path
+        # to a GCP service account credentials in JSON format (which can be created from the GCP 
+        # Console from within the "IAM & admin" section. 
+        cmd = "gsutil cp '{}' '{}'".format(s3obj, gcp_dest)
+        self.debug_logger.debug("Running command '{}'.".format(cmd))
+        if self.check_dry_run():
+            return
+        environ = os.environ
+        if aws_creds:
+            environ.update(aws_creds)
+      
+        popen = subprocess.Popen(cmd,
+                                 shell=True,
+                                 env=environ,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        stdout, stderr = popen.communicate()
+        stdout = stdout.decode("utf-8")
+        stderr = stderr.decode("utf-8")
+        retcode = popen.returncode
+        if retcode:
+            error_msg = "Copy to GCP failed."
+            self.log_error(error_msg)
+            error_msg = (" Subprocess command '{cmd}' failed with return code '{retcode}'."
+                         " Stdout is '{stdout}'.  Stderr is '{stderr}'.").format(
+                cmd=cmd, retcode=retcode, stdout=stdout, stderr=stderr)
+            self.debug_logger.debug(error_msg)
+            raise S3ToGCPFailed(error_msg)
+        self.debug_logger.debug("Copy to GCP successful.")
+        
+
+    def defunct_copy_file_to_gcp(self, file_id, bucket_name, bucket_dir_path=None):
         """
         Copies a file from the Portal to a GCP bucket. The GCP environment variable 
         GOOGLE_APPLICATION_CREDENTIALS must be set for this to work, which points to the credentials
@@ -1383,12 +1461,8 @@ class Connection():
             encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
         """
         self.debug_logger.debug("\nIN upload_file()\n")
-        upload_credentials = self.get_upload_credentials(file_id)
-        if not upload_credentials:
-            msg = "Cannot upload file for {} since upload credentials could not be generated.".format(
-                file_id)
-            self.log_error(msg)
-            return
+        #upload_credentials = self.get_upload_credentials(file_id) # Don't use this - they may have expired. 
+        upload_credentials = self.regenerate_aws_upload_creds(file_id)
         aws_creds = self.extract_aws_upload_credentials(upload_credentials)
         file_rec = self.get(rec_ids=file_id,ignore404=False)
         if not file_path:
