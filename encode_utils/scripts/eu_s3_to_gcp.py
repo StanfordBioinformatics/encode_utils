@@ -9,30 +9,7 @@
 
 """
 Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage         
-Transfer Service. The transfer is scheduled to run in upto 1 minute from the time        
-this method is called.                                                                             
-                                                                                                   
-AWS Credentials are fetched from the environment via the variables `AWS_ACCESS_KEY_ID` and         
-`AWS_SECRET_ACCESS_KEY`, unless passed explicitly to the aws_creds argument.                        
-                                                                                                   
-Google credentials are fetched from the environment via the variable                               
-GOOGLE_APPLICATION_CREDENTIALS.  This should be set to the JSON file provided to you               
-by the GCP Console when you create a service account; see                                          
-https://cloud.google.com/docs/authentication/getting-started for more details. Note that           
-the service account that you create must have at least the two roles below:                        
-    1) Project role with access level of Editor or greater.                                        
-    2) Storage role with access level of Storage Object Creator or greater.                        
-                                                                                                   
-Note! If this is the first time that you are using the Google Storage Transfer Service on          
-your GCP bucket, it won't work just yet as you'll get an error that reads:                         
-                                                                                                   
-  Failed to obtain the location of the destination Google Cloud Storage (GCS) bucket due to        
-  insufficient permissions.  Please verify that the necessary permissions have been granted.    
-  (Google::Apis::ClientError)                                                                      
-                                                                                                   
-To resolve this, I recommend that you go into the GCP Console and run a manual transfer there,  
-as this adds the missing permission that you need. I personaly don't know how to add it            
-otherwise, or even know what it is that's being added, but there you go! 
+Transfer Service. See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
 """
 
 import argparse
@@ -83,7 +60,7 @@ def main():
     file_ids = args.file_ids
     gcp_bucket = args.gcpbucket
     gcp_project = args.gcpproject
-    conn.copy_files_to_gcp(file_ids=file_ids, gcp_bucket=gcp_bucket,
+    conn.gcp_transfer(file_ids=file_ids, gcp_bucket=gcp_bucket,
                            gcp_project=gcp_project, description=desc, aws_creds=aws_creds)
 
 if __name__ == "__main__":
