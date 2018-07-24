@@ -20,7 +20,7 @@ import sys
 import urllib
 
 # inhouse libraries
-import encode_utils.cloud_transfers as euct
+import encode_utils.transfer_to_gcp
 import encode_utils as eu
 import encode_utils.profiles as eup
 import encode_utils.utils as euu
@@ -1337,8 +1337,8 @@ class Connection():
         by the GCP Console when you create a service account; see
         https://cloud.google.com/docs/authentication/getting-started for more details. Note that
         the service account that you create must have at least the two roles below:
-            1) Project role with access level of Editor or greater.
-            2) Storage role with access level of Storage Object Creator or greater.
+          1) Project role with access level of Editor or greater.
+          2) Storage role with access level of Storage Object Creator or greater.
 
         Note1: If this is the first time that you are using the Google Storage Transfer Service on
         your GCP bucket, it won't work just yet as you'll get an error that reads:
@@ -1380,7 +1380,7 @@ class Connection():
             s3_bucket = eu.ENCODE_PROD_S3BUCKET
         else:
             s3_bucket = eu.ENCODE_TEST_S3BUCKET
-        euct.copy_files_to_gcp(s3_bucket=s3_bucket, s3_paths=s3_paths, gcp_bucket=gcp_bucket,
+        encode_utils.transfer_to_gcp.copy_files_to_gcp(s3_bucket=s3_bucket, s3_paths=s3_paths, gcp_bucket=gcp_bucket,
                               gcp_project=gcp_project, description=description, aws_creds=aws_creds)
 
 

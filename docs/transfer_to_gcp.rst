@@ -1,7 +1,7 @@
-encode\_utils\.cloud\_transfers.py
-----------------------------------
+encode\_utils\.transfer\_to\_gcp.py
+------------------------------------
 
-.. automodule:: encode_utils.cloud_transfers
+.. automodule:: encode_utils.transfer_to_gcp
    :members:
    :private-members:
    :show-inheritance:

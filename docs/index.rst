@@ -46,7 +46,7 @@ Client API Modules
 .. toctree::
    :maxdepth: 3
 
-   cloud_transfers
+   transfer_to_gcp 
    encode_utils
    utils
    connection
