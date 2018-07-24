@@ -122,10 +122,10 @@ class Transfer:
             `dict`: The JSON response representing the newly created transferJob.
     
         """
-        if not self.aws_creds:
+        if not self.aws_creds[0] and not self.aws_creds[1]:
             raise AwsCredentialsMissing(("Error: In order to create a transferJob, you need to "
-                                         "instantiate the {} class with AWS credentials, or set "
-                                         "them in your environment.".format(self.__class__.__name__)))
+                                         "instantiate the {} class with AWS credentials, or have them preset "
+                                         "in your environment.".format(self.__class__.__name__)))
         #See example at https://cloud.google.com/storage-transfer/docs/create-client and
         # https://github.com/GoogleCloudPlatform/python-docs-samples/blob/master/storage/transfer_service/aws_request.py.
     
