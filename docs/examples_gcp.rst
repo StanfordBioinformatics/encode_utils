@@ -10,7 +10,7 @@ for more details. This package exports three ways for interfacing with this logi
 
   1. A module named :mod:`encode_utils.transfer_to_gcp` that defines the `Transfer` class, which
      provides the ability to transfer files from an S3 bucket to a GCP bucket. It does so by 
-     creating what the STS calls a transfer job. 
+     creating what the STS calls a transferJob. 
   
   2. The :class:`encode_utils.connection.Connection`
      class has a method named :func:`encode_utils.connection.Connection.gcp_transfer` that uses the above
@@ -22,13 +22,10 @@ for more details. This package exports three ways for interfacing with this logi
   3. Lastly the script :doc:`scripts/eu_s3_to_gcp` can be used, which calls the aforementioned
      method `gcp_transfer` method, to transfer one or more ENCODE files to GCP. 
   
-Any transfer event of a trasferJob is termed as a transferOperation in the STS API. There are
-a few utility methods in this class that work with transferOperations.
-
 The Transfer class
 -------------------
 
-Create a one-off transfer job that executes immediately
+Create a one-off transferJob that executes immediately
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This example is not ENCODE specific.
@@ -39,24 +36,25 @@ This example is not ENCODE specific.
 
   transfer = gcp.Transfer(gcp_project="sigma-night-206802")
 
-The :func:`encode_utils.transfer_to_gcp.Transfer.create` method is used to create a transfer job.
-A transfer job either runs once (a one-off job) or is scheduled
-to run repeatedly, depending on how the job schedule is specified. The `create` method shown below
+The :func:`encode_utils.transfer_to_gcp.Transfer.create` method is used to create a what the STS
+calls a transferJob. A transferJob either runs once (a one-off job) or is scheduled
+to run repeatedly, depending on how the job schedule is specified. However, the `create` method shown below
 only schedules one-off jobs at present::
 
   transfer_job = transfer.create(s3_bucket="pulsar-encode-assets", s3_paths=["reads.fastq.gz"], gcp_bucket="nathankw1", description="test")
 
-  # At this point you can log into the GCP Consle for a visual look at your transfer job.
+  # At this point you can log into the GCP Consle for a visual look at your transferJob.
   transfer_job_id = transfer_job["name"]
   print(transfer_job_id) # Looks sth. like "transferJobs/10467364435665373026".
 
-  # Get the status of the transfer job. This queries the transferOperation:
+  # Get the status of the execution of a transferJob. An execution of a transferJob is called 
+  # a transferOperation in the STS lingo:
   status = gcp.get_transfer_status(transfer_job_id)
   print(status) # i.e. "SUCCESS". Other possabilities: IN_PROGRESS, PAUSED, FAILED, ABORTED.
 
   # Get details of the actual transferOperation.
-  # The "details" variable below is a list of transferOperations. Since we created a one-off job, there will only
-  # be a single transferOperation.
+  # The "details" variable below is a list of transferOperations. Since we created a one-off job, 
+  # there will only be a single transferOperation.
   details = transfer.get_transfers_from_job("transferJobs/10467364435665373026")[0]
   >>> print(json.dumps(d, indent=4))
   #  {
@@ -102,6 +100,9 @@ The `gcp_transfer()` method of the `encode_utils.connection.Connection` class
 
   import encode_utils.connection as euc
   conn = euc.Connection("prod")
+  # In production mode, the S3 source bucket is set to encode-files. In any other mode, the
+  # bucket is set to encoded-files-dev.
+
   transfer_job = conn.gcp_transfer(file_ids=["ENCFF270SAL", "ENCFF861EEE"], 
                     gcp_bucket="nathankw1", 
                     gcp_project="sigma-night-206802",
@@ -115,6 +116,6 @@ Running the script
   eu_s3_to_gcp.py --dcc-mode prod \
                   --file-ids ENCFF270SAL ENCFF861EEE \
                   --gcpbucket nathankw1 \
-                  --gcpproject sigma-night-206802
+                  --gcpproject sigma-night-206802 \
                   --description test
  
