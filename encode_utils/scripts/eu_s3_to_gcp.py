@@ -9,7 +9,7 @@
 
 """
 Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage         
-Transfer Service. See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
+Transfer Service. See :class:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
 """
 
 import argparse

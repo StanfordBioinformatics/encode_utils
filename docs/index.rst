@@ -22,6 +22,7 @@ Examples
    :maxdepth: 2
  
    Connection class <examples>
+   Transferring files to GCP <examples_gcp>
 
 .. :doc:`examples`
 
