@@ -55,7 +55,7 @@ only schedules one-off jobs at present::
   # Get details of the actual transferOperation.
   # The "details" variable below is a list of transferOperations. Since we created a one-off job, 
   # there will only be a single transferOperation.
-  details = transfer.get_transfers_from_job("transferJobs/10467364435665373026")[0]
+  details = transfer.get_transfers_from_job(transfer_job_id)[0]
   >>> print(json.dumps(d, indent=4))
   #  {
   #      "name": "transferOperations/transferJobs-10467364435665373026-1532468269728367",
