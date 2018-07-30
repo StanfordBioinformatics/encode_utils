@@ -189,6 +189,36 @@ def typecast(value, value_type):
 
 
 def create_payloads(profile_id, infile):
+    try:
+        with open(infile) as f:
+            payloads = json.load(f)
+        return create_payloads_from_json(profile_id, payloads)
+    except ValueError:
+        return create_payloads_from_tsv(profile_id, infile)
+
+
+def create_payloads_from_json(profile_id, payloads):
+    """
+    Generates payloads from a JSON file
+
+    Args:
+        profile_id: str. The identifier for a profile on the Portal. For
+        example, use genetic_modificaiton for the profile https://www.encodeproject.org/profiles/genetic_modification.json.
+        payloads: dict or list parsed from a JSON input file.
+
+    Yields: dict. The payload that can be used to either register or patch the
+    metadata for each row.
+    """
+    if isinstance(payloads, dict):
+        payloads = [payloads]
+    profile = eup.Profile(profile_id)
+    schema = profile.get_profile()
+    for payload in payloads:
+        payload[euc.Connection.PROFILE_KEY] = profile.profile_id
+        yield payload
+
+
+def create_payloads_from_tsv(profile_id, infile):
     """
     Generates the payload for each row in 'infile'.
 
