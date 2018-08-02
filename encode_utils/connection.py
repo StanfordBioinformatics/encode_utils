@@ -1291,8 +1291,8 @@ class Connection():
             headers=euu.REQUEST_HEADERS_JSON,
             json = {},
             timeout=eu.TIMEOUT)
+        response_json = response.json()
         if response.ok:
-            response_json = response.json()
             self.debug_logger.debug("Success: upload credentials for '{}' regerated.".format(file_id))
             upload_creds = response_json["@graph"][0]["upload_credentials"]
             return upload_creds
