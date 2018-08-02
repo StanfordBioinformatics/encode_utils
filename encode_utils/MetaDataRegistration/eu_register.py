@@ -8,7 +8,7 @@
 ###
 
 """
-Given a tab-delimited input file containing one or more records belonging to one of the profiles
+Given a tab-delimited or JSON input file containing one or more records belonging to one of the profiles
 listed on the ENCODE Portal (such as https://www.encodeproject.org/profiles/biosample.json),
 either POSTS or PATCHES the records. The default is to POST each record; to PATCH instead, see
 the ``--patch`` option.
@@ -81,14 +81,17 @@ def get_parser():
     values need to be submitted as integers, not strings).""")
 
     parser.add_argument("-i", "--infile", required=True, help="""
-    The tab-delimited input file with a field-header line as the first line.
+    The JSON input file or tab-delimited input file. 
+
+    **The tab-delimited file format:**
+    Must have a field-header line as the first line.
     Any lines after the header line that start with a '#' will be skipped, as well as any empty lines.
-    The field names must be
-    exactly equal to the corresponding property names in the corresponding profile. Non-scematic fields
-    are allowed as long as they begin with a '#'; they will be skipped. If a property has an
-    array data type (as indicated in the profile's documentation on the Portal), the array literals
-    '[' and ']' are optional. Values within the array must be comma-delimited. For example, if a
-    property takes an array of strings, then you can use either of these as the value:
+    The field names must be exactly equal to the corresponding property names in the corresponding 
+    profile. Non-scematic fields are allowed as long as they begin with a '#'; they will be 
+    skipped. If a property has an array data type (as indicated in the profile's documentation 
+    on the Portal), the array literals '[' and ']' are optional. Values within the array must 
+    be comma-delimited. For example, if a property takes an array of strings, then you can use 
+    either of these as the value:
 
     1) str1,str2,str3
     2) [str1,str2,str3]
@@ -101,6 +104,11 @@ def get_parser():
     1) {"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}
     2) [{"name": "eGFP", "location": "C-terminal"},{"name": "FLAG","C-terminal"}]
 
+    **The JSON input file**
+    Can be a single JSON object, or an array of JSON objects. Key names must match property names of
+    an ENCODE record type (profile).
+
+    **The following applies to either input file formats**
     When patching objects, you must specify the 'record_id' field to indicate the identifier of the record.
     Note that this a special field that is not present in the ENCODE schema, and doesn't use the '#'
     prefix to mark it as non-schematic. Here you can specify any valid record identifier
@@ -108,7 +116,8 @@ def get_parser():
 
     Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set
     as fields in the input file, or can be left out, in which case the default values for these
-    attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.""")
+    attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.
+    """)
 
     parser.add_argument("--patch", action="store_true", help="""
     Presence of this option indicates to PATCH an existing DCC record rather than register a new one.""")
@@ -189,6 +198,39 @@ def typecast(value, value_type):
 
 
 def create_payloads(profile_id, infile):
+    """
+    First attempts to read the input file as JSON. If that fails, tries the TSV parser.
+    """
+    try:
+        with open(infile) as f:
+            payloads = json.load(f)
+        return create_payloads_from_json(profile_id, payloads)
+    except ValueError:
+        return create_payloads_from_tsv(profile_id, infile)
+
+
+def create_payloads_from_json(profile_id, payloads):
+    """
+    Generates payloads from a JSON file
+
+    Args:
+        profile_id: str. The identifier for a profile on the Portal. For
+        example, use genetic_modificaiton for the profile https://www.encodeproject.org/profiles/genetic_modification.json.
+        payloads: dict or list parsed from a JSON input file.
+
+    Yields: dict. The payload that can be used to either register or patch the
+    metadata for each row.
+    """
+    if isinstance(payloads, dict):
+        payloads = [payloads]
+    profile = eup.Profile(profile_id)
+    schema = profile.get_profile()
+    for payload in payloads:
+        payload[euc.Connection.PROFILE_KEY] = profile.profile_id
+        yield payload
+
+
+def create_payloads_from_tsv(profile_id, infile):
     """
     Generates the payload for each row in 'infile'.
 
