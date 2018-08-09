@@ -224,7 +224,6 @@ def create_payloads_from_json(profile_id, payloads):
     if isinstance(payloads, dict):
         payloads = [payloads]
     profile = eup.Profile(profile_id)
-    schema = profile.get_profile()
     for payload in payloads:
         payload[euc.Connection.PROFILE_KEY] = profile.profile_id
         yield payload
