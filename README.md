@@ -1,7 +1,7 @@
 © 2018 The Board of Trustees of the Leland Stanford Junior University.
 
 # encode_utils
-Tools that are useful to any ENCODE submitting group. Library and scripts are coded in Python.
+Tools that are useful to any ENCODE Consortium submitting group, as well as the general community working with ENCODE data.  Library and scripts are coded in Python.
 
 See the [wiki](https://github.com/StanfordBioinformatics/encode_utils/wiki) to get started. 
 
@@ -9,6 +9,13 @@ API and script documentation are available on [Read the Docs](http://encode-util
 
 
 # Latest news
+
+Aug 9, 2018
+
+Release [2.3.1](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.3.1).
+Adds support to transfer from S3 to GCP (see release notes from [2.3.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.3.0)). 
+
+***
 
 Jun 15, 2018
 
