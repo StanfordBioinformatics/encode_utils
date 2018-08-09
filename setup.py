@@ -22,7 +22,7 @@ scripts.append("encode_utils/MetaDataRegistration/eu_register.py")
 
 setup(
   name = "encode utils",
-  version = "1.1.4",
+  version = "2.3.1",
   description = "Client and tools for ENCODE data submitters.",
   author = "Nathaniel Watson",
   author_email = "nathankw@stanford.edu",
