@@ -1275,6 +1275,9 @@ class Connection():
             `dict`: `dict` containing the value of the 'upload_credentials' key in the JSON serialization
             of the file record represented by `file_id`. Will be empty if new upload credentials
             could not be issued.
+
+        Raises:
+            `requests.exceptions.HTTPError`: The response from the server isn't a successful status code. 
         """
         self.debug_logger.debug("Using curl to generate new file upload credentials")
         # Don't use curl since it
