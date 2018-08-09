@@ -134,7 +134,7 @@ class TestConnection(unittest.TestCase):
         aws_creds = {}
         aws_creds["AWS_ACCESS_KEY_ID"] = access_key
         aws_creds["AWS_SECRET_ACCESS_KEY"] = secret_key
-        aws_creds["AWS_SECURITY_TOKEN"] = session_token
+        aws_creds["AWS_SESSION_TOKEN"] = session_token
         aws_creds["UPLOAD_URL"] = upload_url
 
         self.assertEqual(res, aws_creds)
@@ -152,23 +152,7 @@ class TestConnection(unittest.TestCase):
         }
 
         res = self.conn.make_search_url(search_args=query)
-        query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=all&organ_slims=blood&type=Experiment"
-        self.assertEqual(res, os.path.join(self.conn.dcc_url, query))
-
-    def test_2_make_search_url(self):
-        """
-        Tests the method ``make_search_url()`` for building the correct URL given the query arguments
-        to find ChIP-seq assays performed on primary cells from blood, and a limit of 1 search result.
-        """
-        query = {
-            "assay_title": "ChIP-seq",
-            "biosample_type": "primary cell",
-            "organ_slims": "blood",
-            "type": "Experiment"
-        }
-
-        res = self.conn.make_search_url(search_args=query, limit=1)
-        query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&limit=1&organ_slims=blood&type=Experiment"
+        query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&organ_slims=blood&type=Experiment"
         self.assertEqual(res, os.path.join(self.conn.dcc_url, query))
 
     def test_get(self):
