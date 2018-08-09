@@ -165,7 +165,7 @@ class Transfer:
         }
         params["transferSpec"] = {
             "awsS3DataSource": {
-                "bucketName": "pulsar-encode-assets",
+                "bucketName": s3_bucket,
                 "awsAccessKey": {
                     "accessKeyId": self.aws_creds[0],
                     "secretAccessKey": self.aws_creds[1]
