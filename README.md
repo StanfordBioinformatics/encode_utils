@@ -13,7 +13,7 @@ API and script documentation are available on [Read the Docs](http://encode-util
 Aug 9, 2018
 
 Release [2.3.1](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.3.1).
-Adds support to transfer from S3 to GCP (see release notes from [2.3.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.3.0). 
+Adds support to transfer from S3 to GCP (see release notes from [2.3.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.3.0)). 
 
 ***
 
