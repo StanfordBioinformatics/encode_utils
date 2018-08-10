@@ -102,7 +102,7 @@ class Transfer:
         self.aws_creds = (aws_access_key_id, aws_secret_access_key)
         self.storagetransfer = googleapiclient.discovery.build('storagetransfer', 'v1')
 
-    def create(self, s3_bucket, s3_paths, gcp_bucket, description=""):
+    def create(self, s3_bucket, s3_paths, gcp_bucket, overwrite_existing=False, description=""):
         """
         Schedules an one-off transferJob that runs immediately to copy the specified file(s) from 
         s3_bucket to gcp_bucket. 
@@ -114,6 +114,8 @@ class Transfer:
                 given transfer job, per the Storage Transfer API transferJobs_ documentation.
                 If you only need to transfer a single file, it may be given as a string.
             gcp_bucket: `str`. The name of the GCP bucket.
+            overwrite_existing: `bool`. True means that files in GCP get overwritten by any files
+                being transferred with the same name (key).
             description: `str`. The description to show when querying transfers via the
                  Google Storage Transfer API, or via the GCP Console. May be left empty, in which
                  case the default description will be the value of the first S3 file name to transfer.
@@ -178,6 +180,11 @@ class Transfer:
                 "includePrefixes": s3_paths
             }
         }
+
+        if overwrite_existing:
+            params["transferSpec"]["transferOptions"] = {
+                "overwriteObjectsAlreadyExistingInSink": True
+            }
     
         job = self.storagetransfer.transferJobs().create(body=params).execute() #dict
         job_id = job["name"].split("/")[-1]
