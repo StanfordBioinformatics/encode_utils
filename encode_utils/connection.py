@@ -1336,7 +1336,7 @@ class Connection():
                 object identifier. Don't mix ENCODE files from across buckets.
             gcp_bucket: `str`. The name of the GCP bucket.
             gcp_project: `str`. The GCP project that is associated with gcp_bucket. Can be given
-                in either integer form  or the user-friendly name form (i.e. sigma-night-207122)
+                in either integer form  or the user-friendly name form (i.e. sigma-night-206802)
             description: `str`. The description to show when querying transfers via the
                  Google Storage Transfer API, or via the GCP Console. May be left empty, in which
                  case the default description will be the value of the first S3 file name to transfer.
@@ -1348,17 +1348,12 @@ class Connection():
             `dict`: The JSON response representing the newly created transferJob.
         """
         s3_paths = []
-        accessions = []
         for i in file_ids:
-            rec = self.get(rec_ids=i, ignore404=False)
-            accessions.append(rec["accession"])
-            s3_paths.append(rec["href"])
-         # Check first accession to determine what S3 bucket to use:
-        if accessions[0].startswith("ENCFF"):
-            s3_bucket = eu.ENCODE_PROD_S3BUCKET
-        else:
-            s3_bucket = eu.ENCODE_TEST_S3BUCKET
+            s3_paths.append(self.s3_object_path(rec_id=i))
         t = encode_utils.transfer_to_gcp.Transfer(gcp_project=gcp_project, aws_creds=aws_creds)
+        # Figure out the s3 bucket by looking at the first s3 object. All specified s3 files should
+        # from the same bucket.
+        s3_bucket = s3_paths[0].split("/")[2]
         transfer_job = t.create(s3_bucket=s3_bucket, s3_paths=s3_paths, gcp_bucket=gcp_bucket, description=description)
         return transfer_job
 
@@ -1577,9 +1572,9 @@ class Connection():
             verify=False)
         r.raise_for_status()
         content_length = r.headers.get("Content-Length")
-        self.debug_logger.debug("Downloading file {} from URL {}.".format(rec_id, url))
+        self.debug_logger.debug("Getting file {} from URL {}.".format(rec_id, url))
         if content_length:
-            self.debug_logger.debug("Download size: {:,.0f} bytes.".format(int(content_length)))
+            self.debug_logger.debug("File size: {:,.0f} bytes.".format(int(content_length)))
         if file_type:
             filename = r.headers["Content-Disposition"].split("filename=")[-1]
         else:
@@ -1596,6 +1591,20 @@ class Connection():
         self.debug_logger.debug("Download complete: {}.".format(filename))
         return filename
 
+    def s3_object_path(self, rec_id):
+        response = self.download(rec_id=rec_id, get_stream=True)
+        redirect_url = response.url
+        # i.e. redirect_url is 
+        # https://download.encodeproject.org/https://encode-files.s3.amazonaws.com/2017/05/12/4ae28
+        # cf4-c0a7-409f-8d8d-384ba692096a/ENCFF985JCJ.bigWig?response-content-disposition=attachment%3B%2 ...
+        url_obj = urllib.parse.urlsplit(redirect_url)
+        url_path = url_obj.path.lstrip("/")
+        # i.e. url_path is 'https://encode-files.s3.amazonaws.com/2017/05/12/4ae28cf4-c0a7-409f-8d8d-384ba692096a/ENCFF985JCJ.bigWig'
+        s3_uri = url_path.replace(url_obj.scheme, "s3")
+        s3_uri = s3_uri.replace(".s3.amazonaws.com", "")
+        print(s3_uri)
+        return s3_uri
+        
     def link_document(self, rec_id, document_id):
         """
         Links an existing `document` record on the Portal to some other record on the Portal via
