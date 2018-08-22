@@ -3,25 +3,37 @@ Transferring files to GCP
 
 .. _transferOperation: https://cloud.google.com/storage-transfer/docs/reference/rest/v1/transferOperations
 
-Encapsulates working with the Google Storage Transfer Service (STS) to transfer files from AWS S3 to
-GCP buckets.  The Google Storage Transfer API documentation for Python is available `here 
-<https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/>`_ 
-for more details. This package exports three ways for interfacing with this logic.
+Encapsulates working with the Google Storage Transfer Service (STS) to transfer files to GCP from either
+list of public URLs, or from a list of AWS S3 URIs. The latter requires that the user has AWS keys
+with permissions granted to the source S3 bucket and objects. 
 
-  1. A module named :mod:`encode_utils.transfer_to_gcp` that defines the `Transfer` class, which
-     provides the ability to transfer files from an S3 bucket to a GCP bucket. It does so by 
-     creating what the STS calls a transferJob. 
+The Google Storage Transfer API documentation for Python is available `here 
+<https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/>`_ 
+for more details. This package exports a few ways for interfacing with this logic.
+
+  1. A  module named :mod:`encode_utils.transfer_to_gcp` that defines the `Transfer` class, which
+     provides the ability to transfer files from an S3 bucket (even non-ENCODE S3 buckets) to a 
+     GCP bucket. It does so by creating what the STS calls a transferJob. A transferJob can also
+     be created by passing in a URL list, which is a public file accessible through HTTP/S; GCS
+     details at https://cloud.google.com/storage-transfer/docs/create-url-list.  
   
   2. The :class:`encode_utils.connection.Connection`
-     class has a method named :func:`encode_utils.connection.Connection.gcp_transfer` that uses the above
-     module and is specific towards working with ENCODE buckets.  When using this method, 
-     you don't need to specify the S3 bucket or full path of an S3 object to transfer. All you need
-     to do is specify an ENCODE file identifier, such as an accession or alias, and it will figure out
-     the bucket and path to the file in the bucket for you.
+     class has a method named :func:`encode_utils.connection.Connection.gcp_transfer_from_s3` that uses the above
+     module and is specific towards working with ENCODE files.  Note: this requires AWS keys.  If 
+     you simply want to copy released ENCODE files, you should 
+     When using this method, you don't need to specify the S3 bucket or full path of an S3 object 
+     to transfer. All you need to do is specify an ENCODE file identifier, such as an accession or 
+     alias, and it will figure out the bucket and path to the file in the bucket for you.
+
+  3. The method :func:`encode_utils.connection.Connection.gcp_transfer_from_urllist`, which doesn't
+     require AWS keys since it only works with released ENCODE files. This method just creates the
+     file that can be used directly as input to the Google Storage Transfer Service in the Google Console,
+     or programatically to the method :func:`encode_utils.transfer_to_gcp.Transfer.from_urllist`. 
   
-  3. Lastly the script :doc:`scripts/eu_s3_to_gcp` can be used, which calls the aforementioned
-     method `gcp_transfer` method, to transfer one or more ENCODE files to GCP. 
-  
+  4. The script :doc:`scripts/eu_s3_to_gcp` can be used, which calls the aforementioned
+     method `gcp_transfer_from_s3` method, to transfer one or more ENCODE files to GCP.  Requires
+     AWS keys. 
+
 The Transfer class
 -------------------
 
@@ -36,12 +48,12 @@ This example is not ENCODE specific.
 
   transfer = gcp.Transfer(gcp_project="sigma-night-206802")
 
-The :func:`encode_utils.transfer_to_gcp.Transfer.create` method is used to create a what the STS
+The :func:`encode_utils.transfer_to_gcp.Transfer.from_s3` method is used to create what the STS
 calls a transferJob. A transferJob either runs once (a one-off job) or is scheduled
-to run repeatedly, depending on how the job schedule is specified. However, the `create` method shown below
+to run repeatedly, depending on how the job schedule is specified. However, the `from_s3` method shown below
 only schedules one-off jobs at present::
 
-  transfer_job = transfer.create(s3_bucket="pulsar-encode-assets", s3_paths=["reads.fastq.gz"], gcp_bucket="nathankw1", description="test")
+  transfer_job = transfer.from_s3(s3_bucket="pulsar-encode-assets", s3_paths=["reads.fastq.gz"], gcp_bucket="nathankw1", description="test")
 
   # At this point you can log into the GCP Consle for a visual look at your transferJob.
   transfer_job_id = transfer_job["name"]
@@ -93,8 +105,9 @@ only schedules one-off jobs at present::
   #      }
   #  }
 
-The `gcp_transfer()` method of the `encode_utils.connection.Connection` class
+The `gcp_transfer_from_s3()` method of the `encode_utils.connection.Connection` class
 -----------------------------------------------------------------------------
+Requires that the user has AWS key permissions on the ENCODE buckets and file objects.
 
 ::
 
@@ -103,13 +116,39 @@ The `gcp_transfer()` method of the `encode_utils.connection.Connection` class
   # In production mode, the S3 source bucket is set to encode-files. In any other mode, the
   # bucket is set to encoded-files-dev.
 
-  transfer_job = conn.gcp_transfer(file_ids=["ENCFF270SAL", "ENCFF861EEE"], 
-                    gcp_bucket="nathankw1", 
-                    gcp_project="sigma-night-206802",
-                    description="test")
+  transfer_job = conn.gcp_transfer_from_s3(
+      file_ids=["ENCFF270SAL", "ENCFF861EEE"], 
+      gcp_bucket="nathankw1", 
+      gcp_project="sigma-night-206802",
+      description="test")
+
+Copying files using a URL list
+------------------------------
+No AWS keys required, but all files being copied must have a status of released. 
+
+::
+  import encode_utils.transfer_to_gcp as gcp 
+  import encode_utils.connection as euc
+  conn = euc.Connection("prod")
+  # Create URL list file
+  url_file = conn.gcp_transfer_urllist(
+       file_ids=["ENCFF385UTX"],
+       filename="files_to_transfer.txt")
+
+  # Upload files_to_transfer.txt to your GCS bucket, or some other public place accessible via HTTP/S.
+  # Suggested to use a txt extension for your file rathar than tsv so that it can be opened in the 
+  # browser (i.e. in GCP to obtain the URL). 
+
+  transfer = gcp.Transfer(gcp_project="sigma-night-206802")
+  transfer_job = transfer.from_urllist(
+       urllist="https://files_to_transfer.txt",
+       gcp_bucket="nathankw1", 
+       description="test")
+
 
 Running the script
 ------------------
+Requires that the user has AWS key permissions on the ENCODE buckets and file objects.
 
 ::
 
@@ -119,3 +158,4 @@ Running the script
                   --gcpproject sigma-night-206802 \
                   --description test
  
+

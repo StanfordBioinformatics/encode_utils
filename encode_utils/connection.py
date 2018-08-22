@@ -1277,7 +1277,7 @@ class Connection():
             could not be issued.
 
         Raises:
-            `requests.exceptions.HTTPError`: The response from the server isn't a successful status code. 
+            `requests.exceptions.HTTPError`: The response from the server isn't a successful status code.
         """
         self.debug_logger.debug("Using curl to generate new file upload credentials")
         # Don't use curl since it
@@ -1326,10 +1326,42 @@ class Connection():
 
         #Don't log the full response as it contains sensative security information.
 
-    def gcp_transfer(self, file_ids, gcp_bucket, gcp_project, description="", aws_creds=()):
+    def gcp_transfer_urllist(self, file_ids, filename):
+        """
+        Creates a URL list (file) to be used as input into the Google STS; see documentation at 
+        https://cloud.google.com/storage-transfer/docs/create-url-list. Oce the URL list is created,
+        you need to upload it somewhere that Google STS can reach it via HTTP or HTTPS. I recommend
+        uploading the URL list to your GCS bucket. From there, you can get an HTTPS URL for it by 
+        clicking on your file name (while in the GCP Console) and then copying the URL shown in your 
+        Web browser. 
+
+        Args:
+            file_ids: `list` of file identifiers.
+            filename: `str`. The output filename in TSV format, which can be fed into the Google STS.
+        """
+        fout = open(filename, 'w')
+        fout.write("TsvHttpData-1.0\n")
+        for i in file_ids:
+            url = self.s3_object_path(rec_id=i, url=True)
+            # One with DCC API keys can get the URL in a more straightforward manner by doing a GET on
+            # the files @@upload endpoint. But this even requires AWS keys even when the file in 
+            # question is released. For broader community support, the above workaround is in use.
+            rec = self.get(i, ignore404=False)
+            md5 = base64.b64encode(bytes.fromhex(rec["md5sum"]))
+            fout.write("\t".join([url, str(rec["file_size"]), md5.decode("utf-8")]) + "\n")
+        fout.close()
+
+    def gcp_transfer_from_aws(self, file_ids, gcp_bucket, gcp_project, description="", aws_creds=()):
         """
         Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage
-        Transfer Service.  See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation. 
+        Transfer Service. Only use this method if need to transfer non-released files and AWS keys
+        for the ENCODE S3 buckets since the underlying call to Google STS requires them. For transferring
+        released files, see :meth:`gcp_transfer_urllist`.
+
+        You must have environment variables for AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY set in
+        order for this method to work.
+
+        See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
 
         Args:
             file_ids: `list`. One or more ENCODE files to transfer. They can be any valid ENCODE File
@@ -1354,7 +1386,7 @@ class Connection():
         # Figure out the s3 bucket by looking at the first s3 object. All specified s3 files should
         # from the same bucket.
         s3_bucket = s3_paths[0].split("/")[2]
-        transfer_job = t.create(s3_bucket=s3_bucket, s3_paths=s3_paths, gcp_bucket=gcp_bucket, description=description)
+        transfer_job = t.from_s3(s3_bucket=s3_bucket, s3_paths=s3_paths, gcp_bucket=gcp_bucket, description=description)
         return transfer_job
 
 
@@ -1591,20 +1623,31 @@ class Connection():
         self.debug_logger.debug("Download complete: {}.".format(filename))
         return filename
 
-    def s3_object_path(self, rec_id):
+    def s3_object_path(self, rec_id, url=False):
+        """
+        Given an ENCODE File object's id (such as accession, uuid, alias), returns the full S3 object
+        URI, or HTTP/HTTPS URI if url=True. 
+
+        Args:
+            rec_id: `str`. A DCC object identifier of the record to link the document to.
+            url: `bool`. True means to return the HTTP/HTTPS URI of the file rather than the S3 URI.
+                 Useful if this is a released file since you can download via the URL.
+        """
         response = self.download(rec_id=rec_id, get_stream=True)
         redirect_url = response.url
-        # i.e. redirect_url is 
+        # i.e. redirect_url is
         # https://download.encodeproject.org/https://encode-files.s3.amazonaws.com/2017/05/12/4ae28
         # cf4-c0a7-409f-8d8d-384ba692096a/ENCFF985JCJ.bigWig?response-content-disposition=attachment%3B%2 ...
         url_obj = urllib.parse.urlsplit(redirect_url)
         url_path = url_obj.path.lstrip("/")
         # i.e. url_path is 'https://encode-files.s3.amazonaws.com/2017/05/12/4ae28cf4-c0a7-409f-8d8d-384ba692096a/ENCFF985JCJ.bigWig'
+        if url:
+            return url_path
         s3_uri = url_path.replace(url_obj.scheme, "s3")
         s3_uri = s3_uri.replace(".s3.amazonaws.com", "")
         print(s3_uri)
         return s3_uri
-        
+
     def link_document(self, rec_id, document_id):
         """
         Links an existing `document` record on the Portal to some other record on the Portal via

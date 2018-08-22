@@ -102,7 +102,7 @@ class Transfer:
         self.aws_creds = (aws_access_key_id, aws_secret_access_key)
         self.storagetransfer = googleapiclient.discovery.build('storagetransfer', 'v1')
 
-    def create(self, s3_bucket, s3_paths, gcp_bucket, overwrite_existing=False, description=""):
+    def from_s3(self, s3_bucket, s3_paths, gcp_bucket, overwrite_existing=False, description=""):
         """
         Schedules an one-off transferJob that runs immediately to copy the specified file(s) from 
         s3_bucket to gcp_bucket. 
@@ -124,6 +124,7 @@ class Transfer:
             `dict`: The JSON response representing the newly created transferJob.
     
         """
+        # See api documentation at https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/storagetransfer_v1.transferJobs.html.
         if not self.aws_creds[0] and not self.aws_creds[1]:
             raise AwsCredentialsMissing(("Error: In order to create a transferJob, you need to "
                                          "instantiate the {} class with AWS credentials, or have them preset "
@@ -190,6 +191,71 @@ class Transfer:
         job_id = job["name"].split("/")[-1]
         print("Created transfer job with ID {}\n{}".format(job_id, json.dumps(job, indent=4)))
         return job
+
+    def from_urllist(self, urllist, gcp_bucket, overwrite_existing=False, description=""):
+        """
+        Schedules an one-off transferJob that runs immediately to copy the files specified in the
+        URL list to GCS.
+
+        Args:
+            gcp_bucket: `str`. The name of the GCP bucket.
+            overwrite_existing: `bool`. True means that files in GCP get overwritten by any files
+                being transferred with the same name (key).
+            description: `str`. The description to show when querying transfers via the
+                 Google Storage Transfer API, or via the GCP Console. May be left empty, in which
+                 case the default description will be the value of the first S3 file name to transfer.
+    
+        Returns:
+            `dict`: The JSON response representing the newly created transferJob.
+    
+        """
+        #See api documentation at https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/storagetransfer_v1.transferJobs.html.
+    
+        if not description:
+            # Default description is the name of the first s3 object to transfer.
+            description = urllist
+        params = {}
+        params["description"] = description
+        params["status"] = "ENABLED"
+        params["projectId"] = self.gcp_project
+        # Set transfer day to present day and schedule an immediate, one-off transferJob. 
+        # Note that if the start day is different from the end day, then a repeating transferJob 
+        # will be created that runs daily all the way through the specified end day. 
+        # If no end date is set, a daily transferJob is created that runs indefinitely. 
+        # So, we need to avoid these last two scenarios and stick with a one-time transferJob.
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        hour = now.hour
+        minute = now.minute
+        params["schedule"] = {
+            "scheduleStartDate": {
+                "year": now.year,
+                "month": now.month,
+                "day": now.day
+            },
+            "scheduleEndDate": {
+                "year": now.year,
+                "month": now.month,
+                "day": now.day
+            }
+        }
+        params["transferSpec"] = {
+            "httpDataSource": {
+                "listUrl": urllist
+            },
+            "gcsDataSink": {
+                "bucketName": gcp_bucket
+            }
+        }
+
+        if overwrite_existing:
+            params["transferSpec"]["transferOptions"] = {
+                "overwriteObjectsAlreadyExistingInSink": True
+            }
+    
+        job = self.storagetransfer.transferJobs().create(body=params).execute() #dict
+        job_id = job["name"].split("/")[-1]
+        print("Created transfer job with ID {}\n{}".format(job_id, json.dumps(job, indent=4)))
+        return job
     
     def get_transfers_from_job(self, transferjob_name):
         """
@@ -202,7 +268,7 @@ class Transfer:
     
         Args:
             transferjob_name: `str`. The value of the `name` key in the dictionary that is returned by
-              create().
+              self.from_s3 or self.from_urllist().
     
         Returns:
             `list` of transferOperations belonging to the specified transferJob. This will be a list
