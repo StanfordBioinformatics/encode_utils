@@ -51,12 +51,13 @@ def get_profiles():
     # Remove the "private" profiles, since these have differing semantics.
     private_profiles = [x for x in profiles if x.startswith("_")]  # i.e. _subtypes
     for i in private_profiles:
+        # _subtypes should be the only one
         profiles.pop(i)
+    if "@type" in profiles: # A pseudo profile that doesn't count. 
+        profiles.pop("@type")
 
     profile_id_hash = {}  # Instead of name as key, profile ID is key.
     for name in profiles:  # i.e. name=GeneticModification
-        if name == "@type":
-            continue  # A pseudo profile that doesn't count.
         profile_id = profiles[name]["id"].split("/")[-1].split(".json")[0]
         profile_id_hash[profile_id] = profiles[name]
     return profile_id_hash
@@ -103,7 +104,7 @@ class Profile:
         assert(FILE_PROFILE_ID in PROFILES)
     except AssertionError:
         raise Exception(
-            "Error: The profile for file.json has underwent a name change apparently and is no longer known to this package.")
+            "Error: The profile for file.json underwent a name change apparently and is no longer known to this package.")
 
     #: Constant storing a property name of the `file.json` profile.
     #: The stored name is asserted for inclusion in the set of `File` properties.
@@ -135,8 +136,12 @@ class Profile:
             profile_id: `str`. Typically the value of a record's `@id` property.
         """
 
-        #: The normalized version of the passed-in `profile_id` to ``self.__init__()``. The normalization
-        #: is neccessary in order to match the format of the profile IDs in ``Profile.PROFILES``.
+        #: Typically, the value of a record's @id attribute, which stores the profile name for
+        #: the given record. For example, the @id value of genetic modification ENCGM701EET is 
+        #: */genetic-modifications/ENCGM701EET/*. The provided `profile_id` is normalized
+        #: so that it matches the format of the profile IDs stored as keys in the dict ``Profile.PROFILES``.
+        #: For example, */genetic-modifications/ENCGM701EET/* would be normalized to genetic_modification.
+        #: Of course, the exact name of a profile ID can be alternativly passed in.
         self.profile_id = self._set_profile_id(profile_id)
         #: The JSON schema for the profile.  Also accessible via the helper method `self.get_profile()`.
         self.schema = Profile.PROFILES[self.profile_id] 

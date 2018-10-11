@@ -11,7 +11,6 @@ import json
 import logging
 import mimetypes
 import os
-import pdb
 import re
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -89,12 +88,12 @@ class S3ToGCPFailed(Exception):
 class Connection():
     """Handles communication with the Portal regarding data submission and retrieval.
 
-    In order to authenticate with the DCC servers when making HTTP requests, you must have the
+    For data submission or modification, and working with non-released datasets, you must have
     the environment variables `DCC_API_KEY` and `DCC_SECRET_KEY` set. Check with your DCC data wrangler
     if you haven't been assigned these keys.
 
     There are three log files opened in append mode in the directory specified by ``connection.LOG_DIR`` that
-    are specific to whichver Portal you are connected to. When connected to Production, each log file
+    are specific to whichever Portal you are connected to. When connected to Production, each log file
     name will include the token '_prod_'. For Development, the token will be '_dev_'. The three
     log files are named accordingly in reference to their purpose, and are classified as:
 
@@ -114,7 +113,7 @@ class Connection():
     #: identifier for a record, such as alias, accession, uuid, md5sum, ... depending on
     #: the object being submitted.
     #: This is not a valid property of any ENCODE object schema, and is used in the ``patch()``
-    #: (and ``send()`` when doing a PATCH) instance method  to designate the record to update.
+    #: instance method to designate the record to update.
     ENCID_KEY = "_enc_id"
 
     #: Identifies the name of the key in the payload that stores the ID of the profile
@@ -175,7 +174,7 @@ class Connection():
 
         #: Indicates whether this class is being use to submit objects to the Portal. The main
         #: effect of setting this option to True is to update the default behavior of the
-        #: ``self.get()`` method, such that it it fetches its payload through the databsse directly
+        #: ``self.get()`` method, such that it it fetches its payload through the database directly
         #: rather than any index. That is useful when you are submitting several inter-dependent
         #: objects in turn and the new objects haven't yet had time to be indexed (otherwise you risk
         #: getting a 404 response back meaning "Resource Not Found". This attribute can be also set
@@ -340,7 +339,7 @@ class Connection():
         Returns:
             `list`: The aliases.
         """
-        record = self.get(ignore404=False, dcc_id=dcc_id)
+        record = self.get(ignore404=False, rec_ids=dcc_id)
         aliases = record[eu.ALIAS_PROP_NAME]
         for index in range(len(aliases)):
             alias = aliases[index]
@@ -370,7 +369,7 @@ class Connection():
         Returns:
             `str`: The URL containing the URL encoded query.
         """
-        # urllib doens't contain the parse() method until you import urllib3 (weird, but that's what I noticed).
+        # urllib doesn't contain the parse() method until you import urllib3 (weird, but that's what I noticed).
         query = urllib.parse.urlencode(search_args)
         url = os.path.join(self.dcc_url, "search/?") + query
         return url
@@ -1080,7 +1079,7 @@ class Connection():
         # and raise an Exception if one is present in the supplied 'props' list. Some properties,
         # such as accession, submitted_by, ..., still show up in a GET with 'frame="edit"', and
         # the Portal will most likely complain or silently disallow an attempt to remove such
-        # properites. Nonetheless, a well-behaved client shouln't send naughty requests, so some
+        # properites. Nonetheless, a well-behaved client shouldn't send uncouth requests, so some
         # checking is performed below for good measure:
         for prop in props:
             if profile.is_prop_required(prop):
@@ -1279,7 +1278,7 @@ class Connection():
         Raises:
             `requests.exceptions.HTTPError`: The response from the server isn't a successful status code.
         """
-        self.debug_logger.debug("Using curl to generate new file upload credentials")
+        self.debug_logger.debug("Attempting to generate new file upload credentials")
         # Don't use curl since it
         #   1) requires that all users have it installed, and
         #   2) only works for the most recent versions when interacting with the ENCODE servers.
@@ -1296,7 +1295,7 @@ class Connection():
             timeout=eu.TIMEOUT)
         response_json = response.json()
         if response.ok:
-            self.debug_logger.debug("Success: upload credentials for '{}' regerated.".format(file_id))
+            self.debug_logger.debug("Success: upload credentials for '{}' regenerated.".format(file_id))
             upload_creds = response_json["@graph"][0]["upload_credentials"]
             return upload_creds
         else:
@@ -1453,9 +1452,8 @@ class Connection():
               record's `submitted_file_name` property.
             set_md5sum: `bool`. True means to also calculate the md5sum and set the file record's md5sum
               property on the Portal (this currently is only implemented for local files, not S3).
-              This will always take place whenever the property isn't yet and when uploading a
+              This will always take place whenever the property isn't yet set and when uploading a
               local file.
-              set.
 
         Raises:
             encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
@@ -1524,15 +1522,13 @@ class Connection():
             platforms.extend(fastq_json["platform"][eu.ALIAS_PROP_NAME])
         return list(set(platforms))
 
-    def post_document(self, download_filename, document, document_type, description):
+    def post_document(self, document, document_type, description):
         """POSTS a document to the Portal.
 
         The alias for the document will be the lab prefix plus the file name. The lab prefix is taken
         as the value of the `DCC_LAB` environment variable, i.e. 'michael-snyder'.
 
         Args:
-            download_filename: `str`. The name to give the document when downloading it from the ENCODE
-              portal.
             document_type: `str`. For possible values, see
               https://www.encodeproject.org/profiles/document.json. It appears that one should use
               "data QA" for analysis results documents.
@@ -1555,7 +1551,6 @@ class Connection():
         payload["document_type"] = document_type
         payload["description"] = description
 
-        #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"
         attachment = self.set_attachment(document)
 
         payload['attachment'] = attachment
@@ -1614,9 +1609,9 @@ class Connection():
         if directory:
             filename = os.path.join(directory,filename)
         fout = open(filename, "wb")
-        # Download in chunks of 512 bytes
         if get_stream:
             return r
+        # Download in chunks of 512 bytes
         for line in r.iter_content(chunk_size=512):
             fout.write(line)
         fout.close()
