@@ -11,6 +11,7 @@ Contains a ``Profile`` class for working with profiles on the ENCODE Portal.  No
 'profile' and 'schema' are used interchangeably in this package.
 """
 
+import inflection
 import json
 import logging
 import os
@@ -178,10 +179,9 @@ class Profile:
         profile_id = profile_id.strip("/").split("/")[0].lower()
         # Multi-word profile names are hypen-separated, i.e. genetic-modifications.
         profile_id = profile_id.replace("-", "_")
+        profile_id = inflection.singularize(profile_id)
         if not profile_id in Profile.PROFILES:
-            profile_id = profile_id.rstrip("s")
-            if not profile_id in Profile.PROFILES:
-                raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
+            raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
         return profile_id
 
     def filter_non_writable_props(self, rec_json, keep_identifying=False):

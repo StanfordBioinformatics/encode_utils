@@ -835,8 +835,8 @@ class Connection():
                 defualt set by the environment variable `DCC_AWARD`.
             encode_utils.connection.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
                 default set by the environment variable `DCC_LAB`.
-            encode_utils.connection.MissingAlias: The argument 'require_aliases' is set to False and
-                the 'aliases' property is missing in the payload.
+            encode_utils.connection.MissingAlias: The argument 'require_aliases' is set to True and
+                the 'aliases' property is missing in the payload or is empty.
             encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok.
 
         Side effects:
@@ -852,7 +852,7 @@ class Connection():
         url = os.path.join(self.dcc_url, profile_id)
         if self.ENCID_KEY in payload:
             # Shouldn't be here, unless maybe a PATCH was attempted and the record didn't exist, so
-            # a POST was then attempted. In face, self.send() can do just that.
+            # a POST was then attempted.
             payload.pop(self.ENCID_KEY)
         # Check if we need to add defaults for 'award' and 'lab' properties:
         if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS:  # No lab prop for these profiles either.
@@ -867,8 +867,8 @@ class Connection():
 
         # Run 'before' hooks:
         payload = self.before_submit_hooks(payload, method=self.POST)
-        # Remove the non-schematic self.PROFILE_KEY if being used. Also check for the `@id` property
-        # and remove if found too.
+        # Remove the non-schematic self.PROFILE_KEY if being used, which was added above since some
+        # 'before' hooks may need it. Also check for the `@id` property and remove it too if found.
         try:
             payload.pop(self.PROFILE_KEY)
         except KeyError:
