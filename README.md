@@ -10,6 +10,13 @@ API and script documentation are available on [Read the Docs](http://encode-util
 
 # Latest news
 
+Bug fixes in Master:
+
+1. Fixed bug reported by Jennifer Jou where the `profile.Profile._set_profile_id()` method didn't properly singularize the profile ID in all cases. Fixed this by using the inflection module's singularize method.
+2. Fixed bug where `eu_register.py`'s `typecase()` function didn't check for booleans to typecaset to.  Thanks again to jjou for reporting.
+
+***
+
 Oct. 11, 2018
 
 Release [2.4.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.4.0)
