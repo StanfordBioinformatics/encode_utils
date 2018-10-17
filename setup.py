@@ -31,6 +31,7 @@ setup(
   install_requires = [
     "awscli",
     "google-api-python-client",
+    "inflection",
     "jsonschema",
     "requests",
     "urllib3"],

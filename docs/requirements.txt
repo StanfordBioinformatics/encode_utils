@@ -1,3 +1,4 @@
-sphinx-argparse
-jsonschema
+inflection
 google-api-python-client
+jsonschema
+sphinx-argparse
