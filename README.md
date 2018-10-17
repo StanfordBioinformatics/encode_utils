@@ -14,8 +14,10 @@ Oct. 16, 2018
 
 Bug fixes in Master:
 
-1. Fixed bug reported by Jennifer Jou where the `profile.Profile._set_profile_id()` method didn't properly singularize the profile ID in all cases. Fixed this by using the inflection module's singularize method.
+1. Fixed bug reported by Jennifer Jou where the `profile.Profile._set_profile_id()` method didn't properly singularize the profile ID in all cases. Fixed this by using the inflection module's singularize function.
 2. Fixed bug where `eu_register.py`'s `typecase()` function didn't check for booleans to typecaset to.  Thanks again to jjou for reporting.
+
+These fixes will be rolled out in the next (minor) release. 
 
 ***
 
