@@ -10,6 +10,8 @@ API and script documentation are available on [Read the Docs](http://encode-util
 
 # Latest news
 
+Oct. 16, 2018
+
 Bug fixes in Master:
 
 1. Fixed bug reported by Jennifer Jou where the `profile.Profile._set_profile_id()` method didn't properly singularize the profile ID in all cases. Fixed this by using the inflection module's singularize method.
