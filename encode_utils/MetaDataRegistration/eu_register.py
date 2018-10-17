@@ -189,11 +189,25 @@ def check_valid_json(prop, val, row_count):
     return json_val
 
 
-def typecast(value, value_type):
+def typecast(field_name, value, data_type, line_num):
     """
+    Converts the value to the specified data type. Used to convert string representations of integers
+    in the input file to integers, and string representations of booleans to booleans.
+
+    Args:
+        field_name: The name of the field in the input file whose value is being potentially typecast.
+            Used only in error messages. 
+        value: The value to potentially typecast.
+        data_type: Specifies the data type of field_name as indicated in the ENCODE profile. 
+        line_num: The current line number in the input file. Used only in error messages. 
     """
-    if value_type == "integer":
+    if data_type == "integer":
         return int(value)
+    elif data_type == "boolean":
+        value = value.lower() 
+        if value not in ["true", "false"]:
+            raise Exception("Can't convert value '{}' in field '{}' on line {} to data type '{}'.".format(value, field_name, line_num, data_type))
+        value = json.loads(value)
     return value
 
 
@@ -312,9 +326,9 @@ def create_payloads_from_tsv(profile_id, infile):
                         val = val[:-1]
                     val = [x.strip() for x in val.split(",")]
                     # Type cast tokens if need be, i.e. to integers:
-                    val = [typecast(value=x, value_type=item_val_type) for x in val]
+                    val = [typecast(field_name=field, value=x, data_type=item_val_type, line_num=line_count) for x in val]
             else:
-                val = typecast(value=val, value_type=schema_val_type)
+                val = typecast(field_name=field, value=val, data_type=schema_val_type, line_num=line_count)
             payload[field] = val
         yield payload
 
