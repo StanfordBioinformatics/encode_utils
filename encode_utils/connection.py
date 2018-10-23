@@ -560,7 +560,7 @@ class Connection():
                 url += "&datastore=database"
             if frame:
                 url += "&frame={frame}".format(frame=frame)
-            self.debug_logger.debug(">>>>>>GETTING {rec_id} From DCC with URL {url}".format(
+            self.debug_logger.debug(">>>>>>GET {rec_id} From DCC with URL {url}".format(
                 rec_id=r, url=url))
             response = requests.get(url,
                                     auth=self.auth,
@@ -1599,7 +1599,7 @@ class Connection():
             verify=False)
         r.raise_for_status()
         content_length = r.headers.get("Content-Length")
-        self.debug_logger.debug("Getting file {} from URL {}.".format(rec_id, url))
+        self.debug_logger.debug("GET file {} from URL {}.".format(rec_id, url))
         if content_length:
             self.debug_logger.debug("File size: {:,.0f} bytes.".format(int(content_length)))
         if file_type:
