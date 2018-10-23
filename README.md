@@ -17,7 +17,15 @@ Bug fixes in Master:
 1. Fixed bug reported by Jennifer Jou where the `profile.Profile._set_profile_id()` method didn't properly singularize the profile ID in all cases. Fixed this by using the inflection module's singularize function.
 2. Fixed bug where `eu_register.py`'s `typecast()` function didn't check for booleans to typecaset to.  That meant that the registration script didn't always handle boolean fields propertly. Thanks again to jjou for reporting.
 
-These fixes will be rolled out in the next (minor) release. 
+New in Master:
+
+1. 10/23/2018 
+   Added new script eu_get_accessions.py.  Given an input list of record aliases, retrieves the DCC accession for each. 
+   
+Updates in Master:
+
+1. Renamed ``utils.clean_alias_name()`` to [``utils.clean_aliases``](https://encode-utils.readthedocs.io/en/latest/utils.html#encode_utils.utils.clean_aliases). This function now takes a list of aliases and either removes or replaces non-permitted characters, such as "/" and "#". This function is called in the pre-submit hook.
+   
 
 ***
 
