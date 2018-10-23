@@ -276,14 +276,33 @@ class Connection():
         secret_key = os.environ.get("DCC_SECRET_KEY")
         return api_key, secret_key
 
-    def _log_post(self, alias, dcc_id):
-        """Uses the self.post_logger to log the submitted object's alias and dcc_id.
-
-        Each message is written in a two column format delimted by a tab character. The columns are:
-          1) alias (the first that appeared in the 'aliases' key in the payload), and
-          2) DCC identifier
+    def _log_post(self, aliases, dcc_id):
         """
-        entry = alias + "\t" + dcc_id
+        Uses the self.post_logger to log a newly POSTED object's aliases and dcc_id. 
+        Each message is written in a three column format delimited by a tab character. The columns are:
+          1) primary alias: The first alias appearing in the provided 'aliases' list argument.
+          2) secondary aliases: Any additional aliases appearing in the provided 'aliases' list argument.
+                 These will be comma-delimited.
+          2) DCC identifier: The value of the dcc_id argument. 
+
+        Note that it is possible that the aliases list is empty, in which case only the dcc_id will
+        be present in the last column of the written line. 
+
+        Args:
+            aliases: `list`. The value of the 'aliases' key in the payload for the record that
+                was POSTED.
+            dcc_id: `str`. An ENCODE-generated identifier on the ENCODE Portal for the new record
+                that was POSTED, i.e. accession, uuid, md5sum.
+        """
+        try:
+            primary = aliases[0]
+        except KeyError:
+            primary = ""
+        try:
+            secondary = aliases[1:]
+        except KeyError:
+            secondary = []
+        entry = primary + "\t" + ",".join(secondary) + "\t" + dcc_id
         self.post_logger.info(entry)
 
     def set_submission(self, status):
@@ -659,9 +678,12 @@ class Connection():
 
     def before_submit_alias(self, payload):
         """
-        A pre-POST and pre-PATCH hook used to add the lab alias prefix to any aliases that are
-        missing it. The `DCC_LAB` environment variable is consulted to fetch the lab name, and if not
-        set then this will be a no-op.
+        A pre-POST and pre-PATCH hook used to 
+          1) Clean alias names by removing disallowed characters indicated by the DCC schema for
+             the alias property. 
+          2) Add the lab alias prefix to any aliases that are missing it. 
+             The `DCC_LAB` environment variable is consulted to fetch the lab name, and if not
+             set then this will be a no-op.
 
         Args:
             payload: `dict`. The payload to submit to the Portal.
@@ -671,7 +693,9 @@ class Connection():
         """
         if not eu.ALIAS_PROP_NAME in payload:
             return payload
-        payload[eu.ALIAS_PROP_NAME] = euu.add_alias_prefix(payload[eu.ALIAS_PROP_NAME])
+        aliases = euu.clean_aliases(payload[eu.ALIAS_PROP_NAME])
+        aliases = euu.add_alias_prefix(aliases)
+        payload[eu.ALIAS_PROP_NAME] = aliases
         return payload
 
     def before_submit_attachment(self, payload):
@@ -903,10 +927,9 @@ class Connection():
         #        self.debug_logger.debug(euu.print_format_dict(validation_error[1]))
         #    raise Exception(euu.print_format_dict(validation_error[0]))
 
-        first_alias = aliases[0]
         self.debug_logger.debug(
-            ("<<<<<< POSTING {alias} To DCC with URL {url} and this"
-             " payload:\n\n{payload}\n\n").format(alias=first_alias, url=url, payload=euu.print_format_dict(payload)))
+            ("<<<<<< POST {alias} To DCC with URL {url} and this"
+             " payload:\n\n{payload}\n\n").format(alias=aliases[0], url=url, payload=euu.print_format_dict(payload)))
 
         if self.check_dry_run():
             return {}
@@ -928,7 +951,7 @@ class Connection():
             except KeyError:
                 # Some objects don't have an accession, i.e. replicates.
                 encid = response_json["uuid"]
-            self._log_post(alias=first_alias, dcc_id=encid)
+            self._log_post(aliases=aliases, dcc_id=encid)
             # Run 'after' hooks:
             self.after_submit_hooks(encid, profile_id, method=self.POST)
             return response_json
@@ -955,11 +978,11 @@ class Connection():
                 if not existing_record:
                     response.raise_for_status()
                 else:
-                    self.log_error("Will not POST '{}' since it already exists with aliases '{}'.".format(first_alias, existing_record["aliases"]))
+                    self.log_error("Will not POST '{}' since it already exists with aliases '{}'.".format(aliases[0], existing_record["aliases"]))
                     return existing_record
 
         else:
-            message = "Failed to POST {alias}".format(alias=first_alias)
+            message = f"Failed to POST {aliases[0]}"
             self.log_error(message)
             self.debug_logger.debug("<<<<<< DCC POST RESPONSE: ")
             self.debug_logger.debug(euu.print_format_dict(response_json))

@@ -84,16 +84,18 @@ def print_format_dict(dico, indent=2):
     return json.dumps(dico, indent=indent, sort_keys=True)
 
 
-def clean_alias_name(alias):
-    r"""
+def clean_aliases(aliases):
+    """
     Removes unwanted characters from the alias name.
-    This function replaces both '/' and '\\\\' with '_'. Can be called prior to registering a new
-    alias if you know it may contain such unwanted characters. You would then need to update
-    your payload with the new alias to submit.
+    This function replaces:
+        - both '/' and '\\\\' with '_'. 
+        - # with "", as it is not allowed according to the schema. 
+
+    Can be called prior to registering a new alias if you know it may contain such unwanted 
+    characters. You would then need to update your payload with the new alias to submit.
 
     Args:
-        alias: `str`. An alias that you want to submit. Should be a raw string (i.e. ``r"some\alias"``)
-          or a string where any '\' character is already escaped (i.e. ``"some\\alias"``).
+        aliases: `list`. One or more record alias names to submit to the Portal. 
 
     Returns:
         `str`: The cleaned alias.
@@ -104,9 +106,10 @@ def clean_alias_name(alias):
           # Returns michael-snyder:a_troublesome_alias
 
     """
-    alias = alias.replace("/", "_")
-    alias = alias.replace("\\", "_")
-    return alias
+    new = []
+    for alias in aliases:
+        new.append(alias.replace("/", "_").replace("\\", "_").replace("#", ""))
+    return new
 
 
 def create_subprocess(cmd, check_retcode=True):
