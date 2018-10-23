@@ -402,7 +402,7 @@ class Connection():
         be added to the query parameters given in the URL.
 
         Args:
-            search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...] ``.
+            search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...]``.
                 To support a != style query, append "!" to the key name.
             url: `str`. A URL used to search for records interactively in the ENCODE Portal. The
                 query will be extracted from the URL.

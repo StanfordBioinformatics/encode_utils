@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-                                                                                
-                                                                                                       
-###                                                                                                    
-# © 2018 The Board of Trustees of the Leland Stanford Junior University                                
-# Nathaniel Watson                                                                                     
-# nathankw@stanford.edu                                                                                
-### 
+# -*- coding: utf-8 -*-
+
+###
+# © 2018 The Board of Trustees of the Leland Stanford Junior University
+# Nathaniel Watson
+# nathankw@stanford.edu
+###
 
 """
-Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage         
+Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage
 Transfer Service. See :class:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
 """
 
@@ -34,11 +34,11 @@ def get_parser():
         The GCP project that is associated with gcp_bucket.""")
     parser.add_argument("-d", "--description", help="""
         The description to show when querying transfers via the Google Storage Transfer API, or via
-        the GCP Console. May be left empty, in which case the default description will be the value 
+        the GCP Console. May be left empty, in which case the default description will be the value
         of the first S3 file name to transfer.""")
     parser.add_argument("-c", "--s3creds", help="""
         AWS credentials. Provide them in the form `AWS_ACCESS_KEY_ID:AWS_SECRET_ACCESS_KEY`.
-        Ideally, they'll be stored in the environment. However, for additional flexability you can 
+        Ideally, they'll be stored in the environment. However, for additional flexability you can
         specify them here as well.""")
     return parser
 

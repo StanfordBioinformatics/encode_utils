@@ -34,13 +34,13 @@ def err_context(payload, schema):
     Validates the schema instance against the provided JSON schema.
 
     Args:
-        payload: dict. 
-        schema: dict. 
+        payload: dict.
+        schema: dict.
 
     Returns:
         `None` if there aren't any instance validation errors. Otherwise, a two-item tuple
         where the first item is the main error message; the second is a dictionary-based
-        error hash that contains the contextual errors. This latter item may be empty. 
+        error hash that contains the contextual errors. This latter item may be empty.
     """
     try:
         jsonschema.validate(payload,schema)
@@ -88,22 +88,22 @@ def clean_aliases(aliases):
     """
     Removes unwanted characters from the alias name.
     This function replaces:
-        - both '/' and '\\\\' with '_'. 
-        - # with "", as it is not allowed according to the schema. 
 
-    Can be called prior to registering a new alias if you know it may contain such unwanted 
+      -both '/' and '\\\\' with '_'.
+      -# with "", as it is not allowed according to the schema.
+
+    Can be called prior to registering a new alias if you know it may contain such unwanted
     characters. You would then need to update your payload with the new alias to submit.
 
     Args:
-        aliases: `list`. One or more record alias names to submit to the Portal. 
+        aliases: `list`. One or more record alias names to submit to the Portal.
 
     Returns:
         `str`: The cleaned alias.
 
     Example::
-
-          clean_alias_name("michael-snyder:a/troublesome\alias")
-          # Returns michael-snyder:a_troublesome_alias
+        clean_alias_name("michael-snyder:a/troublesome\alias")
+        # Returns michael-snyder:a_troublesome_alias
 
     """
     new = []
