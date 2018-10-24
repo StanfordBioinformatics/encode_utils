@@ -982,7 +982,7 @@ class Connection():
                     return existing_record
 
         else:
-            message = f"Failed to POST {aliases[0]}"
+            message = "Failed to POST {}".format(aliases[0])
             self.log_error(message)
             self.debug_logger.debug("<<<<<< DCC POST RESPONSE: ")
             self.debug_logger.debug(euu.print_format_dict(response_json))
