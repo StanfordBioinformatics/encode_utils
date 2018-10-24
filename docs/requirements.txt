@@ -1,4 +1,6 @@
+awscli
 inflection
 google-api-python-client
 jsonschema
 sphinx-argparse
+urllib3
