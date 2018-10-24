@@ -70,7 +70,7 @@ def main():
             lab_prefix, alias_name = alias.split(":", 1)
         except ValueError:
             if not submitter_lab:
-                raise Exception(f"""Unknown submitting lab name for alias {alias}. See description for --submitter-lab  argument.""")
+                raise Exception("Unknown submitting lab name for alias {}. See description for --submitter-lab  argument.".format(alias))
             alias = submitter_lab + ":" + alias
         rec = conn.get(rec_ids=alias, ignore404=False)
         try:
