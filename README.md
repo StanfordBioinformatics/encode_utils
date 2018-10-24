@@ -19,10 +19,10 @@ Bug fixes in Master:
 
 New in Master:
 
-1. 10/23/2018 
-2. Added script [``eu_get_accessions.py``](https://encode-utils.readthedocs.io/en/latest/scripts/eu_get_accessions.html).
+10/23/2018 
+1. Added script [``eu_get_accessions.py``](https://encode-utils.readthedocs.io/en/latest/scripts/eu_get_accessions.html).
    Given an input list of record aliases, retrieves the DCC accession for each. 
-3. Added script [``eu_create_gcp_url_list.py``](https://encode-utils.readthedocs.io/en/latest/scripts/eu_create_gcp_url_list.html). 
+2. Added script [``eu_create_gcp_url_list.py``](https://encode-utils.readthedocs.io/en/latest/scripts/eu_create_gcp_url_list.html). 
    
 Updates in Master:
 
