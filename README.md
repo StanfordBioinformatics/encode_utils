@@ -25,7 +25,7 @@ New in Master:
    
 Updates in Master:
 
-1. Renamed ``utils.clean_alias_name()`` to [``utils.clean_aliases``](https://encode-utils.readthedocs.io/en/latest/utils.html#encode_utils.utils.clean_aliases). This function now takes a list of aliases and either removes or replaces non-permitted characters, such as "/" and "#". This function is called in the pre-submit hook [``before_submit_alias``](https://encode-utils.readthedocs.io/en/latest/connection.html#encode_utils.connection.Connection.before_submit_alias)
+1. Renamed ``utils.clean_alias_name()`` to [``utils.clean_aliases``](https://encode-utils.readthedocs.io/en/latest/utils.html#encode_utils.utils.clean_aliases). This function now takes a list of aliases and either removes or replaces non-permitted characters, such as "/" and "#". This function is called in the pre-submit hook [``before_submit_alias``](https://encode-utils.readthedocs.io/en/latest/connection.html#encode_utils.connection.Connection.before_submit_alias).
    
 
 ***
