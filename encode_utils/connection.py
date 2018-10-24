@@ -1350,15 +1350,16 @@ class Connection():
 
     def gcp_transfer_urllist(self, file_ids, filename):
         """
-        Creates a URL list (file) to be used as input into the Google STS; see documentation at 
-        https://cloud.google.com/storage-transfer/docs/create-url-list. Oce the URL list is created,
+        Creates a "URL list" file to be used by the Google Storage Transfer Service (STS); see documentation at 
+        https://cloud.google.com/storage-transfer/docs/create-url-list. Once the URL list is created,
         you need to upload it somewhere that Google STS can reach it via HTTP or HTTPS. I recommend
         uploading the URL list to your GCS bucket. From there, you can get an HTTPS URL for it by 
         clicking on your file name (while in the GCP Console) and then copying the URL shown in your 
-        Web browser. 
+        Web browser, which can in turn be pasted directly in the Google STS.
 
         Args:
-            file_ids: `list` of file identifiers.
+            file_ids: `list` of file identifiers. The corresponding S3 objects must have public read
+                permission as required for the URL list.
             filename: `str`. The output filename in TSV format, which can be fed into the Google STS.
         """
         fout = open(filename, 'w')
@@ -1375,13 +1376,19 @@ class Connection():
 
     def gcp_transfer_from_aws(self, file_ids, gcp_bucket, gcp_project, description="", aws_creds=()):
         """
-        Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage
-        Transfer Service. Only use this method if need to transfer non-released files and AWS keys
-        for the ENCODE S3 buckets since the underlying call to Google STS requires them. For transferring
-        released files, see :meth:`gcp_transfer_urllist`.
+        Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google STS.
+        This is similar to the :meth:`gcp_transfer_urllist` method - the difference is that S3 object
+        paths are copied directly instead of HTTPS URIs.  
 
-        You must have environment variables for AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY set in
-        order for this method to work.
+        The downside of this approach, however, is that you must be a priviledged user (having DCC
+        API keys with the appropriate access) to be able to use this method since by default the 
+        encode buckets aren't discoverable to the public. That is, the S3 bucket policies deny the 
+        action s3:GetBucketLocation on the public principal. The error a non-priviledged user will
+        see when attempting to run this method is:
+
+            googleapiclient.errors.HttpError: <HttpError 403 when requesting 
+            https://storagetransfer.googleapis.com/v1/transferJobs?alt=json returned "Failed to 
+            obtain the location of the source S3 bucket. Additional details: Access Denied">
 
         See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
 

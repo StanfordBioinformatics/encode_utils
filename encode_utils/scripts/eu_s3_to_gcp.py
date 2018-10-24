@@ -10,6 +10,11 @@
 """
 Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage
 Transfer Service. See :class:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
+
+Note: Currently, only priviledged users with appropriate DCC API keys will be able to make
+use of this script because the Google STS requires that the source buckets be publicly discoverable.
+Sice the encode bucket policies deny the action s3:GetBucketLocation on the public principal. 
+Non-priviledged users may find the alternative script `eu_create_gcp_url_list.py` to be a solution.
 """
 
 import argparse
@@ -25,10 +30,14 @@ def get_parser():
         description=__doc__,
         parents=[dcc_login_parser],
         formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-f", "--file-ids", nargs="+",  required=True, help="""
-      One or more ENCODE files to transfer. They can be any valid ENCODE File object identifier.
-      Don't mix ENCODE files from across buckets.""")
-    parser.add_argument("-gb", "--gcpbucket", required=True, help="""
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-f", "--file-ids", nargs="+", help="""
+      An alternative to --infile, one or more ENCODE file identifiers. Don't mix ENCODE files 
+      from across buckets.""")
+    group.add_argument("-i", "--infile", help="""
+      An alternative to --file-ids, the path to a file containing one or more file identifiers, 
+      one per line. Empty lines and lines starting with a '#' are skipped.""")
+    parser.add_argument("-gb", "--gcpbucket", help="""
         The name of the GCP bucket.""")
     parser.add_argument("-gp", "--gcpproject", required=True, help="""
         The GCP project that is associated with gcp_bucket.""")
@@ -38,8 +47,8 @@ def get_parser():
         of the first S3 file name to transfer.""")
     parser.add_argument("-c", "--s3creds", help="""
         AWS credentials. Provide them in the form `AWS_ACCESS_KEY_ID:AWS_SECRET_ACCESS_KEY`.
-        Ideally, they'll be stored in the environment. However, for additional flexability you can
-        specify them here as well.""")
+        Ideally, they'll be stored in the environment in variables by the same names. However, 
+        for additional flexability you can specify them here as well.""")
     return parser
 
 def main():
@@ -58,10 +67,20 @@ def main():
         conn = euc.Connection()
 
     file_ids = args.file_ids
+    infile = args.infile
+    if infile:
+        fh = open(infile)
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            file_ids.append(line)
+        fh.close()
+            
     gcp_bucket = args.gcpbucket
     gcp_project = args.gcpproject
-    conn.gcp_transfer(file_ids=file_ids, gcp_bucket=gcp_bucket,
-                           gcp_project=gcp_project, description=desc, aws_creds=aws_creds)
+    conn.gcp_transfer_from_aws(file_ids=file_ids, gcp_bucket=gcp_bucket, gcp_project=gcp_project, 
+                      description=desc, aws_creds=aws_creds)
 
 if __name__ == "__main__":
     main()
