@@ -5,7 +5,7 @@
 /dcc_submitters.json
 *.txt
 !LICENSE.txt
-!docs/requirements.txt
+!requirements.txt
 docs/_build
 docs/_templates
 .DS_Store

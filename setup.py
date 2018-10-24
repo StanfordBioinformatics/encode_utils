@@ -30,7 +30,11 @@ setup(
   packages = find_packages(),
   install_requires = [
     "awscli",
-    "google-api-python-client",
+    "google-api-core==1.5.0",
+    "google-api-python-client==1.7.4",
+    "google-auth==1.5.1",
+    "google-auth-httplib2==0.0.3",
+    "google-cloud-core==0.28.1",
     "inflection",
     "jsonschema",
     "requests",

@@ -10,7 +10,9 @@
 import datetime
 import json
 import os
-import googleapiclient.discovery 
+import googleapiclient.discovery
+import google.auth
+
 #pip install google-api-python-client (details https://developers.google.com/api-client-library/python/)
 # List of APIs that google-api-python-client can use at https://developers.google.com/api-client-library/python/apis/
 
@@ -100,7 +102,14 @@ class Transfer:
                 print("Warning: AWS_SECRET_ACCESS_KEY not set.")
                 aws_secret_access_key = ""
         self.aws_creds = (aws_access_key_id, aws_secret_access_key)
-        self.storagetransfer = googleapiclient.discovery.build('storagetransfer', 'v1')
+        self.storagetransfer = Transfer._build_client()
+
+    @staticmethod
+    def _build_client():
+        # OAuth2 scope needed to submit transfer requests:
+        # https://developers.google.com/identity/protocols/googlescopes#storagetransferv1
+        credentials, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+        return googleapiclient.discovery.build('storagetransfer', 'v1', credentials=credentials)
 
     def from_s3(self, s3_bucket, s3_paths, gcp_bucket, overwrite_existing=False, description=""):
         """
