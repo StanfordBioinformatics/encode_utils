@@ -18,7 +18,7 @@ for more details. This package exports a few ways for interfacing with this logi
      details at https://cloud.google.com/storage-transfer/docs/create-url-list.  
   
   2. The :class:`encode_utils.connection.Connection`
-     class has a method named :func:`encode_utils.connection.Connection.gcp_transfer_from_s3` that uses the above
+     class has a method named :func:`encode_utils.connection.Connection.gcp_transfer_from_aws` that uses the above
      module and is specific towards working with ENCODE files.  Note: this requires AWS keys.  If 
      you simply want to copy released ENCODE files, you should 
      When using this method, you don't need to specify the S3 bucket or full path of an S3 object 
@@ -31,7 +31,7 @@ for more details. This package exports a few ways for interfacing with this logi
      or programatically to the method :func:`encode_utils.transfer_to_gcp.Transfer.from_urllist`. 
   
   4. The script :doc:`scripts/eu_s3_to_gcp` can be used, which calls the aforementioned
-     method `gcp_transfer_from_s3` method, to transfer one or more ENCODE files to GCP.  Requires
+     method `gcp_transfer_from_aws` method, to transfer one or more ENCODE files to GCP.  Requires
      AWS keys. 
 
 The Transfer class
@@ -105,7 +105,7 @@ only schedules one-off jobs at present::
   #      }
   #  }
 
-The `gcp_transfer_from_s3()` method of the `encode_utils.connection.Connection` class
+The `gcp_transfer_from_aws()` method of the `encode_utils.connection.Connection` class
 -------------------------------------------------------------------------------------
 Requires that the user has AWS key permissions on the ENCODE buckets and file objects.
 
@@ -116,7 +116,7 @@ Requires that the user has AWS key permissions on the ENCODE buckets and file ob
   # In production mode, the S3 source bucket is set to encode-files. In any other mode, the
   # bucket is set to encoded-files-dev.
 
-  transfer_job = conn.gcp_transfer_from_s3(
+  transfer_job = conn.gcp_transfer_from_aws(
       file_ids=["ENCFF270SAL", "ENCFF861EEE"], 
       gcp_bucket="nathankw1", 
       gcp_project="sigma-night-206802",
