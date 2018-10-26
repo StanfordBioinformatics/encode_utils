@@ -51,12 +51,7 @@ class Transfer:
     Any transfer event of a trasferJob is termed as a transferOperation in the STS API. There are 
     a few utility methods in this class that work with transferOperations.
 
-    AWS Credentials are fetched from the environment via the variables `AWS_ACCESS_KEY_ID` and
-    `AWS_SECRET_ACCESS_KEY`, unless passed explicitly to the aws_creds argument. If no AWS credentials
-    are available, then transferJobs can not be created, and only query interfacing methods will
-    be available for use.
-
-    You'll need to have a Google service account set up with at least the two roles below:
+    You'll need to have a `Google service account`_ set up with at least the two roles below:
 
       1) Project role with access level of Editor or greater.
       2) Storage role with access level of Storage Object Creator or greater.
@@ -86,6 +81,8 @@ class Transfer:
     this will not set a failed status on the transferJob. If you really need to know whether a file
     was tranferred in the API, you need to query the transferOperation; see the method 
     :func:`get_transfers_from_job`.  
+
+    .. _`Google service account`: https://cloud.google.com/storage-transfer/docs/iam-transfer#sink-permissions
 
     .. _transferJobs: https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/storagetransfer_v1.transferJobs.html
     """
@@ -120,7 +117,15 @@ class Transfer:
     def from_s3(self, s3_bucket, s3_paths, gcp_bucket, overwrite_existing=False, description=""):
         """
         Schedules an one-off transferJob that runs immediately to copy the specified file(s) from 
-        s3_bucket to gcp_bucket. 
+        an s3_bucket to a gcp_bucket. AWS keys are required and must have the `following permissions`_
+        granted in source bucket policy:
+
+        1. s3:GetBucketLocation
+        2. s3:ListBucket
+        3. s3:GetObject
+
+        AWS Credentials are fetched from the environment via the variables `AWS_ACCESS_KEY_ID` and
+        `AWS_SECRET_ACCESS_KEY`, unless passed explicitly to the aws_creds argument.
 
         Args:
             s3_bucket: `str`. The name of the AWS S3 bucket.
@@ -138,6 +143,8 @@ class Transfer:
         Returns:
             `dict`: The JSON response representing the newly created transferJob.
     
+
+        .. _`following permissions`: https://cloud.google.com/storage-transfer/docs/iam-transfer#source-permissions
         """
         # See api documentation at https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/storagetransfer_v1.transferJobs.html.
         if not self.aws_creds[0] and not self.aws_creds[1]:
@@ -210,7 +217,7 @@ class Transfer:
     def from_urllist(self, urllist, gcp_bucket, overwrite_existing=False, description=""):
         """
         Schedules an one-off transferJob that runs immediately to copy the files specified in the
-        URL list to GCS.
+        URL list to GCS. AWS keys are not used, and all URIs must be publicliy assessible. 
 
         Args:
             gcp_bucket: `str`. The name of the GCP bucket.

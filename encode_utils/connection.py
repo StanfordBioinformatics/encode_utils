@@ -1378,17 +1378,7 @@ class Connection():
         """
         Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google STS.
         This is similar to the :meth:`gcp_transfer_urllist` method - the difference is that S3 object
-        paths are copied directly instead of HTTPS URIs.  
-
-        The downside of this approach, however, is that you must be a priviledged user (having DCC
-        API keys with the appropriate access) to be able to use this method since by default the 
-        encode buckets aren't discoverable to the public. That is, the S3 bucket policies deny the 
-        action s3:GetBucketLocation on the public principal. The error a non-priviledged user will
-        see when attempting to run this method is:
-
-            googleapiclient.errors.HttpError: <HttpError 403 when requesting 
-            https://storagetransfer.googleapis.com/v1/transferJobs?alt=json returned "Failed to 
-            obtain the location of the source S3 bucket. Additional details: Access Denied">
+        paths are copied directly instead of using public HTTPS URIs, and AWS keys are required here. 
 
         See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
 
