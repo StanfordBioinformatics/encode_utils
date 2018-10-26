@@ -106,7 +106,7 @@ only schedules one-off jobs at present::
   #  }
 
 The `gcp_transfer_from_aws()` method of the `encode_utils.connection.Connection` class
--------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
 Requires that the user has AWS key permissions on the ENCODE buckets and file objects.
 
 ::

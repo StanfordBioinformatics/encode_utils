@@ -7,20 +7,29 @@
 # 2018-07-20
 ###
 
+"""
+Contains a Transfer class that encapsulates working with the Google Storage Transfer Service to
+transfer files from AWS S3 to GCP buckets. If you want to run this on a GCP VM, then in the command
+used to launch the VM you should specify an appropriate security account and the `cloud-platform scope`_
+as the following example demonstrates::
+
+  gcloud compute instances create myinstance --service-account="test-819@sigma-night-206802.iam.gserviceaccount.com" --scopes=cloud-platform --zone us-central1-a 
+
+Google implements OAuth 2 scopes for requesting accessing to specific Google APIs, and in our case 
+it's the cloud-platform scope that we need, which is associated with the Storage Transfer API, amongst others.
+See the documentation in the :class:`Transfer` class below for more details.
+Also, the Storage Transfer API documentation is available at 
+https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/
+
+.. _cloud-platform scope: https://developers.google.com/identity/protocols/googlescopes#storagetransferv1
+"""
+
 import datetime
 import json
 import os
 import googleapiclient.discovery 
 #pip install google-api-python-client (details https://developers.google.com/api-client-library/python/)
 # List of APIs that google-api-python-client can use at https://developers.google.com/api-client-library/python/apis/
-
-"""
-Contains a Transfer class that encapsulates working with the Google Storage Transfer Service to
-transfer files from AWS S3 to GCP buckets. 
-
-The Storage Transfer API documentation is available at https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/
-"""
-
 
 class AwsCredentialsMissing(Exception):
     """
@@ -47,17 +56,23 @@ class Transfer:
     are available, then transferJobs can not be created, and only query interfacing methods will
     be available for use.
 
-    Google credentials are fetched from the environment via the variable
-    GOOGLE_APPLICATION_CREDENTIALS.  This should be set to the JSON file provided to you
-    by the GCP Console when you create a service account; see
-    https://cloud.google.com/docs/authentication/getting-started for more details. Note that
-    the service account that you create must have at least the two roles below:
+    You'll need to have a Google service account set up with at least the two roles below:
 
       1) Project role with access level of Editor or greater.
       2) Storage role with access level of Storage Object Creator or greater.
 
-    Note1: If this is the first time that you are using the Google Storage Transfer Service on
-    your GCP bucket, it won't work just yet as you'll get an error that reads:
+
+    If running on a non-GCP VM, the service account credentials are fetched from the environment 
+    via the variable GOOGLE_APPLICATION_CREDENTIALS. This should be set to the JSON file provided to you
+    by the GCP Console when you create a service account; see
+    https://cloud.google.com/docs/authentication/getting-started for more details. 
+
+    If instead you are running this on a GCP VM, then you should specify the service account and 
+    OAuth 2 scope when launching the VM as described at the beginning; there is no need use the 
+    service account file itself. 
+
+    Note1: if this is the first time that you are using the Google STS on your GCP bucket, 
+    it won't work just yet as you'll get an error that reads:
 
       **Failed to obtain the location of the destination Google Cloud Storage (GCS) bucket due to
       insufficient permissions.  Please verify that the necessary permissions have been granted.
@@ -65,7 +80,7 @@ class Transfer:
 
     To resolve this, I recommend that you go into the GCP Console and run a manual transfer there,
     as this adds the missing permission that you need. I personaly don't know how to add it
-    otherwise, or even know what it is that's being added, but there you go!
+    otherwise, or even know what it is that's being added, but there you go!  
 
     Note2: If you try to transfer a file that is mistyped or doesn't exist in the source bucket, then
     this will not set a failed status on the transferJob. If you really need to know whether a file
