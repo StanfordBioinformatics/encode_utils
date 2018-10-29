@@ -9,7 +9,8 @@
 
 """
 Contains a Transfer class that encapsulates working with the Google Storage Transfer Service to
-transfer files from AWS S3 to GCP buckets. If you want to run this on a GCP VM, then in the command
+transfer files from AWS S3 to GCP buckets. If you want to run this on a GCP VM, then in the 
+`command <https://cloud.google.com/iam/docs/understanding-service-accounts#acting_as_a_service_account>`_
 used to launch the VM you should specify an appropriate security account and the `cloud-platform scope`_
 as the following example demonstrates::
 
@@ -125,7 +126,8 @@ class Transfer:
         3. s3:GetObject
 
         AWS Credentials are fetched from the environment via the variables `AWS_ACCESS_KEY_ID` and
-        `AWS_SECRET_ACCESS_KEY`, unless passed explicitly to the aws_creds argument.
+        `AWS_SECRET_ACCESS_KEY`, unless passed explicitly to the aws_creds argument when
+        instantiating the `Transfer` class. 
 
         Args:
             s3_bucket: `str`. The name of the AWS S3 bucket.

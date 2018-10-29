@@ -218,12 +218,17 @@ class Profile:
     def required_properties(self):
         """
         Returns the list of required properties to submit when creating a new record under the
-        given profile.
+        given profile. Only works when the profile contains a "required" key at the top level, as it
+        is in the biosample profile. Doesn't at this time recognize conditionally required keys
+        that appear in a subschema, such as 'anyOf' as demonstrated in the file profile.
 
         Returns:
             `list`: The list of required properties.
         """
-        return self.schema["required"]
+        try:
+            return self.schema["required"]
+        except KeyError:
+            return []
 
     def is_prop_identifying(self, prop):
         """
