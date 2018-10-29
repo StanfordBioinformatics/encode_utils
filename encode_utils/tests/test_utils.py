@@ -67,11 +67,11 @@ class TestUtils(unittest.TestCase):
         md5sum = utils.calculate_md5sum(infile)
         self.assertEqual(md5sum, "a3e7cb3df359d0642ab0edd33ea7e93e")
 
-    def test_clean_alias_name(self):
-        """Tests the function ``clean_alias_name()`` for success.
+    def test_clean_aliases(self):
+        """Tests the function ``clean_aliases()`` for success.
         """
         alias = r"michael-snyder:a/troublesome\alias"
-        self.assertEqual(utils.clean_alias_name(alias), "michael-snyder:a_troublesome_alias")
+        self.assertEqual(utils.clean_aliases(aliases=[alias]), ["michael-snyder:a_troublesome_alias"])
 
     def test_does_lib_replicate_exist(self):
         """
