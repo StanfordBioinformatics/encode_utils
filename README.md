@@ -14,7 +14,7 @@ Oct. 16, 2018
 
 Bug fixes in Master:
 
-1. Fixed bug reported by weiwei where in profile.py the ``Profile.required_properties()`` method always expected the given profile to contain a top-level 'required' key, which isn't always the case. For example, the biosample profile has it, whereas the file profile has it in the anyOf subschema.  For this latter case, the method now returns the empty array as there isn't at present any attempt to figure out what is conditionally required. This would have affected attetmps to remove a property from such profiles since the behavior is to first prevent removing required properties. 
+1. Fixed bug reported by weiwei where in profile.py the ``Profile.required_properties()`` method always expected the given profile to contain a top-level 'required' key, which isn't always the case. For example, the biosample profile has it, whereas the file profile has it in the anyOf subschema.  For this latter case, the method now returns the empty array as there isn't at present any attempt to figure out what is conditionally required. This would have affected attempts to remove a property from such profiles since the behavior is to first prevent the user from removing required properties by popping those out of the payload. 
 1. Fixed bug reported by Jennifer Jou where the `profile.Profile._set_profile_id()` method didn't properly singularize the profile ID in all cases. Fixed this by using the inflection module's singularize function.
 2. Fixed bug where `eu_register.py`'s `typecast()` function didn't check for booleans to typecaset to.  That meant that the registration script didn't always handle boolean fields propertly. Thanks again to jjou for reporting.
 
