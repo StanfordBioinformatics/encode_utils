@@ -203,6 +203,14 @@ def typecast(field_name, value, data_type, line_num):
     """
     if data_type == "integer":
         return int(value)
+    elif data_type == "number":
+        # JSON Schema says that a number can by any numeric type.
+        # First check if integer, if not, treat as float. 
+        try:
+            return int(value) 
+        except ValueError:
+            # This will be raised if trying to convert a string representation of a float to an int.
+            return float(value)
     elif data_type == "boolean":
         value = value.lower() 
         if value not in ["true", "false"]:
