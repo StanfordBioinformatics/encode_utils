@@ -10,26 +10,9 @@ API and script documentation are available on [Read the Docs](http://encode-util
 
 # Latest news
 
-Oct. 16, 2018
+Nov. 2, 2018
 
-Bug fixes in Master:
-
-1. Updated ``typecast()`` function in ``eu_register.py`` so that it can handle JSON Schema numbers.  Moreover, when an attribute is declarted to be a number, this function will convert from string to either int or float based on the given string representation. Thanks for khine for reporting. 
-1. Fixed bug reported by weiwei where in profile.py the ``Profile.required_properties()`` method always expected the given profile to contain a top-level 'required' key, which isn't always the case. For example, the biosample profile has it, whereas the file profile has it in the anyOf subschema.  For this latter case, the method now returns the empty array as there isn't at present any attempt to figure out what is conditionally required. This would have affected attempts to remove a property from such profiles since the behavior is to first prevent the user from removing required properties by popping those out of the payload. 
-1. Fixed bug reported by Jennifer Jou where the `profile.Profile._set_profile_id()` method didn't properly singularize the profile ID in all cases. Fixed this by using the inflection module's singularize function.
-2. Fixed bug where `eu_register.py`'s `typecast()` function didn't check for booleans to typecaset to.  That meant that the registration script didn't always handle boolean fields propertly. Thanks again to jjou for reporting.
-
-New in Master:
-
-10/23/2018 
-1. Added script [``eu_get_accessions.py``](https://encode-utils.readthedocs.io/en/latest/scripts/eu_get_accessions.html).
-   Given an input list of record aliases, retrieves the DCC accession for each. 
-2. Added script [``eu_create_gcp_url_list.py``](https://encode-utils.readthedocs.io/en/latest/scripts/eu_create_gcp_url_list.html). 
-   
-Updates in Master:
-
-1. Renamed ``utils.clean_alias_name()`` to [``utils.clean_aliases``](https://encode-utils.readthedocs.io/en/latest/utils.html#encode_utils.utils.clean_aliases). This function now takes a list of aliases and either removes or replaces non-permitted characters, such as "/" and "#". This function is called in the pre-submit hook [``before_submit_alias``](https://encode-utils.readthedocs.io/en/latest/connection.html#encode_utils.connection.Connection.before_submit_alias).
-   
+Release [2.5.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.5.0)
 
 ***
 
