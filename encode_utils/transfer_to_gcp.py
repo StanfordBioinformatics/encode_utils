@@ -21,6 +21,7 @@ it's the cloud-platform scope that we need, which is associated with the Storage
 See the documentation in the :class:`Transfer` class below for more details.
 Also, the Storage Transfer API documentation is available at 
 https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/
+https://cloud.google.com/docs/authentication/production#auth-cloud-explicit-python
 
 .. _cloud-platform scope: https://developers.google.com/identity/protocols/googlescopes#storagetransferv1
 """
