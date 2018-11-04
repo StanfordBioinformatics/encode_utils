@@ -23,6 +23,26 @@ Also, the Storage Transfer API documentation is available at
 https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/
 https://cloud.google.com/docs/authentication/production#auth-cloud-explicit-python
 
+If running this in Google Cloud Composer, you must use specific versions of several Google libraries
+so that the tasks running in the environment can properly use the credentials and scope that you 
+delegated to the environment when creating it. This is a work-around, as the Composer environment is
+buggy at present in this regard. You'll need a requirements.txt file with the following (thanks to
+danxmoran for pointing out):
+
+  google-api-core==1.5.0
+  google-api-python-client==1.7.4
+  google-auth==1.5.1
+  google-auth-httplib2==0.0.3
+  google-cloud-core==0.28.1
+
+Then use the following commands to create and set up your Cloud Composer environment:
+
+```
+  gcloud beta composer environments create test-cc-env3 --python-version=3 --location=us-central1 --zone=us-central1-a --disk-size=20GB --service-account=fasdf-29@sigma-night-206802.iam.gserviceaccount.com
+
+  gcloud composer environments update env3 --location us-central1 --update-pypi-packages-from-file requirements.txt
+```
+
 .. _cloud-platform scope: https://developers.google.com/identity/protocols/googlescopes#storagetransferv1
 """
 
