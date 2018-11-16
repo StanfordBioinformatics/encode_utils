@@ -10,6 +10,12 @@ API and script documentation are available on [Read the Docs](http://encode-util
 
 # Latest news
 
+Nov. 15, 2018
+
+Now available on PyPI with ``pip install encode-utils``.
+
+***
+
 Nov. 2, 2018
 
 Release [2.5.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.5.0)
