@@ -12,7 +12,7 @@ API and script documentation are available on [Read the Docs](http://encode-util
 
 Nov. 15, 2018
 
-Now available on PyPI with ``pip install encode-utils``.
+Now available on [PyPI](https://pypi.org/project/encode-utils) with ``pip install encode-utils``.
 
 ***
 
