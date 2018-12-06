@@ -1,3 +1,6 @@
+build/
+dist/
+encode_utils.egg-info/
 .nfs*
 *.gz
 *.pdf

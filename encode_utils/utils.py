@@ -19,6 +19,7 @@ import requests
 import subprocess
 
 import encode_utils as eu
+import encode_utils.aws_storage
 
 
 #: Stores the HTTP headers to indicate JSON content in a request.
@@ -58,14 +59,18 @@ def err_context(payload, schema):
 
 
 def calculate_md5sum(file_path):
-    """Calculates the md5sum for a file.
+    """
+    Calculates the md5sum for a local file or a S3 URI. If an S3 URI, the md5sum will be set as
+    the objects ETag.
 
     Args:
-        file_path: `str`. The path to a local file.
+        file_path: `str`. The path to a local file or an S3 URI, i.e. s3://bucket-name/key.
 
     Returns:
         `str`: The md5sum.
     """
+    if file_path.startswith("s3:"):
+        return encode_utils.aws_storage.S3Object(s3_uri=file_path).md5sum()
     m = hashlib.md5()
     with open(file_path, 'rb') as fh:
         m.update(fh.read())

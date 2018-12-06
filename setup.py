@@ -11,9 +11,15 @@
 # This page is useful for dependencies: 
 # http://python-packaging.readthedocs.io/en/latest/dependencies.html.
 
+# PSF tutorial for packaging up projects:                                                              
+# https://packaging.python.org/tutorials/packaging-projects/ 
+
 import glob
 import os
 from setuptools import setup, find_packages
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 SCRIPTS_DIR = "encode_utils/scripts/"
 scripts = glob.glob(os.path.join(SCRIPTS_DIR,"*.py"))
@@ -21,13 +27,14 @@ scripts.remove(os.path.join(SCRIPTS_DIR,"__init__.py"))
 scripts.append("encode_utils/MetaDataRegistration/eu_register.py")
 
 setup(
-  name = "encode utils",
-  version = "2.5.0",
-  description = "Client and tools for ENCODE data submitters.",
   author = "Nathaniel Watson",
   author_email = "nathankw@stanford.edu",
-  url = "https://github.com/StanfordBioinformatics/encode_utils/wiki",
-  packages = find_packages(),
+  classifiers = [
+      "Programming Language :: Python :: 3",
+      "License :: OSI Approved :: MIT License",
+      "Operating System :: OS Independent",
+  ],
+  description = "Client and tools for ENCODE data submitters.",
   install_requires = [
     "awscli",
     "google-api-python-client",
@@ -35,6 +42,15 @@ setup(
     "jsonschema",
     "requests",
     "urllib3"],
+  long_description = long_description,
+  long_description_content_type = "text/markdown",
+  name = "encode-utils",
+  packages = find_packages(),
+  package_data = {"encode_utils": ["tests/data/*"]},
+  project_urls = {
+      "Read the Docs": "https://encode-utils.readthedocs.io/en/latest",
+  },
   scripts = scripts,
-  package_data = {"encode_utils": ["tests/data/*"]}
+  url = "https://github.com/StanfordBioinformatics/encode_utils", # home page
+  version = "2.5.0",
 )
