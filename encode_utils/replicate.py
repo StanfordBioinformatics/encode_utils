@@ -70,7 +70,7 @@ class ExpReplicates():
         for bio_acc in self.rep_hash:
             for lib_acc in self.rep_hash[bio_acc]:
                 rep = self.rep_hash[bio_acc][lib_acc]
-                if brn == rep["biosample_replicate_number"]:
+                if brn == rep["brn"]:
                     return True
         return False
 
@@ -85,9 +85,9 @@ class ExpReplicates():
         for bio_acc in self.rep_hash:
             for lib_acc in self.rep_hash[bio_acc]:
                 rep = self.rep_hash[bio_acc][lib_acc]
-                if brn != rep["biosample_replicate_number"]:
+                if brn != rep["brn"]:
                     break
-                if trn == rep["technical_replicate_number"]:
+                if trn == rep["trn"]:
                     return True
         return False
             
