@@ -1,7 +1,6 @@
 
-import encode_utils.connection.Connection
-
 class ExpReplicates():
+
     def __init__(self, conn, experiment_id):
         """
         Args:
@@ -9,11 +8,11 @@ class ExpReplicates():
             experiment_id: `str`. An identifier for an experiment record on the ENCODE Portal. 
         """
         self.conn = conn
-        #self.exp = self.conn.get(rec_ids=experiment_id, ignore404=False)
-        #self.reps = self.exp["replicates"]
+        exp = self.conn.get(rec_ids=experiment_id, ignore404=False)
+        self.reps = exp["replicates"]
         self.rep_hash = self._get_rep_hash()
 
-    def _get_reps_hash(self):
+    def _get_rep_hash(self):
         """
         Creates a hierarchicl representation of the replicates on the experiment, categorizing them
         first by the asssociated biosample and then by the associted library. This is stored in a 
@@ -57,7 +56,7 @@ class ExpReplicates():
         """
         if not biosample_accession in self.rep_hash:
             return False
-        if not library_accession in self.rep_hash[biosample_accession] 
+        if not library_accession in self.rep_hash[biosample_accession] :
             return False
         return self.rep_hash[biosample_accession][library_accession]
 
@@ -71,7 +70,7 @@ class ExpReplicates():
         for bio_acc in self.rep_hash:
             for lib_acc in self.rep_hash[bio_acc]:
                 rep = self.rep_hash[bio_acc][lib_acc]
-                if brn == rep["biosample_replicate_number":
+                if brn == rep["biosample_replicate_number"]:
                     return True
         return False
 
@@ -88,7 +87,7 @@ class ExpReplicates():
                 rep = self.rep_hash[bio_acc][lib_acc]
                 if brn != rep["biosample_replicate_number"]:
                     break
-                if trn == rep["technical_replicate_number":
+                if trn == rep["technical_replicate_number"]:
                     return True
         return False
             
