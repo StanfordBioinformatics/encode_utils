@@ -33,6 +33,13 @@ class S3Object():
         return key.lstrip("/")
 
     def md5sum(self):
+        """
+        Retrieves the ETag as the md5sum. As explained `here`_, an object's ETag may or may not be
+        equal to its MD5 digest. In most cases, however, it will be. If ETags on your objects aren't
+        equal, then this method shouldn't be used. 
+
+        .. _here: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
+        """
         # Convert string in JSON string to Python string.
         return json.loads(self.obj.e_tag)
 
