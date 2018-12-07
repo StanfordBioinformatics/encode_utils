@@ -5,7 +5,7 @@ class ExpReplicates():
         """
         Args:
             conn: `encode_utils.connection.Connection` instance.
-            experiment_id: `str`. An identifier for an experiment record on the ENCODE Portal. 
+            experiment_id: `str`. An identifier for an experiment record on the ENCODE Portal.
         """
         self.conn = conn
         exp = self.conn.get(rec_ids=experiment_id, ignore404=False)
@@ -15,12 +15,19 @@ class ExpReplicates():
     def _get_rep_hash(self):
         """
         Creates a hierarchicl representation of the replicates on the experiment, categorizing them
-        first by the asssociated biosample and then by the associted library. This is stored in a 
+        first by the asssociated biosample and then by the associted library. This is stored in a
         `dict` of the format
 
-          {"$biosample_accession": {
-              "$library_accession": $rep
-            } 
+          {
+              "$biosample_accession": {
+                  "brn": $num,
+                  "libraries": {
+                      "$library_accession": {
+                          "trn": $num,
+                          "record": "replicate_json"
+                      }
+                  }
+              }
           }
 
         where $biosample_accession is the value of a biosample record's accession property,
@@ -39,57 +46,88 @@ class ExpReplicates():
             brn = rep["biological_replicate_number"]
             trn = rep["technical_replicate_number"]
             if biosample_acc not in res:
-                res[biosample_acc] = {}
-            if library_acc not in res[biosample_acc]:
-                res[biosample_acc][library_acc] = {"brn": brn, "trn": trn}
+                res[biosample_acc] = {"brn": brn, "libraries": {}}
+            res[biosample_acc]["libraries"][library_acc] = {
+                "trn": trn,
+                "replicate_json": rep
+            }
         return res
 
-    def does_rep_exist(self, biosample_accession, library_accession):
+    def get_rep(self, biosample_accession, library_accession):
         """
         Checks whether the experiment contains a replicate already for the given biosample and library
         records. Useful for clients trying to determine whether creating a new replicate is necessary
-        or not when submitting FASTQ files. 
+        or not when submitting FASTQ files.
 
-        Returns: 
+        Returns:
             `False`: A replicate does not exist.
-            `dict`: The replicate JSON if there is a replicate. 
+            `dict`: The replicate JSON if there is a replicate.
         """
         if not biosample_accession in self.rep_hash:
             return False
-        if not library_accession in self.rep_hash[biosample_accession] :
+        if not library_accession in self.rep_hash[biosample_accession]["libraries"]:
             return False
-        return self.rep_hash[biosample_accession][library_accession]
+        return self.rep_hash[biosample_accession]["libraries"][library_accession]["replicate_json"]
+
+    def get_tech_rep_hash(self, brn):
+        """
+        Gives the value of `self.rep_hash[brn]["libraries"]` if brn exists.
+
+        Returns:
+            `dict`: Empty if brn doesn't exist, otherwise the value of self.rep_hash[brn]["libraries"].
+        """
+        for bio_acc in self.rep_hash:
+            if brn == self.rep_hash[bio_acc]["brn"]:
+                return self.rep_hash[bio_acc]["libraries"]
+        return {}
 
     def does_brn_exist(self, brn):
         """
-        Checks self.rep_hash to see if there is a biological replicate with the given replicate number.
-   
-        Returns:
-            `bool`.
+        Checks self.rep_hash to see if there is a biological replicate with the given
+        biosample_replicate_number.
         """
-        for bio_acc in self.rep_hash:
-            for lib_acc in self.rep_hash[bio_acc]:
-                rep = self.rep_hash[bio_acc][lib_acc]
-                if brn == rep["brn"]:
-                    return True
+        if self.get_brn_hash(brn):
+            return True
         return False
 
     def does_trn_exist(self, brn, trn):
         """
-        Checks self.rep_hash to see if there is a replicate object that exists with the given 
+        Checks self.rep_hash to see if there is a replicate object that exists with the given
         biosample_replicate_number and technical_replicate_number.
-   
+
         Returns:
             `bool`.
         """
-        for bio_acc in self.rep_hash:
-            for lib_acc in self.rep_hash[bio_acc]:
-                rep = self.rep_hash[bio_acc][lib_acc]
-                if brn != rep["brn"]:
-                    break
-                if trn == rep["trn"]:
+        lib_hash = self.get_brn_hash(brn)
+        if lib_hash:
+            for lib_acc in lib_hash:
+                if trn == lib_hash["trn"]:
                     return True
         return False
-            
 
-    
+    def suggest_new_brn(self):
+        """
+        Select a biosample_replicate_number (brn) that is one greater than the number of
+        existing biosamples on the experiment.  If that number is already in use, increment until
+        it is unique.
+        """
+        brn = len(self.rep_hash) + 1
+        while self.does_brn_exist(brn):
+            brn += 1
+        return brn
+
+    def suggest_new_trn(self, biosample_accession):
+        """
+        For technical_replicate_number (trn), use a number that is one greater than the number of
+        existing technical replicates on the experiment for the given biosample. If the given
+        biosample isn't yet registred as a replicate, set trn to 1.
+        """
+        if biosample_accession not in self.rep_hash:
+            return 1
+        else:
+            trn = len(self.rep_hash[biosample_accession]["libraries"]) + 1
+            while self.does_trn_exist(brn=brn, trn=trn):
+                trn += 1
+        return trn
+
+
