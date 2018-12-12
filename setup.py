@@ -37,7 +37,6 @@ setup(
   description = "Client and tools for ENCODE data submitters.",
   install_requires = [
     "awscli",
-    "boto3",
     "google-api-python-client",
     "inflection",
     "jsonschema",
