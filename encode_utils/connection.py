@@ -1663,46 +1663,6 @@ class Connection():
         print(s3_uri)
         return s3_uri
 
-    def link_document(self, rec_id, document_id):
-        """
-        Links an existing `document` record on the Portal to some other record on the Portal via
-        the latter's `documents` property.
-
-        Args:
-            rec_id: `str`. A DCC object identifier of the record to link the document to.
-            document_id: `str`. An identifier of a `document` record.
-        """
-
-        # Need to compare the documents at the primary ID level (`@id` property) in order to ensure the
-        # document isn't already linked. If not comparing at this identifier type and instead some
-        # other type (i.e. alias, uuid), then the document will be relinked as a duplicate.
-
-        doc_json = self.get(ignore404=False, rec_ids=document_id)
-        doc_primary_id = doc_json["@id"]
-
-        rec_json = self.get(ignore404=False, rec_ids=rec_id)
-        try:
-            rec_document_primary_ids = rec_json["documents"]
-        except KeyError:
-            # There aren't any documents at present.
-            rec_document_primary_ids = []
-
-        if doc_primary_id in rec_document_primary_ids:
-            self.debug_logger.debug(
-                "Will not attempt to link document {} to {} since it is already linked.".format(
-                    document_id, rec_id))
-            return
-
-        # Add primary ID of new document to link.
-        rec_document_primary_ids.append(doc_primary_id)
-        # Originally in form of [u'/documents/ba93f5cc-a470-41a2-842f-2cb3befbeb60/',
-        #                       u'/documents/tg81g5aa-a580-01a2-842f-2cb5iegcea03, ...]
-        # Strip off the /documents/ prefix from each document UUID:
-        payload = {}
-        payload[self.ENCID_KEY] = rec_id
-        payload["documents"] = rec_document_primary_ids
-        self.patch(payload=payload)
-
 # When appending "?datastore=database" to the URL. As Esther stated: "_indexer to the end of the
 # URL to see the status of elastic search like
 # https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing",
