@@ -1663,6 +1663,24 @@ class Connection():
         print(s3_uri)
         return s3_uri
 
+    def get_experiments_with_biosample(self, rec_id):
+        """
+        Returns all experiments that have a link to the given biosample record. Technically, there
+        should only be at most one experiment linked to a given biosample, but it's possible that additional
+        experiments can be, incorrectly, with audit flags going off. 
+
+        Args:
+            rec_id: `str`. An identifier for a biosample record on the Portal. 
+
+        Returns:
+            `list` of dicts, where is dict is the JSON serialization of an experiment record that is
+                linked to the provided biosample record. If no experiments are linked, then this will
+                be an empty list. 
+        """
+        query_string = "?searchTerm={}&type=Experiment".format(rec_id)
+        experiments = self.search(url=query_string)
+        return experiments
+
 # When appending "?datastore=database" to the URL. As Esther stated: "_indexer to the end of the
 # URL to see the status of elastic search like
 # https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing",
