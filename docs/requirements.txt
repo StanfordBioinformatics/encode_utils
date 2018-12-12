@@ -1,4 +1,5 @@
 awscli
+boto3
 inflection
 google-api-python-client
 jsonschema
