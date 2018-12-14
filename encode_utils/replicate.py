@@ -86,7 +86,7 @@ class ExpReplicates():
         Checks self.rep_hash to see if there is a biological replicate with the given
         biosample_replicate_number.
         """
-        if self.get_brn_hash(brn):
+        if self.get_tech_rep_hash(brn):
             return True
         return False
 
@@ -98,14 +98,14 @@ class ExpReplicates():
         Returns:
             `bool`.
         """
-        lib_hash = self.get_brn_hash(brn)
+        lib_hash = self.get_tech_rep_hash(brn)
         if lib_hash:
             for lib_acc in lib_hash:
                 if trn == lib_hash["trn"]:
                     return True
         return False
 
-    def suggest_new_brn(self):
+    def suggest_brn(self):
         """
         Select a biosample_replicate_number (brn) that is one greater than the number of
         existing biosamples on the experiment.  If that number is already in use, increment until
@@ -116,11 +116,11 @@ class ExpReplicates():
             brn += 1
         return brn
 
-    def suggest_new_trn(self, biosample_accession):
+    def suggest_trn(self, biosample_accession):
         """
         For technical_replicate_number (trn), use a number that is one greater than the number of
         existing technical replicates on the experiment for the given biosample. If the given
-        biosample isn't yet registred as a replicate, set trn to 1.
+        biosample isn't yet registered as a replicate, set trn to 1.
         """
         if biosample_accession not in self.rep_hash:
             return 1
@@ -129,5 +129,8 @@ class ExpReplicates():
             while self.does_trn_exist(brn=brn, trn=trn):
                 trn += 1
         return trn
+
+    def suggest_brn_trn(self, biosample_accession):
+        return [self.suggest_brn(), self.suggest_trn()]
 
 

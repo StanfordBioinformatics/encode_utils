@@ -459,7 +459,9 @@ class Connection():
         status_code = response.status_code
         if not response.ok and status_code != requests.codes.NOT_FOUND:
             response.raise_for_status()
-        return response.json()["@graph"]  # the @graph object is a list
+        result = response.json()["@graph"]  # the @graph object is a list
+        self.debug_logger.debug("Search completed with {} hits.".format(len(result)))
+        return result
 
     def get_profile_from_payload(self, payload):
         """
@@ -1584,6 +1586,10 @@ class Connection():
         either the calling directory or the indicated download directory. The downloaded file will
         be named as it is on the Portal.
 
+        Alternativly, you can get a reference to the response object by setting the `get_stream`
+        parameter to True. Useful if you want to inspect the response, i.e. see if there was a 
+        redirect and where to, or download the byte stream in a customized manner.
+
         Args:
 
            rec_id: `str`. A DCC identifier for a file or document record on the Portal.
@@ -1591,7 +1597,8 @@ class Connection():
                specified, then the file will be downloaded in the calling directory.
 
         Returns:
-            `str`. The full path to the downloaded file.
+            `str`. The full path to the downloaded file if the `get_stream` parameter is False.
+            `requests.models.Response`: The `get_stream` parameter is True.
         """
         rec = self.get(rec_id, ignore404=False)
         # Check whether we need to download a Document or File record.

@@ -30,6 +30,31 @@ DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
 #: An error ``logging`` instance.
 ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
 
+def get_record_id(rec):
+    """
+    Extracts the most suitable identifier from a JSON-serialized record on the ENCODE Portal.
+    This is useful, for example, for other applications that need to store identifiers of specific 
+    records on the Portal. The identifier chosen is determined to be the 'accession' if that 
+    property is present, otherwise it's the first alias of the 'aliases' property is present, 
+    otherwise its the value of the 'uuid' property.
+
+    Args:
+        rec: `dict`. The JSON-serialization of a record on the ENCODE Portal.
+
+    Returns:
+        `str`: The extracted record identifier.
+
+    Raises:
+        `Exception`: An identifier could not be extracted from the input record.
+    """
+    if "accession" in rec:
+        return rec["accession"]
+    elif "aliases" in rec:
+        return rec["aliases"][0]
+    elif "uuid" in rec:
+        return rec["uuid"]
+    raise Exception("Could not extract an uptream identifier for ENCODE record '{}'.".format(rec))
+
 def err_context(payload, schema):
     """
     Validates the schema instance against the provided JSON schema.
