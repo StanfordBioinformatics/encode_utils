@@ -900,8 +900,9 @@ class Connection():
         of the `DCC_LAB` environment variable. Similarly, if the `award` property isn't present, then the
         default will be set to the value of the `DCC_AWARD` environment variable.
 
-        Before the POST is attempted, any pre-POST hooks are fist called (see the method
-        ``self.before_submit_hooks``).
+        Before the POST is attempted, any pre-POST hooks are fist called; see the method
+        ``self.before_submit_hooks``).  After a successfuly POST, any after-POST submit hooks are
+        also run; see the method ``self.after_submit_hooks``. 
 
         Args:
             payload: `dict`. The data to submit.
@@ -992,8 +993,8 @@ class Connection():
         #    raise Exception(euu.print_format_dict(validation_error[0]))
 
         self.debug_logger.debug(
-            ("<<<<<< POST {alias} To DCC with URL {url} and this"
-             " payload:\n\n{payload}\n\n").format(alias=aliases[0], url=url, payload=euu.print_format_dict(payload)))
+            ("<<<<<< POST {} record {alias} To DCC with URL {url} and this"
+             " payload:\n\n{payload}\n\n").format(profile_id, alias=aliases[0], url=url, payload=euu.print_format_dict(payload)))
 
         if self.check_dry_run():
             return {}
