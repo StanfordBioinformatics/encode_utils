@@ -96,4 +96,8 @@ ch.setLevel(level)
 ch.setFormatter(f_formatter)
 debug_logger.addHandler(ch)
 
+#: A ``logging`` instance that accepts messages at the ERROR level. 
+error_logger = logging.getLogger(ERROR_LOGGER_NAME)
+error_logger.setLevel(logging.ERROR)
+
 del package_path
