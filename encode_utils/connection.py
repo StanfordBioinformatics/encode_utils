@@ -40,7 +40,6 @@ class AwardPropertyMissing(Exception):
     message = ("The property '{}' is missing from the payload and a default isn't set either. To"
                " store a default, set the DCC_AWARD environment variable.")
 
-
 class FileUploadFailed(Exception):
     """
     Raised when the AWS CLI returns a non-zero exit status.
@@ -157,9 +156,7 @@ class Connection():
         #: The log file resides locally within the directory specified by the constant
         #: ``connection.LOG_DIR``. Accepts messages >= ``logging.ERROR``.
         self.error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME)
-        log_level = logging.ERROR
-        self.error_logger.setLevel(log_level)
-        self._add_file_handler(logger=self.error_logger, level=log_level, tag="error")
+        self._add_file_handler(logger=self.error_logger, level=logging.ERROR, tag="error")
         self.log_error("Connecting to {}".format(self.dcc_host))
 
         #: A ``logging`` instance with a file handler for logging successful POST operations.
@@ -197,6 +194,23 @@ class Connection():
                 "WARNING: API keys {} not set, all functions have no permission".format(
                     self.auth))
 
+        # Create a dict attribute of all source records
+        sources_response = requests.get(os.path.join(self.dcc_url, "sources?limit=all"),
+                                auth=self.auth,
+                                timeout=eu.TIMEOUT,
+                                headers=euu.REQUEST_HEADERS_JSON,
+                                verify=False)
+        sources_response.raise_for_status()
+        sources = sources_response.json()["@graph"]
+        #: `dict` where each key is a source record name and each value is the corresponding 
+        #: JSON record. The key is parsed out of the records '@id' property by
+        #: tokenizing on the '/' character and taking only the last field, i.e. 
+        #: '/sources/michael-snyder/' becomes simply 'michael-snyder'. 
+        self.sources = {}
+        for s in sources:
+            s_id = s["@id"].strip("/").split("/")[-1]
+            self.sources[s_id] = s
+    
     def _set_dcc_mode(self, dcc_mode=False):
         if not dcc_mode:
             try:
@@ -346,6 +360,54 @@ class Connection():
         """
         self.debug_logger.debug(msg)
         self.error_logger.error(msg)
+
+    def add_alias_prefix(self, aliases, prefix=False):
+        """
+        Given a list of aliases, adds the lab prefix to each one that doesn't yet have a prefix set.
+        The lab prefix is taken as the passed-in `prefix`, otherwise, it defaults to the `DCC_LAB`
+        environment variable, and it must be a value assigned by the DCC, i.e. "michael-snyder"
+        for the Snyder Production Center. The DCC requires that aliases be prefixed in this manner. 
+    
+        Args:
+            aliases: `list` of aliases.
+            prefix: `str`. The DCC assigned lab prefix to use. If not specified, then the default
+                is the value of the DCC_LAB environment variable.
+    
+        Returns:
+            `list`.
+
+        Raises:
+            `Exception`: A passed-in alias doesn't have a prefix set, and the default prefix could
+                not be determined. 
+    
+        Examples::
+    
+              add_alias_prefix(aliases=["my-alias"],prefix="michael-snyder")
+              # Returns ["michael-snyder:my-alias"]
+    
+              add_alias_prefix(aliases=["michael-snyder:my-alias"],prefix="michael-snyder")
+              # Returns ["michael-snyder:my-alias"]
+
+              add_alias_prefix(aliases=["my_alias"], prefix="bad-value")
+              # Raises an Exception since this lab prefix isn't from a registered source record on
+              # the Portal. 
+    
+        """
+        if not prefix:
+            prefix = eu.LAB_PREFIX
+        prefix = prefix.strip(":")
+        res = []
+        for i in aliases:
+            if ":" in i:
+                # Check if this is a known source prefix
+                if i.split(":")[0] in self.sources:
+                    # Prefix aleady set
+                    res.append(i)
+                    continue
+            if not prefix or prefix not in self.sources:
+                raise Exception("Can't add lab prefix '{}' to aliases; please set DCC_LAB environment variable to the lab identifier assigned to you by the DCC, i.e. michael-snyder for the Snyder Production Center.".format(prefix))
+            res.append(prefix + ":" + i)
+        return res
 
     def get_aliases(self, dcc_id, strip_alias_prefix=False):
         """
@@ -696,7 +758,7 @@ class Connection():
         if not eu.ALIAS_PROP_NAME in payload:
             return payload
         aliases = euu.clean_aliases(payload[eu.ALIAS_PROP_NAME])
-        aliases = euu.add_alias_prefix(aliases)
+        aliases = self.add_alias_prefix(aliases)
         payload[eu.ALIAS_PROP_NAME] = aliases
         return payload
 

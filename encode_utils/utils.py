@@ -25,11 +25,6 @@ import encode_utils.aws_storage
 #: Stores the HTTP headers to indicate JSON content in a request.
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
-#: A debug ``logging`` instance.
-DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
-#: An error ``logging`` instance.
-ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
-
 def get_record_id(rec):
     """
     Extracts the most suitable identifier from a JSON-serialized record on the ENCODE Portal.
@@ -93,12 +88,24 @@ def calculate_md5sum(file_path):
 
     Returns:
         `str`: The md5sum.
+
+    Raises:
+        `FileNotFoundError`: The given file_path does not exist. 
     """
     if file_path.startswith("s3:"):
         return encode_utils.aws_storage.S3Object(s3_uri=file_path).md5sum()
     m = hashlib.md5()
+    # Assume local file
+    if not os.path.exists(file_path):
+        msg = "File path '{}' does not exists.".format(file_path)
+        logging.error(msg)
+        raise FileNotFoundError(msg)
     with open(file_path, 'rb') as fh:
-        m.update(fh.read())
+        while True:
+            chunk = fh.read(2**16)
+            if not chunk:
+                break
+            m.update(chunk)
     return m.hexdigest()
 
 
@@ -178,46 +185,6 @@ def create_subprocess(cmd, check_retcode=True):
         return stdout, stderr
     else:
         return popen
-
-
-def add_alias_prefix(aliases, prefix=False):
-    """
-    Given a list of aliases, adds the lab prefix to each one that doesn't yet have a prefix set.
-    The lab prefix is taken as the passed-in `prefix`, otherwise, it defaults to the `DCC_LAB`
-    environment variable.
-
-    Args:
-        aliases: `list` of aliases.
-
-    Returns:
-        `list`.
-
-    Examples::
-
-          add_alias_prefix(aliases=["my-alias"],prefix="michael-snyder")
-          # Returns ["michael-snyder:my-alias"]
-
-          add_alias_prefix(aliases=["some-prefix:my-alias"],prefix="michael-snyder")
-          # Returns ["some-refix:my-alias"]
-          # Doesn't change an existing alias.
-
-    """
-    if not prefix:
-        prefix = eu.LAB_PREFIX
-    else:
-        # Make sure colon is at the end and don't re-add it if already present
-        prefix = prefix.strip(":") + ":"
-
-    res = []
-    for i in aliases:
-        if ":" in i:
-            # A prefix is already set.
-            res.append(i)
-        else:
-            if not prefix:
-                raise Exception("Alias '{}' does not have a lab prefix set, and a default could not be determined.".format(i))
-            res.append(prefix + i)
-    return res
 
 
 def strip_alias_prefix(alias):
