@@ -463,6 +463,9 @@ class Connection():
         values for both arguments in which case the query parameters specified in `search_args` will
         be added to the query parameters given in the URL.
 
+        If ``self.submission == True``, then the query will be searced with "datastore=database",
+        unless the 'database' query parameter is already set. 
+
         Args:
             search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...]``.
                 To support a != style query, append "!" to the key name.
@@ -510,6 +513,9 @@ class Connection():
                 query_list.append(("limit", "all"))
             else:
                 query_list.append(("limit", str(limit)))
+        if "datastore" not in params:
+            if self.submission:
+                query_list.append("datastore", "database")
 
         url = self.make_search_url(search_args=query_list)
         self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
