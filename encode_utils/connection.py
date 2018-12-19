@@ -515,7 +515,7 @@ class Connection():
                 query_list.append(("limit", str(limit)))
         if "datastore" not in params:
             if self.submission:
-                query_list.append("datastore", "database")
+                query_list.append(("datastore", "database"))
 
         url = self.make_search_url(search_args=query_list)
         self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
