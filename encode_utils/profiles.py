@@ -131,6 +131,23 @@ class Profile:
         raise Exception(
             "Error: The profile for file.json no longer includes the property {}.".format(MD5SUM_NAME_PROP_NAME))
 
+    @classmethod
+    def profiles_with_property(cls, property_name):
+        """
+        Returns a list of profile names that have a given property.
+
+        Args:
+            property_name: `str`. The name of the property. 
+
+        Returns:
+            `list` of profile names. 
+        """
+        res = []
+        for profile_name in cls.PROFILES:
+            if property_name in cls.PROFILES[profile_name]["properties"]:
+                res.append(profile_name) 
+        return res
+
     def __init__(self, profile_id):
         """
         Args:
