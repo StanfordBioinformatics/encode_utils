@@ -131,6 +131,6 @@ class ExpReplicates():
         return trn
 
     def suggest_brn_trn(self, biosample_accession):
-        return [self.suggest_brn(), self.suggest_trn()]
+        return [self.suggest_brn(), self.suggest_trn(biosample_accession)]
 
 
