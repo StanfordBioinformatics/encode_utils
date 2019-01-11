@@ -101,7 +101,7 @@ class ExpReplicates():
         lib_hash = self.get_tech_rep_hash(brn)
         if lib_hash:
             for lib_acc in lib_hash:
-                if trn == lib_hash["trn"]:
+                if trn == lib_hash[lib_acc]["trn"]:
                     return True
         return False
 
@@ -125,6 +125,7 @@ class ExpReplicates():
         if biosample_accession not in self.rep_hash:
             return 1
         else:
+            brn = self.rep_hash[biosample_accession]["brn"]
             trn = len(self.rep_hash[biosample_accession]["libraries"]) + 1
             while self.does_trn_exist(brn=brn, trn=trn):
                 trn += 1
