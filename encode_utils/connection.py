@@ -1107,7 +1107,11 @@ class Connection():
                     # not all props are pulled back when they are empty.
                     # For ex, in a file object, if the controlled_by prop isn't set, then
                     # it won't be in the response.
-                    payload[key] = list(set(val))
+ 
+                    ## CHECK FOR DUPLICATES: Be careful as some can be tricky, i.e.
+                    # ['/documents/id1', 'id1'] 
+                    # such a duplicate should be identified and removed, leaving us with ["id1"]. 
+                    payload[key] = eup.remove_duplicate_associations(val)
 
         # Run 'before' hooks:
         payload = self.before_submit_hooks(payload, method=self.PATCH)
