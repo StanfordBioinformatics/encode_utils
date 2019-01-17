@@ -1532,8 +1532,10 @@ class Connection():
 
     def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
-        Uses the AWS CLI to upload a file to the Portal for the indicated file record. The file
-        to upload can be specified in one of the following ways;
+        Uploads a file to the Portal for the indicated file record.  The file to upload can be
+        specified by setting the `file_path` parameter, or by using the value of the ENCODE file 
+        profile's `submitted_file_name` property of the given file object represented by the 
+        `file_id` parameter. The file to upload can be from any of the following sources:
 
           1. Path to a local file,
           2. S3 object, or
