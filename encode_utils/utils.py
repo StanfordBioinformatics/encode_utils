@@ -97,7 +97,7 @@ def calculate_md5sum(file_path):
     m = hashlib.md5()
     # Assume local file
     if not os.path.exists(file_path):
-        msg = "File path '{}' does not exists.".format(file_path)
+        msg = "File path '{}' does not exist.".format(file_path)
         logging.error(msg)
         raise FileNotFoundError(msg)
     with open(file_path, 'rb') as fh:
@@ -108,6 +108,14 @@ def calculate_md5sum(file_path):
             m.update(chunk)
     return m.hexdigest()
 
+def calculate_file_size(file_path):
+    if file_path.startswith("s3:"):
+        return encode_utils.aws_storage.S3Object(s3_uri=file_path).size()
+    if not os.path.exists(file_path):
+        msg = "File path '{}' does not exist.".format(file_path)
+        logging.error(msg)
+        raise FileNotFoundError(msg)
+    return os.path.getsize(file_path) 
 
 def print_format_dict(dico, indent=2):
     """Formats a dictionary for printing purposes to ease visual inspection.

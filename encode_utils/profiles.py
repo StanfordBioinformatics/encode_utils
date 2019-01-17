@@ -139,6 +139,8 @@ class Profile:
     #: Constant storing a property name of the `file.json` profile.
     #: The stored name is asserted for inclusion in the set of `File` properties.
     MD5SUM_NAME_PROP_NAME = "md5sum"
+    #: Constant sotring a property name of the `file.json` profile.
+    FILE_SIZE_PROP_NAME = "file_size"
     #: Constant storing the name of the property in a JSON object sub-schema that indicates whether
     #: the object is read only.
     READ_ONLY_FLAG = "readonly"

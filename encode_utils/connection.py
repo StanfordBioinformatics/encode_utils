@@ -800,9 +800,10 @@ class Connection():
         return payload
 
     def before_post_file(self, payload):
-        """A pre-POST hook that calculates and sets the `md5sum` property for a file record.
-
-        If the 'md5sum' key is already present in the payload, then this is a no-op.
+        """
+        A pre-POST hook that calculates and sets the `md5sum` property and `file_size` property
+        for a file record. However, any of these two properties that is already set in the payload 
+        to a non-empty value will not be reset. 
 
         Args:
             payload: `dict`. The payload to submit to the Portal.
@@ -821,12 +822,18 @@ class Connection():
             file_name = payload[eup.Profile.SUBMITTED_FILE_PROP_NAME]
         except KeyError:
             return payload
-        if eup.Profile.MD5SUM_NAME_PROP_NAME in payload:
-            if payload[eup.Profile.MD5SUM_NAME_PROP_NAME]:
-                # Already set; nothing to do.
-                return payload
-        md5sum = euu.calculate_md5sum(file_name)
-        payload["md5sum"] = md5sum
+        # Set md5sum
+        if (eup.Profile.MD5SUM_NAME_PROP_NAME in payload) and (payload[eup.Profile.MD5SUM_NAME_PROP_NAME]):
+            # Already set; nothing to do.
+            pass
+        else:
+            payload[eup.Profile.MD5SUM_NAME_PROP_NAME] = euu.calculate_md5sum(file_name)
+        # Set file_size
+        if (eup.Profile.FILE_SIZE_PROP_NAME in payload) and (payload[eup.Profile.FILE_SIZE_PROP_NAME]):
+            # Already set; nothing to do.
+            pass
+        else:
+            payload[eup.Profile.FILE_SIZE_PROP_NAME] = euu.calculate_file_size(file_name)
         return payload
 
     def before_post_fastq_file(self, payload):
@@ -1545,10 +1552,13 @@ class Connection():
               or a Google Storage object (i.e. gs://mybucket/test.txt).
               If not set, defaults to `None` in which case the local file path will be extracted from the
               record's `submitted_file_name` property.
-            set_md5sum: `bool`. True means to also calculate the md5sum and set the file record's md5sum
-              property on the Portal (this currently is only implemented for local files, not S3).
-              This will always take place whenever the property isn't yet set and when uploading a
-              local file.
+            set_md5sum: `bool`. True means to also calculate the md5sum and set the file record's `md5sum`
+              property on the Portal (this currently is only implemented for local files and S3; not yet GCP).
+              This will always take place whenever the property isn't yet set.
+              Furthermore, setting to True will also cause the `file_size` property to be set. 
+              Normally these two properties would already be set as they are required in the *file* profile,
+              however, if the wrong file was originally uploaded, then they must be reset when 
+              uploading a new file. 
 
         Raises:
             encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
@@ -1563,13 +1573,15 @@ class Connection():
                 file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
             except KeyError:  # submitted_file_name property not set:
                 raise Exception("No file path specified.")
-        file_rec_md5sum = file_rec.get("md5sum")
+        file_rec_md5sum = file_rec.get(eup.Profile.MD5SUM_NAME_PROP_NAME)
         if not file_rec_md5sum or set_md5sum:
-            if not file_path.startswith("s3"):
-                # md5sum calc. supported at present only for local files.
-                self.debug_logger.debug("Calculating md5sum for {}".format(os.path.basename(file_path)))
-                md5sum = euu.calculate_md5sum(file_path)
-                self.patch({self.ENCID_KEY: file_rec["@id"], "md5sum": md5sum})
+            # md5sum calc. supported at present only for local files and aws (not GCP)
+            self.debug_logger.debug("Calculating md5sum for {}".format(os.path.basename(file_path)))
+            md5sum = euu.calculate_md5sum(file_path)
+            file_size = euu.calculate_file_size(file_path)
+            self.patch({self.ENCID_KEY: file_rec["@id"], 
+                        eup.Profile.MD5SUM_NAME_PROP_NAME: md5sum,
+                        eup.FILE_SIZE_PROP_NAME: file_size})
 
         cmd_args = "{file_path} {upload_url}".format(file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         if file_path.startswith("gs://"):
