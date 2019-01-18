@@ -16,7 +16,7 @@ Additions in master (will go into next release):
 
 ***
 
-Jan. 11, 2018
+Jan. 11, 2019
 
 Release [2.6.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.6.0)
 
