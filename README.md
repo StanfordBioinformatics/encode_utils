@@ -1,4 +1,4 @@
-© 2018 The Board of Trustees of the Leland Stanford Junior University.
+© 2019 The Board of Trustees of the Leland Stanford Junior University.
 
 # encode_utils
 Tools that are useful to any ENCODE Consortium submitting group, as well as the general community working with ENCODE data.  Library and scripts are coded in Python.
