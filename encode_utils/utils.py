@@ -25,6 +25,11 @@ import encode_utils.aws_storage
 #: Stores the HTTP headers to indicate JSON content in a request.
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
+def url_join(parts=[])
+    parts = [i.strip("/") for i in parts] 
+    url = os.path.sep.join(parts)
+    return url
+
 def get_record_id(rec):
     """
     Extracts the most suitable identifier from a JSON-serialized record on the ENCODE Portal.
