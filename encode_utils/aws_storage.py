@@ -12,7 +12,25 @@ import urllib
 import boto3
 
 class S3Object():
+    """
+    Represents an object in a S3 bucket. Internally used for calculating the md5sum and file size 
+    when submitting files to the ENCODE Portal.
+
+    You must set the appropriate AWS keys as documented in the wiki_.
+
+    .. _wiki: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration#aws-keys
+    """
     def __init__(self, bucket_name="", key="", s3_uri=""):
+        """
+        Args:
+            bucket_name: `str`. The name of the S3 bucket that contains your file of interest.
+                For example, "mybucket". 
+            key: `str`. The object path in the bucket.  For example, /path/to/reads.fastq.gz.
+            s3_uri: Fully qualified path to the object in the bucket, i.e. 
+                s3://pulsar-lims-assets/path/to/reads.fastq.gz. If this is set, then the `buket_name`
+                and `key` parameters are ignored since they will be set internally by parsing the
+                value of `s3_uri`.
+        """
         self.bucket_name = bucket_name
         self.key = self._process_key_name(key)
         if s3_uri:
