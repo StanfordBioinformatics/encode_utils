@@ -109,6 +109,18 @@ def calculate_md5sum(file_path):
     return m.hexdigest()
 
 def calculate_file_size(file_path):
+    """
+    Calculates the file size in bytes for a local file or a S3 URI.
+
+    Args:
+        file_path: `str`. The path to a local file or an S3 URI, i.e. s3://bucket-name/key.
+
+    Returns:
+        `int`.
+
+    Raises:
+        `FileNotFoundError`: The given file_path does not exist. 
+    """
     if file_path.startswith("s3:"):
         return encode_utils.aws_storage.S3Object(s3_uri=file_path).size()
     if not os.path.exists(file_path):
