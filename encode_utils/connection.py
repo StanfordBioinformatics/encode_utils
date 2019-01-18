@@ -195,7 +195,7 @@ class Connection():
                     self.auth))
 
         # Create a dict attribute of all source records
-        sources_response = requests.get(euu.url_join(self.dcc_url, "sources?limit=all"),
+        sources_response = requests.get(euu.url_join([self.dcc_url, "sources?limit=all"]),
                                 auth=self.auth,
                                 timeout=eu.TIMEOUT,
                                 headers=euu.REQUEST_HEADERS_JSON,
@@ -452,7 +452,7 @@ class Connection():
         """
         # urllib doesn't contain the parse() method until you import urllib3 (weird, but that's what I noticed).
         query = urllib.parse.urlencode(search_args)
-        url = euu.url_join(self.dcc_url, "search/?") + query
+        url = euu.url_join([self.dcc_url, "search/?"]) + query
         return url
 
     def search(self, search_args=[], url=None, limit=None):
@@ -644,7 +644,7 @@ class Connection():
         status_codes = {}  # key is return code, value is the record ID
         for r in rec_ids:
             r = r.strip("/")
-            url = euu.url_join(self.dcc_url, r, "?format=json")
+            url = euu.url_join([self.dcc_url, r, "?format=json"])
             if database:
                 url += "&datastore=database"
             if frame:
@@ -951,7 +951,7 @@ class Connection():
         payload = json.loads(json.dumps(payload))
         profile_id = self.get_profile_from_payload(payload)
         payload[self.PROFILE_KEY] = profile_id
-        url = euu.url_join(self.dcc_url, profile_id)
+        url = euu.url_join([self.dcc_url, profile_id])
         if self.ENCID_KEY in payload:
             # Shouldn't be here, unless maybe a PATCH was attempted and the record didn't exist, so
             # a POST was then attempted.
@@ -1127,7 +1127,7 @@ class Connection():
             # Some client software may add this key in; won't hurt to remove it.
             payload.pop(self.PROFILE_KEY)
 
-        url = euu.url_join(self.dcc_url, encode_id.lstrip("/"))
+        url = euu.url_join([self.dcc_url, encode_id.lstrip("/")])
         self.debug_logger.debug(
             ("<<<<<< PATCHING {encode_id} To DCC with URL"
              " {url} and this payload:\n\n{payload}\n\n").format(
@@ -1197,7 +1197,7 @@ class Connection():
                 # Then it is safe to remove this property.
                 editable_json.pop(prop)
 
-        url = euu.url_join(self.dcc_url, rec_id)
+        url = euu.url_join([self.dcc_url, rec_id])
         self.debug_logger.debug("Attempting to remove properties {} from record '{}' by sending a PUT request with payload {}.".format(props, rec_id, euu.print_format_dict(editable_json)))
         if self.check_dry_run():
             return
@@ -1393,7 +1393,7 @@ class Connection():
 #               " | python3 -m json.tool").format(api_key=self.api_key, secret_key=self.secret_key, host=self.dcc_host, file_id=file_id)
 
         response = requests.post(
-            euu.url_join(self.dcc_url, "files", file_id, "@@upload"),
+            euu.url_join([self.dcc_url, "files", file_id, "@@upload"]),
             auth=self.auth,
             headers=euu.REQUEST_HEADERS_JSON,
             json = {},
@@ -1706,9 +1706,9 @@ class Connection():
             raise Exception("This method can only download records of type 'File' and 'Document'; '{}' is neither of these.".format(rec_id))
         # Formulate download URL:
         if file_type:
-            url = euu.url_join(self.dcc_url, rec["href"].lstrip("/"))
+            url = euu.url_join([self.dcc_url, rec["href"].lstrip("/")])
         else:
-            url = euu.url_join(self.dcc_url, "documents", rec["uuid"], rec["attachment"]["href"])
+            url = euu.url_join([self.dcc_url, "documents", rec["uuid"], rec["attachment"]["href"]])
         r = requests.get(
             url,
             auth=auth,

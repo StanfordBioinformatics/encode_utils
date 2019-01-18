@@ -25,7 +25,11 @@ import encode_utils.aws_storage
 #: Stores the HTTP headers to indicate JSON content in a request.
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
-def url_join(parts=[])
+def url_join(parts=[]):
+    """
+    Useful for joinging URL fragments to make a single cohesive URL, i.e. for searching. 
+    You can see several examples of its use in the `connection.Connection` class.
+    """
     parts = [i.strip("/") for i in parts] 
     url = os.path.sep.join(parts)
     return url
