@@ -1541,7 +1541,9 @@ class Connection():
           2. S3 object, or
           3. Google Storage object (Not yet supported; see ticket at https://github.com/GoogleCloudPlatform/gsutil/issues/535)
 
-        For the last option listed, the user must have gsutil insalled with credentials configured (
+        For the AWS option above, the user must set the proper AWS keys, see the `wiki documentation`_.
+
+        For the GCP option above, the user must have gsutil insalled with credentials configured (
         see https://github.com/StanfordBioinformatics/encode_utils/wiki/could-to-cloud-file-transfers
         for more details).
 
@@ -1564,6 +1566,8 @@ class Connection():
 
         Raises:
             encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
+
+        .. _`wiki documentation`: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration#aws-keys
         """
         self.debug_logger.debug("\nIN upload_file()\n")
         #upload_credentials = self.get_upload_credentials(file_id) # Don't use this - they may have expired.
