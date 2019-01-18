@@ -14,6 +14,8 @@ Additions in master (will go into next release):
 
 * Updated `connection.Connection.before_post_file()` such that it will calculate file_size now in addition to md5sum. Updated `connection.Connection.upload_file()` such that whenever the md5sum needs to be set, then file_size will also be set. 
 
+***
+
 Jan. 11, 2018
 
 Release [2.6.0](https://github.com/StanfordBioinformatics/encode_utils/releases/tag/2.6.0)
