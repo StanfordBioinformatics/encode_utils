@@ -21,10 +21,10 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-SCRIPTS_DIR = "encode_utils/scripts/"
+SCRIPTS_DIR = os.path.join("encode_utils", "scripts")
 scripts = glob.glob(os.path.join(SCRIPTS_DIR,"*.py"))
 scripts.remove(os.path.join(SCRIPTS_DIR,"__init__.py"))
-scripts.append("encode_utils/MetaDataRegistration/eu_register.py")
+scripts.append(os.path.join("encode_utils","MetaDataRegistration", "eu_register.py"))
 
 setup(
   author = "Nathaniel Watson",
@@ -47,7 +47,7 @@ setup(
   long_description_content_type = "text/markdown",
   name = "encode-utils",
   packages = find_packages(),
-  package_data = {"encode_utils": ["tests/data/*"]},
+  package_data = {"encode_utils": [os.path.join("tests", "data", "*")]},
   project_urls = {
       "Read the Docs": "https://encode-utils.readthedocs.io/en/latest",
   },
