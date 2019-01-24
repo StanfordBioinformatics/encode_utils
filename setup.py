@@ -53,5 +53,5 @@ setup(
   },
   scripts = scripts,
   url = "https://github.com/StanfordBioinformatics/encode_utils", # home page
-  version = "2.6.1",
+  version = "2.6.2",
 )
