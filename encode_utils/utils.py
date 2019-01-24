@@ -27,11 +27,11 @@ REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
 def url_join(parts=[]):
     """
-    Useful for joinging URL fragments to make a single cohesive URL, i.e. for searching. 
+    Useful for joining URL fragments to make a single cohesive URL, i.e. for searching. 
     You can see several examples of its use in the `connection.Connection` class.
     """
     parts = [i.strip("/") for i in parts] 
-    url = os.path.sep.join(parts)
+    url = "/".join(parts)
     return url
 
 def get_record_id(rec):
