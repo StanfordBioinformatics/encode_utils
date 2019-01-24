@@ -195,7 +195,7 @@ class Connection():
                     self.auth))
 
         # Create a dict attribute of all source records
-        sources_response = requests.get(euu.url_join([self.dcc_url, "sources?limit=all"]),
+        sources_response = requests.get(euu.url_join([self.dcc_url, "sources?limit=all&format=json"]),
                                 auth=self.auth,
                                 timeout=eu.TIMEOUT,
                                 headers=euu.REQUEST_HEADERS_JSON,
