@@ -398,15 +398,12 @@ class Connection():
         prefix = prefix.strip(":")
         res = []
         for i in aliases:
-            if ":" in i:
-                # Check if this is a known source prefix
-                if i.split(":")[0] in self.sources:
-                    # Prefix aleady set
-                    res.append(i)
-                    continue
-            if not prefix or prefix not in self.sources:
-                raise Exception("Can't add lab prefix '{}' to aliases; please set DCC_LAB environment variable to the lab identifier assigned to you by the DCC, i.e. michael-snyder for the Snyder Production Center.".format(prefix))
-            res.append(prefix + ":" + i)
+            if ":" not in i:
+                if not prefix:
+                    raise Exception("Can't add alias prefix to aliases as it isn't specified; please set DCC_LAB environment variable to the lab identifier assigned to you by the DCC, i.e. michael-snyder for the Snyder Production Center.".format(prefix))
+                else:
+                    i = prefix + ":" + i
+            res.append(i)
         return res
 
     def get_aliases(self, dcc_id, strip_alias_prefix=False):
