@@ -19,6 +19,7 @@ import os
 import PIL.Image
 import requests
 import subprocess
+import urllib3
 
 import exifread
 
@@ -411,3 +412,39 @@ def does_lib_replicate_exist(replicates_json, lib_accession,
                 continue
         results.append(rep["uuid"])
     return results
+
+def requests_retry_session(retries=3,
+                           method_whitelist=frozenset(['GET', 'POST']),
+                           backoff_factor=1,
+                           status_forcelist=(504,),
+                           session=None):
+    """
+    Retry request upon "504 Gateway Timeout" (`requests.exceptions.HTTPError`).
+
+    This function will retry the request when response `status_code` is in the `status_forcelist`, which by default is 504. It returns a Session object which essentially can be used in place of requests when making a request. For example, `requests.get(url)` is equivalent to `requests_retry_session().get(url)`.
+
+    This function is adapted from https://www.peterbe.com/plog/best-practice-with-retries-with-requests
+
+    Please also check `requests.adapters` module and `urllib3.util.retry` for details.
+
+    Args:
+        retries: `int`. The number of retries to allow. Default is `3`.
+        backoff_factor: `float`. The delay fator between retries. See `urllib3.util.retry.Retry` for details. Default is `1`.
+        status_forcelist: `iterable`. A set of integer HTTP status codes which a retry will be forced on. Default is `(504)`.
+        session: `Session` object. A session to be modified with retries. If `None` (default), a new `requests.Session()` will be used.
+
+    Returns:
+        `requests.Session`: A Session object whichhas all the methods of the main Requests API.
+    """
+
+    session = session or requests.Session()
+    retry = urllib3.util.retry.Retry(
+        total=retries,
+        method_whitelist=frozenset(['GET', 'POST']),
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = requests.adapters.HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session

@@ -648,11 +648,13 @@ class Connection():
                 url += "&frame={frame}".format(frame=frame)
             self.debug_logger.debug(">>>>>>GET {rec_id} From DCC with URL {url}".format(
                 rec_id=r, url=url))
-            response = requests.get(url,
-                                    auth=self.auth,
-                                    timeout=eu.TIMEOUT,
-                                    headers=euu.REQUEST_HEADERS_JSON,
-                                    verify=False)
+            with euu.requests_retry_session() as retry_requests:
+                response = retry_requests.get(
+                    url,
+                    auth=self.auth,
+                    timeout=eu.TIMEOUT,
+                    headers=euu.REQUEST_HEADERS_JSON,
+                    verify=False)
             if response.ok:
                 return response.json()
             status_codes[response.status_code] = r
@@ -1020,14 +1022,20 @@ class Connection():
 
         if self.check_dry_run():
             return {}
-        response = requests.post(url,
-                                 auth=self.auth,
-                                 timeout=eu.TIMEOUT,
-                                 headers=euu.REQUEST_HEADERS_JSON,
-                                 json=payload,
-                                 verify=False)
+        with euu.requests_retry_session() as retry_requests:
+            response = retry_requests.post(
+                url,
+                auth=self.auth,
+                timeout=eu.TIMEOUT,
+                headers=euu.REQUEST_HEADERS_JSON,
+                json=payload,
+                verify=False)
         #response_json = response.json()["@graph"][0]
-        response_json = response.json()
+        try:
+            response_json = response.json()
+        except ValueError:
+            response.raise_for_status()
+            raise  # In case it is a good request
 
         if response.ok:
             self.debug_logger.debug("Success.")
@@ -1147,9 +1155,19 @@ class Connection():
 
         if self.check_dry_run():
             return {}
-        response = requests.patch(url, auth=self.auth, timeout=eu.TIMEOUT, headers=euu.REQUEST_HEADERS_JSON,
-                                  json=payload, verify=False)
-        response_json = response.json()
+        with euu.requests_retry_session() as retry_requests:
+            response = retry_requests.patch(
+                url,
+                auth=self.auth,
+                timeout=eu.TIMEOUT,
+                headers=euu.REQUEST_HEADERS_JSON,
+                json=payload,
+                verify=False)
+        try:
+            response_json = response.json()
+        except ValueError:
+            response.raise_for_status()
+            raise  # In case it is a good request
 
         if response.ok:
             self.debug_logger.debug("Success.")
@@ -1404,12 +1422,13 @@ class Connection():
 #               " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
 #               " | python3 -m json.tool").format(api_key=self.api_key, secret_key=self.secret_key, host=self.dcc_host, file_id=file_id)
 
-        response = requests.post(
-            euu.url_join([self.dcc_url, "files", file_id, "@@upload"]),
-            auth=self.auth,
-            headers=euu.REQUEST_HEADERS_JSON,
-            json = {},
-            timeout=eu.TIMEOUT)
+        with euu.requests_retry_session() as retry_requests:
+            response = retry_requests.post(
+                euu.url_join([self.dcc_url, "files", file_id, "@@upload"]),
+                auth=self.auth,
+                headers=euu.REQUEST_HEADERS_JSON,
+                json={},
+                timeout=eu.TIMEOUT)
         response_json = response.json()
         if response.ok:
             self.debug_logger.debug("Success: upload credentials for '{}' regenerated.".format(file_id))
