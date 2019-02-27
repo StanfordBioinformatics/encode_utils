@@ -7,9 +7,45 @@
 ### 
 
 import json
+import os
 import urllib
 
 import boto3
+
+class S3Upload:
+
+  def __init__(self, bucket_name, acl="public-read", key_path=""):
+    """
+    Args:
+        bucket_name: `str`. The name of the bucket to upload files to, i.e. pulsar-encode-assets.
+        acl: `str`. See possible values at https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.put_object.
+        key_path: `str`. The directory path in the specified bucket to upload all files to. 
+    """
+    s3 = boto3.resource('s3')
+    self.acl = acl
+    self.bucket = s3.Bucket(bucket_name)
+    # Make sure that key_path, if specified, ends with a '/' so that it can be properly prefixed
+    # to the file name being uploaded while forming the object key path. Also note that the upload
+    # will silently fail if path starts with a '/', so check for that and remove if present.
+    if key_path:
+        key_path = key_path.lstrip("/")
+        key_path = key_path.rstrip("/") + "/"
+    else:
+       # Ensure that it's an empty string and not some other falsy value the user set it to, such
+       # as the None object. 
+       key_path = ""
+    self.key_path = key_path
+
+  def upload(self, filename):
+    """
+    Returns:
+        `str`: The key/path of the newly created object.
+    """
+    fh = open(filename, "rb")
+    key = self.key_path + os.path.basename(filename)
+    self.bucket.put_object(ACL=self.acl, Key=key, Body=fh)
+    return key
+    
 
 class S3Object():
     """
