@@ -41,6 +41,7 @@ setup(
     "google-api-python-client",
     "inflection",
     "jsonschema",
+    "pillow",
     "requests",
     "urllib3"],
   long_description = long_description,

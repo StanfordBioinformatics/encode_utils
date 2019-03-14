@@ -671,7 +671,11 @@ class Connection():
     def set_attachment(self, document):
         """
         Sets the `attachment` property for any profile that supports it, such as `document` or
-        `antibody_characterization`.
+        `antibody_characterization`. 
+
+        Checks if the provided file is an image in either of the JPEG 
+        or TIFF formats - if so, then checks the image orientation in the EXIF data and rotates if
+        if necessary. The original image will not be modified.
 
         Args:
             document: `str`. A local file path.
@@ -681,7 +685,14 @@ class Connection():
         """
         download_filename = os.path.basename(document)
         mime_type = mimetypes.guess_type(download_filename)[0]
-        data = base64.b64encode(open(document, 'rb').read())
+        if euu.is_jpg_or_tiff(document):
+            orientation_stats = euu.orient_jpg(document)
+            if orientation_stats["transformed"]:
+                self.debug_logger.degub("Image {} orientation transformed from {} to {}.".format(orientation_stats["from"], 1))
+                data = base64.b64encode(orientation_stats["img"])
+        else:
+            data = base64.b64encode(open(document, 'rb').read())
+
         temp_uri = str(data, "utf-8")
         href = "data:{mime_type};base64,{temp_uri}".format(mime_type=mime_type, temp_uri=temp_uri)
         #download_filename = library_alias.split(":")[1] + "_relative_knockdown.jpeg"

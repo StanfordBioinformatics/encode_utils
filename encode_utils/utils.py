@@ -11,10 +11,12 @@ Contains utilities that don't require authorization on the DCC servers.
 """
 
 import hashlib
+import io
 import json
 import jsonschema
 import logging
 import os
+import PIL.Image
 import requests
 import subprocess
 
@@ -24,6 +26,105 @@ import encode_utils.aws_storage
 
 #: Stores the HTTP headers to indicate JSON content in a request.
 REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
+
+def is_jpg_or_tiff(filename):
+    """
+    True if this is a JPG for TIFF formatted file that. Such file formats may include EXIF metadata.
+    """
+    return os.path.splitext(filename)[-1].lstrip(".").lower() in ["jpg", "jpeg", "tiff"]
+
+def orient_jpg(filename):
+    """
+    Given a JPG or TIFF, attempts to read the EXIF data to determine the orientation and then
+    transform the image if needed. This function is called in `connection.Connection.set_attachment()`.
+
+    EXIF - exchangeable image file format - is only supported by JPG and TIFF formatted images. 
+    Such images aren't even required to set EXIF metadata. Imaging software sometimes sets EXIF 
+    to allow clients to read metadata such as what software took the picture, and what orientation
+    it's in. This function is concerned with the oriention being in an upright position.
+
+    Note! Existing EXIF data will be lost for any transformed image. That's not a big issue for 
+    orientation, however, since software should consider the orientation to be 1 when EXIF isn't 
+    present anyways.
+
+    Args:
+        filename: `str`. Path to local JPG or TIFF file.
+
+    Returns:
+        `dict` with the following keys:
+            1) from - int. The orientation that was read in, or 0 if unknown.
+            2) transformed - boolean. True if this function transformed the image, False otherwise. 
+               Note that False could either mean that the image didn't need any transformation or that
+               the need for a transformation could not be determined based on EXIF metadata or lack thereof. 
+            3) A `bytes` instance or None if the input file is not a JPG or TIFF.
+
+    Raises:
+        `InvalidExifOrientation`: The EXIF orientation data is present, but the orientation value
+            isn't in the expected range of [1..8]. 
+    """
+    class InvalidExifOrientation(Exception):
+        """
+        Raised when the EXIF orientation is set, but the value is not interpretable.
+        """
+        pass
+
+    UNKNOWN_ORIENTATION_VALUE = 0
+    if not is_jpg_or_tiff(filename):
+        return {
+          "from": UNKNOWN_ORIENTATION_VALUE,
+          "transformed": False,
+          "img": None
+        }
+
+    img = PIL.Image.open(filename)
+    try:
+        exif = img._getexif()
+        orientation = exif[274] # int in [1..8]
+    except (AttributeError, KeyError):
+        # Maybe this image doesn't use exif data, or it does but the orientation field is absent.
+        orientation = UNKNOWN_ORIENTATION_VALUE
+    degrees = None
+    flip = None
+    if orientation in [0, 1]:
+        pass
+    if orientation == 8:
+        degrees = 90
+    elif orientation == 3:
+        degrees = 180
+    elif  orientation == 6:
+        degrees = 270
+    elif orientation == 2:
+        flip = PIL.Image.FLIP_LEFT_RIGHT
+    elif orientation == 7:
+        degrees = 90
+        flip = PIL.Image.FLIP_LEFT_RIGHT
+    elif orientation == 4:
+        degrees = 180
+        flip = PIL.Image.FLIP_LEFT_RIGHT
+    elif orientation == 5:
+        degrees = 270 
+        flip = PIL.Image.FLIP_LEFT_RIGHT
+    else:
+        raise InvalidExifOrientation("Unknown exif orientation value {}.".format(orientation))
+    
+    transformed = True
+    rotate_extra_args = {"expand": True}
+    if degrees and not flip:
+        new_img = img.rotate(degrees, **rotate_extra_args)
+    elif degrees and flip:
+        flipped_img = img.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+        new_img = flipped_img.rotate(degrees, **rotate_extra_args)
+    else:
+        transformed = False
+        new_img = img
+
+    res = {}
+    bio = io.BytesIO()
+    new_img.save(bio, format="JPEG")    
+    res["from"] = orientation
+    res["transformed"] = transformed
+    res["img"] = bio.getvalue()
+    return res
 
 def url_join(parts=[]):
     """

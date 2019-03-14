@@ -3,5 +3,6 @@ boto3
 inflection
 google-api-python-client
 jsonschema
+pillow
 sphinx-argparse
 urllib3
