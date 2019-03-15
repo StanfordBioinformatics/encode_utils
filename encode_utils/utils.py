@@ -33,7 +33,7 @@ def is_jpg_or_tiff(filename):
     """
     return os.path.splitext(filename)[-1].lstrip(".").lower() in ["jpg", "jpeg", "tiff"]
 
-def orient_jpg(filename):
+def orient_jpg(image):
     """
     Given a JPG or TIFF, attempts to read the EXIF data to determine the orientation and then
     transform the image if needed. This function is called in `connection.Connection.set_attachment()`.
@@ -48,7 +48,8 @@ def orient_jpg(filename):
     present anyways.
 
     Args:
-        filename: `str`. Path to local JPG or TIFF file.
+        image: `str` or `bytes` instance.  Use a string to supply the path to local JPG or TIFF file.
+            Use a bytes object if you have the image data already in memory. 
 
     Returns:
         `dict` with the following keys:
@@ -56,7 +57,7 @@ def orient_jpg(filename):
             2) transformed - boolean. True if this function transformed the image, False otherwise. 
                Note that False could either mean that the image didn't need any transformation or that
                the need for a transformation could not be determined based on EXIF metadata or lack thereof. 
-            3) A `bytes` instance or None if the input file is not a JPG or TIFF.
+            3) stream - A `bytes` instance.
 
     Raises:
         `InvalidExifOrientation`: The EXIF orientation data is present, but the orientation value
@@ -69,14 +70,7 @@ def orient_jpg(filename):
         pass
 
     UNKNOWN_ORIENTATION_VALUE = 0
-    if not is_jpg_or_tiff(filename):
-        return {
-          "from": UNKNOWN_ORIENTATION_VALUE,
-          "transformed": False,
-          "img": None
-        }
-
-    img = PIL.Image.open(filename)
+    img = PIL.Image.open(image)
     try:
         exif = img._getexif()
         orientation = exif[274] # int in [1..8]
@@ -94,23 +88,22 @@ def orient_jpg(filename):
     elif  orientation == 6:
         degrees = 270
     elif orientation == 2:
-        flip = PIL.Image.FLIP_LEFT_RIGHT
+        flip = True
     elif orientation == 7:
         degrees = 90
-        flip = PIL.Image.FLIP_LEFT_RIGHT
+        flip = True
     elif orientation == 4:
         degrees = 180
-        flip = PIL.Image.FLIP_LEFT_RIGHT
+        flip = True
     elif orientation == 5:
         degrees = 270 
-        flip = PIL.Image.FLIP_LEFT_RIGHT
+        flip = True
     else:
         raise InvalidExifOrientation("Unknown exif orientation value {}.".format(orientation))
     
     transformed = True
-    rotate_extra_args = {"expand": True}
     if degrees:
-        img = img.rotate(degrees, **rotate_extra_args)
+        img = img.rotate(degrees, expand=True)
     if flip:
         img = img.transpose(PIL.Image.FLIP_LEFT_RIGHT)
     if not degrees and not flip:
@@ -121,7 +114,7 @@ def orient_jpg(filename):
     img.save(bio, format="JPEG")    
     res["from"] = orientation
     res["transformed"] = transformed
-    res["img"] = bio.getvalue()
+    res["stream"] = bio.getvalue()
     return res
 
 def url_join(parts=[]):
