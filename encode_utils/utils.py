@@ -109,18 +109,16 @@ def orient_jpg(filename):
     
     transformed = True
     rotate_extra_args = {"expand": True}
-    if degrees and not flip:
-        new_img = img.rotate(degrees, **rotate_extra_args)
-    elif degrees and flip:
-        flipped_img = img.transpose(PIL.Image.FLIP_LEFT_RIGHT)
-        new_img = flipped_img.rotate(degrees, **rotate_extra_args)
-    else:
+    if degrees:
+        img = img.rotate(degrees, **rotate_extra_args)
+    if flip:
+        img = img.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+    if not degrees and not flip:
         transformed = False
-        new_img = img
 
     res = {}
     bio = io.BytesIO()
-    new_img.save(bio, format="JPEG")    
+    img.save(bio, format="JPEG")    
     res["from"] = orientation
     res["transformed"] = transformed
     res["img"] = bio.getvalue()
