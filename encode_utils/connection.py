@@ -1787,6 +1787,47 @@ class Connection():
         experiments = self.search(url=query_string)
         return experiments
 
+    def get_biosample_type(self, classification, term_id=None, term_name=None):
+        """
+        Searches the biosample_types for the given classification (i.e. tissue, cell line) and
+        term_id or term_name. Both term_name and term_id need not be set - if both are than term_id
+        will take precedence. The combination of classification and term_id/term_name uniquely 
+        identifies a biosample_type. 
+
+        Args:
+            classification: `str`. A value for the 'classificaiton' property of the biosample_ontology
+                profile.
+            term_id: `str`. A value for the 'term_id' property of the biosample_ontology profile. 
+            term_name: `str`. A value for the 'term_name' property of the biosample_ontology profile.
+
+        Returns:
+            `dict`. Empty if not biosample_type found, otherwise the JSON representation of the record.
+
+        Raises:
+            `RecordNotFound`: No search results. 
+            `Exception`: More than one search result was returned. This should not happen and if 
+                it does then it's likely a bug on the server side. 
+        """
+        if term_id:
+            search_term = "term_id"
+            search_term_val = term_id
+        elif term_name:
+            search_term = "term_name"
+            search_term_val = term_name
+        else:
+            raise Exception("You must provide a value for one of the 'term_name' or 'term_id' parameters.")
+        
+        params = []
+        params.append(("type", "BiosampleType"))
+        params.append(("classification", classification))
+        params.append((search_term, search_term_val))
+        results = self.search(search_args=params)
+        if not results:
+            raise RecordNotFound("Could not find a BiosampleType.")
+        elif len(results) > 1:
+            raise Exception("BiosampleType search returned more than one result.")
+        return results[0]
+
 # When appending "?datastore=database" to the URL. As Esther stated: "_indexer to the end of the
 # URL to see the status of elastic search like
 # https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing",
