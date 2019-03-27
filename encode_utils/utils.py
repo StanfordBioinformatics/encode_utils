@@ -54,11 +54,11 @@ def orient_jpg(image):
     Returns:
         `dict` with the following keys:
 
-         #. from - int. The orientation that was read in, or 0 if unknown.
-         #. transformed - boolean. True if this function transformed the image, False otherwise. 
-            Note that False could either mean that the image didn't need any transformation or that
-            the need for a transformation could not be determined based on EXIF metadata or lack thereof. 
-         #. stream - A `bytes` instance.
+        #. from - int. The orientation that was read in, or 0 if unknown.
+        #. transformed - boolean. True if this function transformed the image, False otherwise. 
+           Note that False could either mean that the image didn't need any transformation or that
+           the need for a transformation could not be determined based on EXIF metadata or lack thereof. 
+        #. stream - A `bytes` instance.
 
     Raises:
         `InvalidExifOrientation`: The EXIF orientation data is present, but the orientation value
