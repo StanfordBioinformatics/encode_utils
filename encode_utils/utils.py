@@ -29,9 +29,31 @@ REQUEST_HEADERS_JSON = {'content-type': 'application/json'}
 
 def is_jpg_or_tiff(filename):
     """
-    True if this is a JPG for TIFF formatted file that. Such file formats may include EXIF metadata.
+    Checks if the provided file is an image file that is formatted as either JPEG or TIFF.
+
+    Args: 
+        filename: `str`. Local file. 
+
+    Returns:
+        `False`: The provided file is not a JPEG or TIFF image.
+        `str`: 'JPEG' if this is a JPEG image, or 'TIFF' if this is a TIFF image. 
+
+    Raises:
+        `OSError`: The provided file isn't a recognized image format.
     """
-    return os.path.splitext(filename)[-1].lstrip(".").lower() in ["jpg", "jpeg", "tiff"]
+    TIFF = "TIFF"
+    JPEG = "JPEG"
+    try:
+      img = PIL.Image.open(filename)
+    except OSError:
+      # Raised when input file isn't a recognized image format.
+      return False
+    if img.format == JPEG:
+        return JPEG
+    elif img.format == TIFF:
+        return TIFF
+    else:
+        return False
 
 def orient_jpg(image):
     """
@@ -71,18 +93,25 @@ def orient_jpg(image):
         pass
 
     UNKNOWN_ORIENTATION_VALUE = 0
+    orientation = UNKNOWN_ORIENTATION_VALUE
     img = PIL.Image.open(image)
     try:
-        exif = img._getexif()
-        orientation = exif[274] # int in [1..8]
+        if img.format == "JPEG":
+            exif = img._getexif()
+            if exif:
+                orientation = exif[274] # int in [1..8]
+        elif img.format == "TIFF":
+            tags = img.tag.tags
+            if tags:
+                orientation = img.tag.tags[274]
     except (AttributeError, KeyError):
-        # Maybe this image doesn't use exif data, or it does but the orientation field is absent.
-        orientation = UNKNOWN_ORIENTATION_VALUE
+        # Maybe this image doesn't use EXIF data, or it does but the orientation field is absent.
+        pass
     degrees = None
     flip = None
     if orientation in [0, 1]:
         pass
-    if orientation == 8:
+    elif orientation == 8:
         degrees = 90
     elif orientation == 3:
         degrees = 180

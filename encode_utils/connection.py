@@ -681,7 +681,7 @@ class Connection():
             document: `str`. A local file path.
 
         Returns:
-            `dict`. The 'attachment' propery value.
+            `dict`: The 'attachment' propery value.
         """
         download_filename = os.path.basename(document)
         mime_type = mimetypes.guess_type(download_filename)[0]
