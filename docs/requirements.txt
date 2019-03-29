@@ -1,5 +1,6 @@
 awscli
 boto3
+exifread
 inflection
 google-api-python-client
 jsonschema

@@ -38,6 +38,7 @@ setup(
   install_requires = [
     "awscli",
     "boto3",
+    "exifread",
     "google-api-python-client",
     "inflection",
     "jsonschema",
