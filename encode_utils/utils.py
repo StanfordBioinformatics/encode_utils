@@ -20,6 +20,8 @@ import PIL.Image
 import requests
 import subprocess
 
+import exifread
+
 import encode_utils as eu
 import encode_utils.aws_storage
 
@@ -101,9 +103,13 @@ def orient_jpg(image):
             if exif:
                 orientation = exif[274] # int in [1..8]
         elif img.format == "TIFF":
-            tags = img.tag.tags
+            tags = exifread.process_file(open(image, "rb")) # tags is dict.
             if tags:
-                orientation = img.tag.tags[274]
+                ORIENT_KEY = "Image Orientation"
+                if ORIENT_KEY in tags:
+                    orient_val = tags[ORIENT_KEY]
+                    if orient_val:
+                        orientation = orient_val.values[0]
     except (AttributeError, KeyError):
         # Maybe this image doesn't use EXIF data, or it does but the orientation field is absent.
         pass
