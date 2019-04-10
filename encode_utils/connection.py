@@ -1171,7 +1171,7 @@ class Connection():
         """Runs a PUT request to remove properties of interest on the specified record.
 
         Note that before-submit and after-submit hooks are not run here as they would be in
-        `self.path()` or `self.post()` (:meth:`before_submit_hooks` and :meth:`after_submit_hooks`
+        `self.patch()` or `self.post()` (:meth:`before_submit_hooks` and :meth:`after_submit_hooks`
         are not called).
 
         Args:
