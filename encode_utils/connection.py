@@ -689,7 +689,7 @@ class Connection():
         if euu.is_jpg_or_tiff(document):
             orientation_stats = euu.orient_jpg(document)
             if orientation_stats["transformed"]:
-                self.debug_logger.debug("Image {} orientation transformed from {} to {}.".format(orientation_stats["from"], 1))
+                self.debug_logger.debug("Image {} orientation transformed from {} to {}.".format(download_filename, orientation_stats["from"], 1))
                 data = base64.b64encode(orientation_stats["stream"])
         if not data:
             data = base64.b64encode(open(document, 'rb').read())
