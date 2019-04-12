@@ -13,6 +13,10 @@ import urllib
 import boto3
 
 class S3Upload:
+  """
+  Simplifies the process of uploading files to a bucket in a specific location with the specified
+  acl. 
+  """
 
   def __init__(self, bucket_name, acl="public-read", key_path=""):
     """
@@ -98,4 +102,7 @@ class S3Object():
         return json.loads(self.obj.e_tag)
 
     def size(self):
+        """
+        Fetches the size of the S3 object by reading its content_length attribute. 
+        """ 
         return self.obj.content_length
