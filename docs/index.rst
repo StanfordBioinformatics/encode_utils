@@ -50,11 +50,12 @@ Client API Modules
 .. toctree::
    :maxdepth: 3
 
-   transfer_to_gcp 
-   encode_utils
-   utils
+   aws_storage
    connection
+   encode_utils
    profiles 
+   transfer_to_gcp 
+   utils
 
 Unit Tests
 ----------
