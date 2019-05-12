@@ -65,7 +65,7 @@ def get_profiles():
 
 def remove_duplicate_associations(associations):
     """
-    Checks for duplicates in array properties. Need to Be careful as some cases can be tricky, i.e.
+    Checks for duplicates in array properties containing string elements. Need to Be careful as some cases can be tricky, i.e.
 
         ['/documents/id1', 'id1']
 

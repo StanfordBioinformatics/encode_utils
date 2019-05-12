@@ -1118,6 +1118,9 @@ class Connection():
             for key in payload:
                 if isinstance(payload[key], list):
                     val = payload[key]
+                    if not isinstance(val, str):
+                        # Currently only able to work with arrays of strings. 
+                        continue
                     val.extend(rec_json.get(key, []))
                     # I use rec_json.get(key,[]) above because in a GET request,
                     # not all props are pulled back when they are empty.
