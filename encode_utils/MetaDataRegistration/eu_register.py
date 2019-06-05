@@ -183,6 +183,10 @@ def check_valid_json(prop, val, row_count):
     # for a nested object.
     try:
         json_val = json.loads(val)
+        if isinstance(json_val, list):
+            for item in json_val:
+                if not isinstance(item, dict):
+                    raise ValueError
     except ValueError:
         print("Error: Invalid JSON in field '{}', row '{}'".format(prop, row_count))
         raise
