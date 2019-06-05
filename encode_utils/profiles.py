@@ -82,9 +82,23 @@ def remove_duplicate_associations(associations):
         if val.startswith("/"):
             prefix = inflection.singularize(val.strip("/").split("/")[0])
             if prefix in Profile.PROFILES:
-                associations[i] = val.split("/")[-1]
+                associations[i] = val.strip("/").split("/")[-1]
     return list(set(associations))
 
+def remove_duplicate_objects(objects):
+    """
+    Checks for duplicates in array properties containing dictionary elements.
+
+    Args:
+        objects: `list`.
+
+    Returns:
+        Deduplicated `list`.
+    """
+    for item in reversed(objects):
+        if objects.count(item) > 1:
+            objects.remove(item)
+    return objects
 
 class Profile:
     """
