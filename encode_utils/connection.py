@@ -1227,6 +1227,131 @@ class Connection():
         response_json = response.json()
         return response_json
 
+    def remove_and_patch(
+        self,
+        props,
+        patch,
+        raise_403=True,
+        extend_array_values=True
+    ):
+        """Runs a PUT request to remove properties and patch a record in one
+        request.
+
+        In general, this is a method combining ``remove_props`` and ``patch``.
+        This is useful because some schema dependencies requires property
+        removal and property patch (including adding new properties) happening
+        at the same time. Please note that after the record is retrieved from
+        the portal, ``props`` will be removed before the ``patch`` is applied.
+
+        Args:
+            props: `list`. The properties to remove from the record.
+            patch: `dict`. containing the attribute key and value pairs to
+                patch. Must contain the key ``self.ENCID_KEY`` in order to
+                indicate which record to PATCH.
+            raise_403: `bool`. `True` means to raise a
+                ``requests.exceptions.HTTPError`` if a 403 status (forbidden)
+                is returned. If set to `False` and there still is a 403 return
+                status, then the object you were trying to PATCH will be
+                fetched from the Portal in JSON format as this function's
+                return value.
+            extend_array_values: `bool`. Only affects keys with array values.
+                `True` (default) means to extend the corresponding value on the
+                Portal with what's specified in the payload. `False` means to
+                replace the value on the Portal with what's in the payload.
+
+        Returns:
+            `dict`: The JSON response from the PUT operation, or an empty dict
+                if the record doesn't exist on the Portal. Will also be an
+                empty dict if the dry-run feature is enabled.
+
+        Raises:
+            requests.exceptions.HTTPError: if the return status is not ok
+                (excluding a 403 status if 'raise_403' is False).
+        """
+        # Make sure we have a payload that can be converted to valid JSON, and
+        # tuples become arrays, ...
+        patch = json.loads(json.dumps(patch))
+        self.debug_logger.debug("\nIN remove_and_patch()")
+        encode_id = patch[self.ENCID_KEY]
+        rec_json = self.get(rec_ids=encode_id, frame="object", ignore404=True)
+        if not rec_json:  # Ensure that the record exists on the Portal:
+            return {}
+        profile = eup.Profile(rec_json["@id"])
+        payload = self.get(rec_ids=encode_id, frame="edit", ignore404=False)
+        for prop in props:
+            if profile.is_prop_required(prop):
+                raise Exception("Can't remove required property")
+            elif profile.is_prop_not_submittable(prop):
+                raise Exception("Can't remove non-submittable property.")
+            elif profile.is_prop_read_only(prop):
+                raise Exception("Can't remove read-only property.")
+            else:
+                # Then it is safe to remove this property.
+                payload.pop(prop, None)
+        for key in patch:
+            if (
+                extend_array_values
+                and isinstance(patch[key], list)
+                and key in payload
+            ):
+                val = payload[key]
+                val.extend(patch[key])
+                # CHECK FOR DUPLICATES: Be careful as some can be tricky, i.e.
+                # ['/documents/id1', 'id1'] such a duplicate should be
+                # identified and removed, leaving us with ["id1"].
+                # Checks for arrays of strings or of dicts.
+                if isinstance(val[0], str):
+                    payload[key] = eup.remove_duplicate_associations(val)
+                elif isinstance(val[0], dict):
+                    payload[key] = eup.remove_duplicate_objects(val)
+            else:
+                payload[key] = patch[key]
+
+        # Run 'before' hooks:
+        payload = self.before_submit_hooks(payload, method=self.PATCH)
+        payload.pop(self.ENCID_KEY)
+        payload.pop(self.PROFILE_KEY, None)
+
+        url = euu.url_join([self.dcc_url, encode_id.lstrip("/")])
+        self.debug_logger.debug(
+            "<<<<<< PATCHING {encode_id} To DCC with URL"
+            " {url} and this payload:\n\n{payload}\n\n".format(
+                encode_id=encode_id,
+                url=url,
+                payload=euu.print_format_dict(payload)
+            )
+        )
+
+        if self.check_dry_run():
+            return {}
+        response = requests.put(
+            url,
+            auth=self.auth,
+            timeout=eu.TIMEOUT,
+            headers=euu.REQUEST_HEADERS_JSON,
+            json=payload,
+            verify=False
+        )
+        response_json = response.json()
+
+        if response.ok:
+            self.debug_logger.debug("Success.")
+            response_json = response_json["@graph"][0]
+            uuid = response_json["uuid"]
+            profile_id = eup.Profile(response_json["@id"]).profile_id
+            # Run 'after' hooks:
+            self.after_submit_hooks(uuid, profile_id, method=self.PATCH)
+            return response_json
+        elif response.status_code == requests.codes.FORBIDDEN:
+            # Don't have permission to PATCH this object.
+            if not raise_403:
+                return rec_json
+
+        message = "Failed to PUT {}".format(encode_id)
+        self.log_error(message)
+        self.debug_logger.debug("<<<<<< DCC PUT RESPONSE: ")
+        self.debug_logger.debug(euu.print_format_dict(response_json))
+        response.raise_for_status()
 
     def send(self, payload, error_if_not_found=False, extend_array_values=True, raise_403=True):
         """
