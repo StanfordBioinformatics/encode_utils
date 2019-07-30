@@ -1268,6 +1268,18 @@ class Connection():
             requests.exceptions.HTTPError: if the return status is not ok
                 (excluding a 403 status if 'raise_403' is False).
         """
+        if not props:
+            raise ValueError(
+                'Input props to remove must be non-empty. If you only need to '
+                'patch and not remove properties, use the patch() method of '
+                'the Connection class.'
+            )
+        if set(patch.keys()) <= {self.ENCID_KEY, self.PROFILE_KEY}:
+            raise ValueError(
+                'Input patch has no valide properties to patch. If you only '
+                'need to patch and not remove properties, use the '
+                'remove_props() method of the Connection class.'
+            )
         # Make sure we have a payload that can be converted to valid JSON, and
         # tuples become arrays, ...
         patch = json.loads(json.dumps(patch))
@@ -1289,11 +1301,11 @@ class Connection():
                 # Then it is safe to remove this property.
                 payload.pop(prop, None)
         for key in patch:
-            if (
-                extend_array_values
-                and isinstance(patch[key], list)
-                and key in payload
-            ):
+            if all([
+                extend_array_values,
+                isinstance(patch[key], list),
+                key in payload
+            ]):
                 val = payload[key]
                 val.extend(patch[key])
                 # CHECK FOR DUPLICATES: Be careful as some can be tricky, i.e.
@@ -1314,7 +1326,7 @@ class Connection():
 
         url = euu.url_join([self.dcc_url, encode_id.lstrip("/")])
         self.debug_logger.debug(
-            "<<<<<< PATCHING {encode_id} To DCC with URL"
+            "<<<<<< PUTTING {encode_id} To DCC with URL"
             " {url} and this payload:\n\n{payload}\n\n".format(
                 encode_id=encode_id,
                 url=url,
