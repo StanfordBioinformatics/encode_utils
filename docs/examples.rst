@@ -11,7 +11,7 @@ Imports
 
 Connecting to the production and development Portals
 ----------------------------------------------------
-You'll need to instanciate the ``Connection`` class, passing in a value for the ``dcc_mode`` 
+You'll need to instantiate the ``Connection`` class, passing in a value for the ``dcc_mode``
 argument.
 
 ::
@@ -114,12 +114,12 @@ do it:
   conn.upload_file(file_id="ENCFF852WVP")
 
 This will only work if the File record has the `submitted_file_name` property set, which is 
-interperted as the local path to the file to submit. 
-You can also explicitely set the path to the file to upload:
+interpreted as the local path to the file to submit.
+You can also explicitly set the path to the file to upload:
 
 ::
 
-  conn.upload_fild(file_id="ENCFF852WVP",file_path="/path/to/myfile")
+  conn.upload_file(file_id="ENCFF852WVP",file_path="/path/to/myfile")
 
 POST Request
 ------------
@@ -184,9 +184,9 @@ you indicate for removal are popped out of the returned JSON representation of t
 updated JSON representation is then sent to the Portal via a PUT operation.
 
 For example, say you have a biosample record and you want to remove the `pooled_from` property.
-This property stores a list of other biosample records.  You can't just empty out the list interactivly
-in the Portal, or programaticaly via a PATCH operation since this property, when present, can't be
-emtpy.  This is where the PUT HTTP method comes in handy.  Let's look at an example::
+This property stores a list of other biosample records.  You can't just empty out the list interactively
+in the Portal, or programmatically via a PATCH operation since this property, when present, can't be
+empty.  This is where the PUT HTTP method comes in handy.  Let's look at an example::
 
   conn = Connection("dev")
   conn.remove_props(rec_id="ENCBS133ZSU",props=["pooled_from"])
@@ -199,7 +199,7 @@ such as properties that are:
   2. read-only, and
   3. non-submittable. 
 
-as indicated in the profile (JSON schema) of the record of interst. The Portal would most likely
+as indicated in the profile (JSON schema) of the record of interest. The Portal would most likely
 reject or silently ignore any attempt to remove such properties, nonetheless, to be a good citizen,
 this client performs these checks regardless for good measure.
 
