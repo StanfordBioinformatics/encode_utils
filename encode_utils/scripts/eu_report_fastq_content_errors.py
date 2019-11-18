@@ -68,7 +68,7 @@ def main():
         if not rec_id or rec_id.startswith("#"):
             continue
         rec = conn.get(rec_id, ignore404=False)
-        profile = Profile(rec["@id"])
+        profile = Profile(rec["@id"], conn.dcc_url)
         profile_id = profile.profile_id
         if profile_id not in VALID_PROFILES:
             raise Exception(

@@ -170,7 +170,7 @@ def main():
     if args.remove_property is not None:
         props_to_remove = args.remove_property.split(",")
 
-    gen = create_payloads(profile_id=profile_id, infile=infile)
+    gen = create_payloads(profile_id=profile_id, infile=infile, dcc_url=conn.dcc_url)
     for payload in gen:
         if not patch and not rmpatch:
             conn.post(payload, require_aliases=not no_aliases)
@@ -252,19 +252,19 @@ def typecast(field_name, value, data_type, line_num):
     return value
 
 
-def create_payloads(profile_id, infile):
+def create_payloads(profile_id, infile, dcc_url):
     """
     First attempts to read the input file as JSON. If that fails, tries the TSV parser.
     """
     try:
         with open(infile) as f:
             payloads = json.load(f)
-        return create_payloads_from_json(profile_id, payloads)
+        return create_payloads_from_json(profile_id, payloads, dcc_url)
     except ValueError:
-        return create_payloads_from_tsv(profile_id, infile)
+        return create_payloads_from_tsv(profile_id, infile, dcc_url)
 
 
-def create_payloads_from_json(profile_id, payloads):
+def create_payloads_from_json(profile_id, payloads, dcc_url):
     """
     Generates payloads from a JSON file
 
@@ -278,13 +278,13 @@ def create_payloads_from_json(profile_id, payloads):
     """
     if isinstance(payloads, dict):
         payloads = [payloads]
-    profile = eup.Profile(profile_id)
+    profile = eup.Profile(profile_id, dcc_url)
     for payload in payloads:
         payload[euc.Connection.PROFILE_KEY] = profile.profile_id
         yield payload
 
 
-def create_payloads_from_tsv(profile_id, infile):
+def create_payloads_from_tsv(profile_id, infile, dcc_url):
     """
     Generates the payload for each row in 'infile'.
 
@@ -296,7 +296,7 @@ def create_payloads_from_tsv(profile_id, infile):
     Yields  : dict. The payload that can be used to either register or patch the metadata for each row.
     """
     STR_REGX = reg = re.compile(r'\'|"')
-    profile = eup.Profile(profile_id)
+    profile = eup.Profile(profile_id, dcc_url)
     # Fetch the schema from the ENCODE Portal so we can set attr values to the
     # right type when generating the  payload (dict).
     schema = profile.get_profile()

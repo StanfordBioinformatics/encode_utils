@@ -34,7 +34,7 @@ class UnknownProfile(Exception):
     pass
 
 
-def get_profiles():
+def get_profiles(dcc_url):
     """Creates a dictionary storing all public profiles on the Portal.
 
     Returns:
@@ -46,7 +46,8 @@ def get_profiles():
         `/profiles/genetic_modification.json`. The corresponding key in this `dict` is
         `genetic_modification`.
     """
-    profiles = requests.get(eu.PROFILES_URL + "?format=json",
+    url = euu.url_join([dcc_url, eu.PROFILES_URL, "?format=json"])
+    profiles = requests.get(url,
                             timeout=eu.TIMEOUT,
                             headers=euu.REQUEST_HEADERS_JSON).json()
     # Remove the "private" profiles, since these have differing semantics.
@@ -63,27 +64,6 @@ def get_profiles():
         profile_id_hash[profile_id] = profiles[name]
     return profile_id_hash
 
-def remove_duplicate_associations(associations):
-    """
-    Checks for duplicates in array properties containing string elements. Need to Be careful as some cases can be tricky, i.e.
-
-        ['/documents/id1', 'id1']
-
-    Such a duplicate should be identified and removed, leaving us with ["id1"].
-
-    Args:
-        associations: `list`.
-
-    Returns:
-        Deduplicated `list`.
-    """
-    for i in range(len(associations)):
-        val = associations[i]
-        if val.startswith("/"):
-            prefix = inflection.singularize(val.strip("/").split("/")[0])
-            if prefix in Profile.PROFILES:
-                associations[i] = val.strip("/").split("/")[-1]
-    return list(set(associations))
 
 def remove_duplicate_objects(objects):
     """
@@ -116,41 +96,19 @@ class Profile:
           the function ``encode_utils.profiles.Profile``). You can also pass in the already normalized
           profile ID.
     """
-    # Constant (`dict`) set to the return value of the function ``encode_utils.profiles.get_profiles()``.
-    # See documentation there for details.
-    # Don't comment for sphinx since it will break the build process on Read The Docs because the
-    # list value is so large.
-    PROFILES = get_profiles()
-
     #: List of profile IDs that don't have the `award` and `lab` properties. Consulted in
     #: ``encode_utils.connection.Connection.post()`` to determine whether to set defaults for the
     #: `lab` and `award` properties of a given profile.
     AWARDLESS_PROFILE_IDS = []
     NO_ALIAS_PROFILE_IDS = []
-    for profile_id in PROFILES:
-        profile_props = PROFILES[profile_id]["properties"]
-        if eu.AWARD_PROP_NAME not in profile_props:
-            AWARDLESS_PROFILE_IDS.append(profile_id)
-        if eu.ALIAS_PROP_NAME not in profile_props:
-            NO_ALIAS_PROFILE_IDS.append(profile_id)
 
     #: Constant storing the `file.json` profile's ID.
     #: This is asserted for inclusion in ``Profile.PROFILES``.
     FILE_PROFILE_ID = "file"
-    try:
-        assert(FILE_PROFILE_ID in PROFILES)
-    except AssertionError:
-        raise Exception(
-            "Error: The profile for file.json underwent a name change apparently and is no longer known to this package.")
 
     #: Constant storing a property name of the `file.json` profile.
     #: The stored name is asserted for inclusion in the set of `File` properties.
     SUBMITTED_FILE_PROP_NAME = "submitted_file_name"
-    try:
-        assert(SUBMITTED_FILE_PROP_NAME in PROFILES[FILE_PROFILE_ID]["properties"])
-    except AssertionError:
-        raise Exception(
-            "Error: The profile for file.json no longer includes the property {}.".format(FILE_PROFILE_ID))
 
     #: Constant storing a property name of the `file.json` profile.
     #: The stored name is asserted for inclusion in the set of `File` properties.
@@ -163,11 +121,6 @@ class Profile:
     #: Constant storing the name of the property in a JSON object sub-schema that indicates whether
     #: the object is submittable.
     NOT_SUBMITTABLE_FLAG = "notSubmittable"
-    try:
-        assert(MD5SUM_NAME_PROP_NAME in PROFILES[FILE_PROFILE_ID]["properties"])
-    except AssertionError:
-        raise Exception(
-            "Error: The profile for file.json no longer includes the property {}.".format(MD5SUM_NAME_PROP_NAME))
 
     @classmethod
     def profiles_with_property(cls, property_name):
@@ -186,12 +139,17 @@ class Profile:
                 res.append(profile_name)
         return res
 
-    def __init__(self, profile_id):
+    def __init__(self, profile_id, dcc_url=None):
         """
         Args:
             profile_id: `str`. Typically the value of a record's `@id` property.
+            dcc_url: `str`. The dcc_url as specified by Connection.dcc_url.
         """
-
+        # Constant (`dict`) set to the return value of the function ``encode_utils.profiles.get_profiles()``.
+        # See documentation there for details.
+        # Don't comment for sphinx since it will break the build process on Read The Docs because the
+        # list value is so large.
+        self.PROFILES = get_profiles(dcc_url)
         #: Typically, the value of a record's @id attribute, which stores the profile name for
         #: the given record. For example, the @id value of genetic modification ENCGM701EET is
         #: */genetic-modifications/ENCGM701EET/*. The provided `profile_id` is normalized
@@ -216,6 +174,31 @@ class Profile:
                 self.non_writable_props.append(i)
             else:
                 self.writable_props.append(i)
+
+        for profile_id in self.PROFILES:
+            profile_props = self.PROFILES[profile_id]["properties"]
+            if eu.AWARD_PROP_NAME not in profile_props:
+                AWARDLESS_PROFILE_IDS.append(profile_id)
+            if eu.ALIAS_PROP_NAME not in profile_props:
+                NO_ALIAS_PROFILE_IDS.append(profile_id)
+
+        try:
+            assert(FILE_PROFILE_ID in self.PROFILES)
+        except AssertionError:
+            raise Exception(
+                "Error: The profile for file.json underwent a name change apparently and is no longer known to this package.")
+
+        try:
+            assert(SUBMITTED_FILE_PROP_NAME in self.PROFILES[FILE_PROFILE_ID]["properties"])
+        except AssertionError:
+            raise Exception(
+                "Error: The profile for file.json no longer includes the property {}.".format(FILE_PROFILE_ID))
+
+        try:
+            assert(MD5SUM_NAME_PROP_NAME in PROFILES[FILE_PROFILE_ID]["properties"])
+        except AssertionError:
+            raise Exception(
+                "Error: The profile for file.json no longer includes the property {}.".format(MD5SUM_NAME_PROP_NAME))
 
     def _set_profile_id(self, profile_id):
         """
@@ -242,7 +225,7 @@ class Profile:
         if profile_id == "antibody":
             profile_id = "antibody_lot"
 
-        if not profile_id in Profile.PROFILES:
+        if not profile_id in self.PROFILES:
             raise UnknownProfile("Unknown profile ID '{}'.".format(orig_profile))
         return profile_id
 
@@ -355,3 +338,25 @@ class Profile:
             `dict`: `dict` being the value of `self.schema`, which is the profile's JSON schema.
         """
         return self.schema
+ 
+    def remove_duplicate_associations(self, associations):
+        """
+        Checks for duplicates in array properties containing string elements. Need to Be careful as some cases can be tricky, i.e.
+
+            ['/documents/id1', 'id1']
+
+        Such a duplicate should be identified and removed, leaving us with ["id1"].
+
+        Args:
+            associations: `list`.
+
+        Returns:
+            Deduplicated `list`.
+        """
+        for i in range(len(associations)):
+            val = associations[i]
+            if val.startswith("/"):
+                prefix = inflection.singularize(val.strip("/").split("/")[0])
+                if prefix in self.PROFILES:
+                    associations[i] = val.strip("/").split("/")[-1]
+        return list(set(associations))

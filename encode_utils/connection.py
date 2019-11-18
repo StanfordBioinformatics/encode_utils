@@ -555,7 +555,7 @@ class Connection():
                 raise ProfileNotSpecified(
                     ("You need to specify the ID of the profile to submit to by using the '{}' key"
                      " in the payload, or by setting the `@id` property explicitely.").format(self.PROFILE_KEY))
-        profile = eup.Profile(profile_id)  # raises euu.UnknownProfile if unknown profile ID.
+        profile = eup.Profile(profile_id, self.dcc_url)  # raises euu.UnknownProfile if unknown profile ID.
         return profile.profile_id
 
     def get_lookup_ids_from_payload(self, payload):
@@ -1131,7 +1131,9 @@ class Connection():
                     if len(val) == 0:
                         continue
                     if isinstance(val[0], str):
-                        payload[key] = eup.remove_duplicate_associations(val)
+                        profile_id = self.get_profile_from_payload(payload)
+                        profile = eup.Profile(profile_id, self.dcc_url) 
+                        payload[key] = profile.remove_duplicate_associations(val)
                     elif isinstance(val[0], dict):
                         payload[key] = eup.remove_duplicate_objects(val)
 
@@ -1158,7 +1160,7 @@ class Connection():
             self.debug_logger.debug("Success.")
             response_json = response_json["@graph"][0]
             uuid = response_json["uuid"]
-            profile_id = eup.Profile(response_json["@id"]).profile_id
+            profile_id = eup.Profile(response_json["@id"], self.dcc_url).profile_id
             # Run 'after' hooks:
             self.after_submit_hooks(uuid, profile_id, method=self.PATCH)
             return response_json
@@ -1192,7 +1194,7 @@ class Connection():
         """
         self.debug_logger.debug("\nIN remove_props()")
         rec_json = self.get(rec_ids=rec_id, frame="object", ignore404=False)
-        profile = eup.Profile(rec_json["@id"])
+        profile = eup.Profile(rec_json["@id"], self.url)
         del rec_json
         editable_json = self.get(rec_ids=rec_id, frame="edit", ignore404=False)
         # For good house-keeping, check for any props that we definitely aren't allowed to remove,
@@ -1290,7 +1292,7 @@ class Connection():
         rec_json = self.get(rec_ids=encode_id, frame="object", ignore404=True)
         if not rec_json:  # Ensure that the record exists on the Portal:
             return {}
-        profile = eup.Profile(rec_json["@id"])
+        profile = eup.Profile(rec_json["@id"], self.dcc_url)
         payload = self.get(rec_ids=encode_id, frame="edit", ignore404=False)
         for prop in props:
             if profile.is_prop_required(prop):
@@ -1317,7 +1319,7 @@ class Connection():
                 if len(val) == 0:
                     continue
                 if isinstance(val[0], str):
-                    payload[key] = eup.remove_duplicate_associations(val)
+                    payload[key] = profile.remove_duplicate_associations(val)
                 elif isinstance(val[0], dict):
                     payload[key] = eup.remove_duplicate_objects(val)
             else:
@@ -1354,7 +1356,7 @@ class Connection():
             self.debug_logger.debug("Success.")
             response_json = response_json["@graph"][0]
             uuid = response_json["uuid"]
-            profile_id = eup.Profile(response_json["@id"]).profile_id
+            profile_id = eup.Profile(response_json["@id"], self.dcc_url).profile_id
             # Run 'after' hooks:
             self.after_submit_hooks(uuid, profile_id, method=self.PATCH)
             return response_json
