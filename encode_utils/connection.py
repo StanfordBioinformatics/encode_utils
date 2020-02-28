@@ -1128,6 +1128,8 @@ class Connection():
                     # ['/documents/id1', 'id1']
                     # such a duplicate should be identified and removed, leaving us with ["id1"].
                     # Checks for arrays of strings or of dicts.
+                    if len(val) == 0:
+                        continue
                     if isinstance(val[0], str):
                         payload[key] = eup.remove_duplicate_associations(val)
                     elif isinstance(val[0], dict):
@@ -1303,8 +1305,8 @@ class Connection():
         for key in patch:
             if all([
                 extend_array_values,
+                key in payload,
                 isinstance(patch[key], list),
-                key in payload
             ]):
                 val = payload[key]
                 val.extend(patch[key])
@@ -1312,6 +1314,8 @@ class Connection():
                 # ['/documents/id1', 'id1'] such a duplicate should be
                 # identified and removed, leaving us with ["id1"].
                 # Checks for arrays of strings or of dicts.
+                if len(val) == 0:
+                    continue
                 if isinstance(val[0], str):
                     payload[key] = eup.remove_duplicate_associations(val)
                 elif isinstance(val[0], dict):
