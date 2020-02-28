@@ -774,7 +774,7 @@ class Connection():
             return payload
         aliases = euu.clean_aliases(payload[eu.ALIAS_PROP_NAME])
         aliases = self.add_alias_prefix(aliases)
-        payload[eu.ALIAS_PROP_NAME] = aliases
+        payload[eu.ALIAS_PROP_NAME] = sorted(set(aliases))
         return payload
 
     def before_submit_attachment(self, payload):
