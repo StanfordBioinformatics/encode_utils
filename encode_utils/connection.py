@@ -1129,7 +1129,6 @@ class Connection():
                     # such a duplicate should be identified and removed, leaving us with ["id1"].
                     # Checks for arrays of strings or of dicts.
                     if len(val) == 0:
-                        payload.pop(key)
                         continue
                     if isinstance(val[0], str):
                         payload[key] = eup.remove_duplicate_associations(val)
@@ -1316,7 +1315,6 @@ class Connection():
                 # identified and removed, leaving us with ["id1"].
                 # Checks for arrays of strings or of dicts.
                 if len(val) == 0:
-                    payload.pop(key)
                     continue
                 if isinstance(val[0], str):
                     payload[key] = eup.remove_duplicate_associations(val)
