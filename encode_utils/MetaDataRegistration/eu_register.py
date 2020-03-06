@@ -143,6 +143,11 @@ def get_parser():
 def main():
     parser = get_parser()
     args = parser.parse_args()
+    if args.rm_patch and not args.remove_property:
+        parser.error("No properties to remove were specified. Use --patch if only patching is needed.")
+    if args.remove_property and not args.rm_patch:
+        parser.error("Properties to remove were specified, but --rm-patch flag was not set.")
+
     profile_id = args.profile_id
     dcc_mode = args.dcc_mode
     dry_run = args.dry_run
@@ -167,24 +172,19 @@ def main():
         if not patch and not rmpatch:
             conn.post(payload, require_aliases=not no_aliases)
         elif rmpatch:
-            if not props_to_remove:
-                raise Exception("No properties to remove were specified. Use --patch if only patching is needed.")
-            else:
-                props_to_remove = props_to_remove.split(',')
+            props_to_remove = props_to_remove.split(",")
             record_id = payload.get(RECORD_ID_FIELD, False)
             if not record_id:
-                raise Exception(
+                raise ValueError(
                     "Can't patch payload {} since there isn't a '{}' field indicating an identifier for the record to be PATCHED.".format(
                         euu.print_format_dict(payload), RECORD_ID_FIELD))
             payload.pop(RECORD_ID_FIELD)
             payload.update({conn.ENCID_KEY: record_id})
             conn.remove_and_patch(props=props_to_remove, patch=payload, extend_array_values=not overwrite_array_values)
-        elif props_to_remove and not rmpatch:
-            raise Exception("Properties to remove were specified, but --rm-patch flag was not set.")
         elif patch:
             record_id = payload.get(RECORD_ID_FIELD, False)
             if not record_id:
-                raise Exception(
+                raise ValueError(
                     "Can't patch payload {} since there isn't a '{}' field indicating an identifier for the record to be PATCHED.".format(
                         euu.print_format_dict(payload), RECORD_ID_FIELD))
             payload.pop(RECORD_ID_FIELD)
@@ -365,7 +365,7 @@ def create_payloads_from_tsv(profile_id, infile):
                         val = val[:-1]
                     val = [x.strip() for x in val.split(",")]
                     # Type cast tokens if need be, i.e. to integers:
-                    val = [typecast(field_name=field, value=x, data_type=item_val_type, line_num=line_count) for x in val if x != '']
+                    val = [typecast(field_name=field, value=x, data_type=item_val_type, line_num=line_count) for x in val if x]
             else:
                 val = typecast(field_name=field, value=val, data_type=schema_val_type, line_num=line_count)
             payload[field] = val
