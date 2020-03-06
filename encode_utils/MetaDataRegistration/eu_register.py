@@ -119,23 +119,25 @@ def get_parser():
     attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.
     """)
 
-    parser.add_argument("--patch", action="store_true", help="""
-    Presence of this option indicates to PATCH an existing DCC record rather than register a new one.""")
-
     parser.add_argument("-w", "--overwrite-array-values", action="store_true", help="""
     Only has meaning in combination with the --patch option. When this is specified, it means that
     any keys with array values will be overwritten on the ENCODE Portal with the corresponding value
     to patch. The default action is to extend the array value with the patch value and then to remove
     any duplicates.""")
 
-    parser.add_argument("--rm-patch", action="store_true", help="""
-    Presence of this option indicates to remove a property, as specified by the -r argument,
-    from an existing DCC record, and then PATCH it with the payload specified in -i.""")
-
     parser.add_argument("-r", "--remove-property", help="""
     Only has meaning in combination with the --rm-patch option. Properties specified in this argument
     will be popped from the record fetched from the ENCODE portal. Can specify as comma delimited
     string.""")
+
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument("--patch", action="store_true", help="""
+    Presence of this option indicates to PATCH an existing DCC record rather than register a new one.""")
+
+    group.add_argument("--rm-patch", action="store_true", help="""
+    Presence of this option indicates to remove a property, as specified by the -r argument,
+    from an existing DCC record, and then PATCH it with the payload specified in -i.""")
 
     return parser
 
