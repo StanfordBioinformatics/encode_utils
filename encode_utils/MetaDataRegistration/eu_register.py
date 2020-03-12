@@ -167,14 +167,13 @@ def main():
     infile = args.infile
     patch = args.patch
     rmpatch = args.rm_patch
-    props_to_remove = args.remove_property
+    props_to_remove = args.remove_property.split(",")
 
     gen = create_payloads(profile_id=profile_id, infile=infile)
     for payload in gen:
         if not patch and not rmpatch:
             conn.post(payload, require_aliases=not no_aliases)
         elif rmpatch:
-            props_to_remove = props_to_remove.split(",")
             record_id = payload.get(RECORD_ID_FIELD, False)
             if not record_id:
                 raise ValueError(
