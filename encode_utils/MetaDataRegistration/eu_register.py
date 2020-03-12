@@ -167,7 +167,8 @@ def main():
     infile = args.infile
     patch = args.patch
     rmpatch = args.rm_patch
-    props_to_remove = args.remove_property.split(",")
+    if args.remove_property is not None:
+        props_to_remove = args.remove_property.split(",")
 
     gen = create_payloads(profile_id=profile_id, infile=infile)
     for payload in gen:
