@@ -119,14 +119,25 @@ def get_parser():
     attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.
     """)
 
-    parser.add_argument("--patch", action="store_true", help="""
-    Presence of this option indicates to PATCH an existing DCC record rather than register a new one.""")
-
     parser.add_argument("-w", "--overwrite-array-values", action="store_true", help="""
     Only has meaning in combination with the --patch option. When this is specified, it means that
     any keys with array values will be overwritten on the ENCODE Portal with the corresponding value
     to patch. The default action is to extend the array value with the patch value and then to remove
     any duplicates.""")
+
+    parser.add_argument("-r", "--remove-property", help="""
+    Only has meaning in combination with the --rm-patch option. Properties specified in this argument
+    will be popped from the record fetched from the ENCODE portal. Can specify as comma delimited
+    string.""")
+
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument("--patch", action="store_true", help="""
+    Presence of this option indicates to PATCH an existing DCC record rather than register a new one.""")
+
+    group.add_argument("--rm-patch", action="store_true", help="""
+    Presence of this option indicates to remove a property, as specified by the -r argument,
+    from an existing DCC record, and then PATCH it with the payload specified in -i.""")
 
     return parser
 
@@ -134,6 +145,11 @@ def get_parser():
 def main():
     parser = get_parser()
     args = parser.parse_args()
+    if args.rm_patch and not args.remove_property:
+        parser.error("No properties to remove were specified. Use --patch if only patching is needed.")
+    if args.remove_property and not args.rm_patch:
+        parser.error("Properties to remove were specified, but --rm-patch flag was not set.")
+
     profile_id = args.profile_id
     dcc_mode = args.dcc_mode
     dry_run = args.dry_run
@@ -150,15 +166,28 @@ def main():
     conn.set_submission(True)
     infile = args.infile
     patch = args.patch
+    rmpatch = args.rm_patch
+    if args.remove_property is not None:
+        props_to_remove = args.remove_property.split(",")
+
     gen = create_payloads(profile_id=profile_id, infile=infile)
     for payload in gen:
-        if not patch:
+        if not patch and not rmpatch:
             conn.post(payload, require_aliases=not no_aliases)
-        else:
+        elif rmpatch:
             record_id = payload.get(RECORD_ID_FIELD, False)
             if not record_id:
-                raise Exception(
-                    "Can't patch payload {} since there isn't a '{}' field indiciating an identifer for the record to be PATCHED.".format(
+                raise ValueError(
+                    "Can't patch payload {} since there isn't a '{}' field indicating an identifier for the record to be PATCHED.".format(
+                        euu.print_format_dict(payload), RECORD_ID_FIELD))
+            payload.pop(RECORD_ID_FIELD)
+            payload.update({conn.ENCID_KEY: record_id})
+            conn.remove_and_patch(props=props_to_remove, patch=payload, extend_array_values=not overwrite_array_values)
+        elif patch:
+            record_id = payload.get(RECORD_ID_FIELD, False)
+            if not record_id:
+                raise ValueError(
+                    "Can't patch payload {} since there isn't a '{}' field indicating an identifier for the record to be PATCHED.".format(
                         euu.print_format_dict(payload), RECORD_ID_FIELD))
             payload.pop(RECORD_ID_FIELD)
             payload.update({conn.ENCID_KEY: record_id})
@@ -338,7 +367,7 @@ def create_payloads_from_tsv(profile_id, infile):
                         val = val[:-1]
                     val = [x.strip() for x in val.split(",")]
                     # Type cast tokens if need be, i.e. to integers:
-                    val = [typecast(field_name=field, value=x, data_type=item_val_type, line_num=line_count) for x in val]
+                    val = [typecast(field_name=field, value=x, data_type=item_val_type, line_num=line_count) for x in val if x]
             else:
                 val = typecast(field_name=field, value=val, data_type=schema_val_type, line_num=line_count)
             payload[field] = val
