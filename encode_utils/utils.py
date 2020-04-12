@@ -258,6 +258,8 @@ def calculate_file_size(file_path):
     Raises:
         `FileNotFoundError`: The given file_path does not exist. 
     """
+    if file_path.startswith("https://") or file_path.startswith("http://"):
+        return requests.head(file_path).headers["Content-Length"]
     if file_path.startswith("s3:"):
         return encode_utils.aws_storage.S3Object(s3_uri=file_path).size()
     if not os.path.exists(file_path):
