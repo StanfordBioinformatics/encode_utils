@@ -1743,12 +1743,21 @@ class Connection():
                         eup.Profile.MD5SUM_NAME_PROP_NAME: md5sum,
                         eup.FILE_SIZE_PROP_NAME: file_size})
 
-        cmd_args = "{file_path} {upload_url}".format(file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         if file_path.startswith("gs://"):
-            cmd = "gsutil cp"
+            cmd = "gsutil cp {file_path} {upload_url}".format(
+                file_path=file_path,
+                upload_url=aws_creds["UPLOAD_URL"]
+            )
+        if file_path.startswith("https://") or file_path.startswith("http://"):
+            cmd = "curl {file_path} | aws s3 cp - {upload_url}".format(
+                file_path=file_path,
+                upload_url=aws_creds["UPLOAD_URL"]
+            )
         else:
-            cmd = "aws s3 cp"
-        cmd += " " + cmd_args
+            cmd = "aws s3 cp {file_path} {upload_url}".format(
+                file_path=file_path,
+                upload_url=aws_creds["UPLOAD_URL"]
+            )
         self.debug_logger.debug("Running command '{cmd}'.".format(cmd=cmd))
         if self.check_dry_run():
             return
