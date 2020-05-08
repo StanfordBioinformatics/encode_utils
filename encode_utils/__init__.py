@@ -60,8 +60,8 @@ try:
 except KeyError:
     pass
 
-#: THE ENCODE Portal URL that points to all the profiles (schemas).
-PROFILES_URL = "https://www.encodeproject.org/profiles/"
+#: The relative ENCODE Portal URL that points to all the profiles (schemas).
+PROFILES_URL = "profiles"
 
 DCC_DEV_MODE = "dev"
 DCC_PROD_MODE = "prod"

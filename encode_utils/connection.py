@@ -21,7 +21,7 @@ import urllib
 # inhouse libraries
 import encode_utils.transfer_to_gcp
 import encode_utils as eu
-import encode_utils.profiles as eup
+from encode_utils.profiles import Profiles
 import encode_utils.utils as euu
 
 
@@ -141,6 +141,7 @@ class Connection():
         self.dcc_mode = self._set_dcc_mode(dcc_mode)
         self.dcc_host = eu.DCC_MODES[self.dcc_mode]["host"]
         self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
+        self.profiles = Profiles(self.dcc_url)
 
         #: Set to True to prevent any server-side changes on the ENCODE Portal, i.e. PUT, POST,
         #: PATCH, DELETE requests will not be sent to the Portal. After-POST and after-PATCH
@@ -555,8 +556,8 @@ class Connection():
                 raise ProfileNotSpecified(
                     ("You need to specify the ID of the profile to submit to by using the '{}' key"
                      " in the payload, or by setting the `@id` property explicitely.").format(self.PROFILE_KEY))
-        profile = eup.Profile(profile_id)  # raises euu.UnknownProfile if unknown profile ID.
-        return profile.profile_id
+        profile = self.profiles.get_profile_from_id(profile_id)
+        return profile
 
     def get_lookup_ids_from_payload(self, payload):
         """
@@ -715,7 +716,7 @@ class Connection():
             rec_id: `str`. An identifier for the new File object on the Portal.
             profile_id: `str`. The ID of the profile that the record belongs to.
         """
-        if profile_id != eup.Profile.FILE_PROFILE_ID:
+        if profile_id != self.profiles.FILE_PROFILE_ID:
             return
         self.upload_file(file_id=rec_id)
 
@@ -825,24 +826,24 @@ class Connection():
               `encode_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
         """
         profile_id = payload[self.PROFILE_KEY]
-        if profile_id != eup.Profile.FILE_PROFILE_ID:
+        if profile_id != self.profiles.FILE_PROFILE_ID:
             return payload
         try:
-            file_name = payload[eup.Profile.SUBMITTED_FILE_PROP_NAME]
+            file_name = payload[self.profiles.SUBMITTED_FILE_PROP_NAME]
         except KeyError:
             return payload
         # Set md5sum
-        if (eup.Profile.MD5SUM_NAME_PROP_NAME in payload) and (payload[eup.Profile.MD5SUM_NAME_PROP_NAME]):
+        if (self.profiles.MD5SUM_NAME_PROP_NAME in payload) and (payload[self.profiles.MD5SUM_NAME_PROP_NAME]):
             # Already set; nothing to do.
             pass
         else:
-            payload[eup.Profile.MD5SUM_NAME_PROP_NAME] = euu.calculate_md5sum(file_name)
+            payload[self.profiles.MD5SUM_NAME_PROP_NAME] = euu.calculate_md5sum(file_name)
         # Set file_size
-        if (eup.Profile.FILE_SIZE_PROP_NAME in payload) and (payload[eup.Profile.FILE_SIZE_PROP_NAME]):
+        if (self.profiles.FILE_SIZE_PROP_NAME in payload) and (payload[self.profiles.FILE_SIZE_PROP_NAME]):
             # Already set; nothing to do.
             pass
         else:
-            payload[eup.Profile.FILE_SIZE_PROP_NAME] = euu.calculate_file_size(file_name)
+            payload[self.profiles.FILE_SIZE_PROP_NAME] = euu.calculate_file_size(file_name)
         return payload
 
     def before_post_fastq_file(self, payload):
@@ -858,7 +859,7 @@ class Connection():
 
         """
         profile_id = payload[self.PROFILE_KEY]
-        if profile_id != eup.Profile.FILE_PROFILE_ID:
+        if profile_id != self.profiles.FILE_PROFILE_ID:
             return payload
 
         run_type = payload.get("run_type")
@@ -958,15 +959,15 @@ class Connection():
         # Make sure we have a payload that can be converted to valid JSON, and
         # tuples become arrays, ...
         payload = json.loads(json.dumps(payload))
-        profile_id = self.get_profile_from_payload(payload)
-        payload[self.PROFILE_KEY] = profile_id
-        url = euu.url_join([self.dcc_url, profile_id])
+        profile = self.get_profile_from_payload(payload)
+        payload[self.PROFILE_KEY] = profile.name
+        url = euu.url_join([self.dcc_url, profile.name])
         if self.ENCID_KEY in payload:
             # Shouldn't be here, unless maybe a PATCH was attempted and the record didn't exist, so
             # a POST was then attempted.
             payload.pop(self.ENCID_KEY)
         # Check if we need to add defaults for 'award' and 'lab' properties:
-        if profile_id not in eup.Profile.AWARDLESS_PROFILE_IDS:  # No lab prop for these profiles either.
+        if profile.has_award:  # No lab prop for these profiles either.
             if eu.AWARD_PROP_NAME not in payload:
                 if not eu.AWARD:
                     raise AwardPropertyMissing
@@ -992,7 +993,7 @@ class Connection():
         no_alias = False #Use this to check later if doing a GET
         aliases = payload.get(eu.ALIAS_PROP_NAME)
         if not aliases:
-            if profile_id in eup.Profile.NO_ALIAS_PROFILE_IDS or not require_aliases:
+            if not profile.has_alias or not require_aliases:
                 aliases = ["N/A"]
                 no_alias = True
             else:
@@ -1005,7 +1006,7 @@ class Connection():
         ### This doesn't work as locally I can't use jsonschema to validate a profile with
         ### custom objects specified in the value of a linkTo property.
         #self.debug_logger.debug("Validating the payload against the schema")
-        #validation_error = euu.err_context(payload=payload, schema=eup.Profile.PROFILES[profile_id])
+        #validation_error = euu.err_context(payload=payload, schema=self.profiles.get_profile_from_id(profile_id))
         #if validation_error:
         #    self.log_error("Invalid schema instance of the {} profile.".format(profile_id))
         #    self.debug_logger.debug("Payload is: {}".format(euu.print_format_dict(payload)))
@@ -1016,7 +1017,7 @@ class Connection():
 
         self.debug_logger.debug(
             ("<<<<<< POST {} record {alias} To DCC with URL {url} and this"
-             " payload:\n\n{payload}\n\n").format(profile_id, alias=aliases[0], url=url, payload=euu.print_format_dict(payload)))
+             " payload:\n\n{payload}\n\n").format(profile.name, alias=aliases[0], url=url, payload=euu.print_format_dict(payload)))
 
         if self.check_dry_run():
             return {}
@@ -1040,7 +1041,7 @@ class Connection():
                 encid = response_json["uuid"]
             self._log_post(aliases=aliases, dcc_id=encid)
             # Run 'after' hooks:
-            self.after_submit_hooks(encid, profile_id, method=self.POST)
+            self.after_submit_hooks(encid, profile.name, method=self.POST)
             return response_json
         elif response.status_code == requests.codes.CONFLICT:
             self.debug_logger.debug(response_json)
@@ -1131,9 +1132,10 @@ class Connection():
                     if len(val) == 0:
                         continue
                     if isinstance(val[0], str):
-                        payload[key] = eup.remove_duplicate_associations(val)
+                        profile_id = self.get_profile_from_payload(payload)
+                        payload[key] = self.profiles.remove_duplicate_associations(val)
                     elif isinstance(val[0], dict):
-                        payload[key] = eup.remove_duplicate_objects(val)
+                        payload[key] = euu.remove_duplicate_objects(val)
 
         # Run 'before' hooks:
         payload = self.before_submit_hooks(payload, method=self.PATCH)
@@ -1158,7 +1160,7 @@ class Connection():
             self.debug_logger.debug("Success.")
             response_json = response_json["@graph"][0]
             uuid = response_json["uuid"]
-            profile_id = eup.Profile(response_json["@id"]).profile_id
+            profile_id = self.profiles.get_profile_from_id(response_json["@id"]).name
             # Run 'after' hooks:
             self.after_submit_hooks(uuid, profile_id, method=self.PATCH)
             return response_json
@@ -1192,7 +1194,7 @@ class Connection():
         """
         self.debug_logger.debug("\nIN remove_props()")
         rec_json = self.get(rec_ids=rec_id, frame="object", ignore404=False)
-        profile = eup.Profile(rec_json["@id"])
+        profile = self.profiles.get_profile_from_id(rec_json["@id"])
         del rec_json
         editable_json = self.get(rec_ids=rec_id, frame="edit", ignore404=False)
         # For good house-keeping, check for any props that we definitely aren't allowed to remove,
@@ -1201,12 +1203,13 @@ class Connection():
         # the Portal will most likely complain or silently disallow an attempt to remove such
         # properites. Nonetheless, a well-behaved client shouldn't send uncouth requests, so some
         # checking is performed below for good measure:
-        for prop in props:
-            if profile.is_prop_required(prop):
+        for prop_name in props:
+            prop = profile.get_property_from_name(prop_name)
+            if prop.is_required:
                 raise Exception("Can't remove required property")
-            elif profile.is_prop_not_submittable(prop):
+            elif prop.is_not_submittable:
                 raise Exception("Can't remove non-submittable property.")
-            elif profile.is_prop_read_only(prop):
+            elif prop.is_read_only:
                 raise Exception("Can't remove read-only property.")
             else:
                 # Then it is safe to remove this property.
@@ -1290,14 +1293,15 @@ class Connection():
         rec_json = self.get(rec_ids=encode_id, frame="object", ignore404=True)
         if not rec_json:  # Ensure that the record exists on the Portal:
             return {}
-        profile = eup.Profile(rec_json["@id"])
+        profile = self.profiles.get_profile_from_id(rec_json["@id"])
         payload = self.get(rec_ids=encode_id, frame="edit", ignore404=False)
-        for prop in props:
-            if profile.is_prop_required(prop):
+        for prop_name in props:
+            prop = profile.get_property_from_name(prop_name)
+            if prop.is_required:
                 raise Exception("Can't remove required property")
-            elif profile.is_prop_not_submittable(prop):
+            elif prop.is_not_submittable:
                 raise Exception("Can't remove non-submittable property.")
-            elif profile.is_prop_read_only(prop):
+            elif prop.is_read_only:
                 raise Exception("Can't remove read-only property.")
             else:
                 # Then it is safe to remove this property.
@@ -1317,9 +1321,9 @@ class Connection():
                 if len(val) == 0:
                     continue
                 if isinstance(val[0], str):
-                    payload[key] = eup.remove_duplicate_associations(val)
+                    payload[key] = profile.remove_duplicate_associations(val)
                 elif isinstance(val[0], dict):
-                    payload[key] = eup.remove_duplicate_objects(val)
+                    payload[key] = euu.remove_duplicate_objects(val)
             else:
                 payload[key] = patch[key]
 
@@ -1354,7 +1358,7 @@ class Connection():
             self.debug_logger.debug("Success.")
             response_json = response_json["@graph"][0]
             uuid = response_json["uuid"]
-            profile_id = eup.Profile(response_json["@id"]).profile_id
+            profile_id = self.profiles.get_profile_from_id(response_json["@id"]).name
             # Run 'after' hooks:
             self.after_submit_hooks(uuid, profile_id, method=self.PATCH)
             return response_json
@@ -1730,18 +1734,18 @@ class Connection():
         file_rec = self.get(rec_ids=file_id,ignore404=False)
         if not file_path:
             try:
-                file_path = file_rec[eup.Profile.SUBMITTED_FILE_PROP_NAME]
+                file_path = file_rec[self.profiles.SUBMITTED_FILE_PROP_NAME]
             except KeyError:  # submitted_file_name property not set:
                 raise Exception("No file path specified.")
-        file_rec_md5sum = file_rec.get(eup.Profile.MD5SUM_NAME_PROP_NAME)
+        file_rec_md5sum = file_rec.get(self.profiles.MD5SUM_NAME_PROP_NAME)
         if not file_rec_md5sum or set_md5sum:
             # md5sum calc. supported at present only for local files and aws (not GCP)
             self.debug_logger.debug("Calculating md5sum for {}".format(os.path.basename(file_path)))
             md5sum = euu.calculate_md5sum(file_path)
             file_size = euu.calculate_file_size(file_path)
             self.patch({self.ENCID_KEY: file_rec["@id"], 
-                        eup.Profile.MD5SUM_NAME_PROP_NAME: md5sum,
-                        eup.FILE_SIZE_PROP_NAME: file_size})
+                        self.profiles.MD5SUM_NAME_PROP_NAME: md5sum,
+                        self.profiles.FILE_SIZE_PROP_NAME: file_size})
 
         cmd_args = "{file_path} {upload_url}".format(file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         if file_path.startswith("gs://"):

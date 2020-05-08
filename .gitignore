@@ -12,3 +12,6 @@ encode_utils.egg-info/
 docs/_build
 docs/_templates
 .DS_Store
+.mypy_cache/
+.vscode/
+venv

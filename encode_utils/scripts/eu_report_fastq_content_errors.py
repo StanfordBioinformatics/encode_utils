@@ -68,8 +68,8 @@ def main():
         if not rec_id or rec_id.startswith("#"):
             continue
         rec = conn.get(rec_id, ignore404=False)
-        profile = Profile(rec["@id"])
-        profile_id = profile.profile_id
+        profile = conn.profiles.get_profile_from_id(rec["@id"])
+        profile_id = profile.name
         if profile_id not in VALID_PROFILES:
             raise Exception(
                 "Record identifier '{}' must be an identifer for an object of a type in the set {}.".format(

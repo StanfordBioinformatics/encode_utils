@@ -42,7 +42,7 @@ import requests
 import encode_utils.utils as euu
 import encode_utils.connection as euc
 from encode_utils.parent_argparser import dcc_login_parser
-import encode_utils.profiles as eup
+from encode_utils.profiles import Profiles
 
 # Check that Python3 is being used
 v = sys.version_info
@@ -164,13 +164,15 @@ def main():
 
     # Put conn into submit mode:
     conn.set_submission(True)
+
+    schema = conn.profiles.get_profile_from_id(profile_id)
     infile = args.infile
     patch = args.patch
     rmpatch = args.rm_patch
     if args.remove_property is not None:
         props_to_remove = args.remove_property.split(",")
 
-    gen = create_payloads(profile_id=profile_id, infile=infile)
+    gen = create_payloads(schema=schema, infile=infile)
     for payload in gen:
         if not patch and not rmpatch:
             conn.post(payload, require_aliases=not no_aliases)
@@ -252,25 +254,27 @@ def typecast(field_name, value, data_type, line_num):
     return value
 
 
-def create_payloads(profile_id, infile):
+def create_payloads(schema, infile):
     """
     First attempts to read the input file as JSON. If that fails, tries the TSV parser.
+
+    Args:
+        schema: `EncodeSchema`. The schema of the objects to be submitted.
     """
     try:
         with open(infile) as f:
             payloads = json.load(f)
-        return create_payloads_from_json(profile_id, payloads)
+        return create_payloads_from_json(schema, payloads)
     except ValueError:
-        return create_payloads_from_tsv(profile_id, infile)
+        return create_payloads_from_tsv(schema, infile)
 
 
-def create_payloads_from_json(profile_id, payloads):
+def create_payloads_from_json(schema, payloads):
     """
     Generates payloads from a JSON file
 
     Args:
-        profile_id: str. The identifier for a profile on the Portal. For
-        example, use genetic_modificaiton for the profile https://www.encodeproject.org/profiles/genetic_modification.json.
+        schema: `EncodeSchema`. The schema of the objects to be submitted.
         payloads: dict or list parsed from a JSON input file.
 
     Yields: dict. The payload that can be used to either register or patch the
@@ -278,29 +282,25 @@ def create_payloads_from_json(profile_id, payloads):
     """
     if isinstance(payloads, dict):
         payloads = [payloads]
-    profile = eup.Profile(profile_id)
     for payload in payloads:
-        payload[euc.Connection.PROFILE_KEY] = profile.profile_id
+        payload[euc.Connection.PROFILE_KEY] = schema.name
         yield payload
 
 
-def create_payloads_from_tsv(profile_id, infile):
+def create_payloads_from_tsv(schema, infile):
     """
     Generates the payload for each row in 'infile'.
 
     Args:
-        profile_id: str. The identifier for a profile on the Portal. For example, use
-          genetic_modificaiton for the profile https://www.encodeproject.org/profiles/genetic_modification.json.
+        schema: EncodeSchema. The schema of the objects to be submitted.
         infile - str. Path to input file.
 
     Yields  : dict. The payload that can be used to either register or patch the metadata for each row.
     """
-    STR_REGX = reg = re.compile(r'\'|"')
-    profile = eup.Profile(profile_id)
+    STR_REGX = re.compile(r'\'|"')
     # Fetch the schema from the ENCODE Portal so we can set attr values to the
     # right type when generating the  payload (dict).
-    schema = profile.get_profile()
-    schema_props = schema["properties"]
+    schema_props = [prop.name for prop in schema.properties]
     field_index = {}
     fh = open(infile, 'r')
     header_fields = fh.readline().strip("\n").split("\t")
@@ -315,7 +315,7 @@ def create_payloads_from_tsv(profile_id, infile):
             if field != RECORD_ID_FIELD:
                 raise Exception(
                     "Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(
-                        field, profile.profile_id))
+                        field, schema.name))
         field_index[fi_count] = field
 
     line_count = 1  # already read header line
@@ -326,7 +326,7 @@ def create_payloads_from_tsv(profile_id, infile):
             continue
         line = line.split("\t")
         payload = {}
-        payload[euc.Connection.PROFILE_KEY] = profile.profile_id
+        payload[euc.Connection.PROFILE_KEY] = schema.name
         fi_count = -1
         for val in line:
             fi_count += 1
@@ -341,12 +341,13 @@ def create_payloads_from_tsv(profile_id, infile):
             if field == RECORD_ID_FIELD:
                 payload[field] = val
                 continue
-            schema_val_type = schema_props[field]["type"]
+            field_schema = schema.get_property_from_name(field).schema
+            schema_val_type = field_schema["type"]
             if schema_val_type == "object":
                 # Must be proper JSON
                 val = check_valid_json(field, val, line_count)
             elif schema_val_type == "array":
-                item_val_type = schema_props[field]["items"]["type"]
+                item_val_type = field_schema["items"]["type"]
                 if item_val_type == "object":
                     # Must be valid JSON
                     # Check if user supplied optional JSON array literal. If not, I'll add it.

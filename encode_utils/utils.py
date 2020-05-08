@@ -411,3 +411,19 @@ def does_lib_replicate_exist(replicates_json, lib_accession,
                 continue
         results.append(rep["uuid"])
     return results
+
+
+def remove_duplicate_objects(objects):
+    """
+    Checks for duplicates in array properties containing dictionary elements.
+
+    Args:
+        objects: `list`.
+
+    Returns:
+        Deduplicated `list`.
+    """
+    for item in reversed(objects):
+        if objects.count(item) > 1:
+            objects.remove(item)
+    return objects
