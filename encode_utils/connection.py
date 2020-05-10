@@ -735,6 +735,8 @@ class Connection():
             profile_id: `str`. The profile identifier indicating the profile that the record belongs to.
             method: str. One of ``self.POST`` or ``self.PATCH``, or the empty string to indicate which
                 registered hooks to look through.
+            upload_file: `bool`. If `False`, skip uploading files to the Portal.
+                Defaults to `True`.
         """
         if self.check_dry_run():
             return
@@ -936,6 +938,11 @@ class Connection():
                  as many times as you want on the Portal when not providing an alias.  Furthermore,
                  submitting labs should include at least one alias per record being submitted
                  to the Portal for traceabilty purposes in the submitting lab.
+            upload_file: `bool`. If `False`, when POSTing files the file data will not
+                be uploaded to S3, defaults to `True`. This can be useful if you have
+                custom upload logic. If the files to upload are already on disk, it is
+                recommmended to leave this with the default, which will use `aws s3 cp`
+                to upload them.
 
         Returns:
             `dict`: The JSON response from the POST operation, or the existing record if it already
