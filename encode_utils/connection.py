@@ -720,7 +720,7 @@ class Connection():
             return
         self.upload_file(file_id=rec_id)
 
-    def after_submit_hooks(self, rec_id, profile_id, method=""):
+    def after_submit_hooks(self, rec_id, profile_id, method="", upload_file=True):
         """
         Calls after-POST and after-PATCH hooks. This method is called from both the ``post()`` and
         ``patch()`` instance methods. Returns the None object immediately if the dry-run feature
@@ -750,8 +750,8 @@ class Connection():
         #... None yet.
 
         # Call POST-specific hooks if POST:
-        if method == self.POST:
-            self.after_submit_file_cloud_upload(rec_id, profile_id)
+        if method == self.POST and upload_file is True:
+            self.after_submit_file_cloud_upload(rec_id, profile_id, upload_file)
 
         # Call PATCH-specific hooks if PATCH:
         #... None yet.
@@ -912,7 +912,7 @@ class Connection():
 
         return payload
 
-    def post(self, payload, require_aliases=True):
+    def post(self, payload, require_aliases=True, upload_file=True):
         """POST a record to the Portal.
 
         Requires that you include in the payload the non-schematic key ``self.PROFILE_KEY`` to
@@ -1041,7 +1041,7 @@ class Connection():
                 encid = response_json["uuid"]
             self._log_post(aliases=aliases, dcc_id=encid)
             # Run 'after' hooks:
-            self.after_submit_hooks(encid, profile.name, method=self.POST)
+            self.after_submit_hooks(encid, profile.name, method=self.POST, upload_file=upload_file)
             return response_json
         elif response.status_code == requests.codes.CONFLICT:
             self.debug_logger.debug(response_json)
