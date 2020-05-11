@@ -753,7 +753,7 @@ class Connection():
 
         # Call POST-specific hooks if POST:
         if method == self.POST and upload_file is True:
-            self.after_submit_file_cloud_upload(rec_id, profile_id, upload_file)
+            self.after_submit_file_cloud_upload(rec_id, profile_id)
 
         # Call PATCH-specific hooks if PATCH:
         #... None yet.
