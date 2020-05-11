@@ -1089,7 +1089,7 @@ class Connection():
                 else:
                     self.log_error("Will not POST '{}' since it already exists with aliases '{}'.".format(aliases[0], existing_record["aliases"]))
                     if return_original_status_code is True:
-                        return (response_json, original_status_code)
+                        return (existing_record, original_status_code)
                     return existing_record
 
         else:
