@@ -914,7 +914,13 @@ class Connection():
 
         return payload
 
-    def post(self, payload, require_aliases=True, upload_file=True):
+    def post(
+        self,
+        payload,
+        require_aliases=True,
+        upload_file=True,
+        return_original_status_code=False,
+    ):
         """POST a record to the Portal.
 
         Requires that you include in the payload the non-schematic key ``self.PROFILE_KEY`` to
@@ -943,11 +949,16 @@ class Connection():
                 custom upload logic. If the files to upload are already on disk, it is
                 recommmended to leave this with the default, which will use `aws s3 cp`
                 to upload them.
+            return_original_status_code: `bool`. Defaults to `False`. If `True`, then
+                will return the original `requests.Response.status_code` of the initial
+                post, in addition to the usual `dict` response.
 
         Returns:
             `dict`: The JSON response from the POST operation, or the existing record if it already
             exists on the Portal (where a GET on any of it's aliases, when provided in the payload,
-            finds the existing record).
+            finds the existing record). If `return_original_status_code=True`, then will
+            return a `tuple` of the above `dict` and an `int` corresponding to the
+            status code on POST of the initial payload.
 
         Raises:
             encode_utils.connection.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
@@ -1036,6 +1047,7 @@ class Connection():
                                  verify=False)
         #response_json = response.json()["@graph"][0]
         response_json = response.json()
+        original_status_code = response.status_code
 
         if response.ok:
             self.debug_logger.debug("Success.")
@@ -1049,6 +1061,8 @@ class Connection():
             self._log_post(aliases=aliases, dcc_id=encid)
             # Run 'after' hooks:
             self.after_submit_hooks(encid, profile.name, method=self.POST, upload_file=upload_file)
+            if return_original_status_code is True:
+                return (response_json, original_status_code)
             return response_json
         elif response.status_code == requests.codes.CONFLICT:
             self.debug_logger.debug(response_json)
@@ -1074,6 +1088,8 @@ class Connection():
                     response.raise_for_status()
                 else:
                     self.log_error("Will not POST '{}' since it already exists with aliases '{}'.".format(aliases[0], existing_record["aliases"]))
+                    if return_original_status_code is True:
+                        return (response_json, original_status_code)
                     return existing_record
 
         else:
