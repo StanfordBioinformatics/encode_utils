@@ -17,7 +17,6 @@ import argparse
 
 from encode_utils.connection import Connection
 from encode_utils.parent_argparser import dcc_login_parser
-from encode_utils.profiles import Profile
 
 # dcc_login_parser  contains the arguments needed for logging in to the
 # ENCODE Portal, including which env.
