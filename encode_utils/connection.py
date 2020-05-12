@@ -752,6 +752,11 @@ class Connection():
         #... None yet.
 
         # Call POST-specific hooks if POST:
+        if upload_file is False:
+            self.debug_logger.debug(
+                "Will not upload file %s to the portal since upload_file is False",
+                rec_id,
+            )
         if method == self.POST and upload_file is True:
             self.after_submit_file_cloud_upload(rec_id, profile_id)
 
