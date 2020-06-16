@@ -327,6 +327,8 @@ class Profiles:
         # expected '/antibody_lots/ENCAB719MQZ'. The block below fixes such exceptions:
         if profile_id == "antibody":
             profile_id = "antibody_lot"
+        if profile_id == "publication_datum":
+            profile_id = "publication_data"
 
         if profile_id not in self.profiles:
             raise UnknownProfile("Unknown profile ID '{}'.".format(at_id))
