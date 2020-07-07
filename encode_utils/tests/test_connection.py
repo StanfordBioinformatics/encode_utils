@@ -38,8 +38,8 @@ class TestConnection(unittest.TestCase):
         file record.
         """
         payload = {
-            self.conn.PROFILE_KEY: profiles.Profile.FILE_PROFILE_ID,
-            profiles.Profile.SUBMITTED_FILE_PROP_NAME: os.path.join(
+            self.conn.PROFILE_KEY: profiles.Profiles.FILE_PROFILE_ID,
+            profiles.Profiles.SUBMITTED_FILE_PROP_NAME: os.path.join(
                 DATA_DIR, "test_fq_40recs.fastq.gz")
         }
         res = self.conn.before_post_file(payload)
@@ -72,7 +72,7 @@ class TestConnection(unittest.TestCase):
         payload = {}
         payload[self.conn.PROFILE_KEY] = "genetic_modification"
         res = self.conn.get_profile_from_payload(payload)
-        self.assertEqual(res, profile_id)
+        self.assertEqual(res.name, profile_id)
 
     def test_2_get_profile_from_payload(self):
         """
@@ -84,7 +84,7 @@ class TestConnection(unittest.TestCase):
         payload = {}
         payload["@id"] = "genetic_modification"
         res = self.conn.get_profile_from_payload(payload)
-        self.assertEqual(res, profile_id)
+        self.assertEqual(res.name, profile_id)
 
     def test_3_get_profile_from_payload(self):
         """

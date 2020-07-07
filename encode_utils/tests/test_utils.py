@@ -29,6 +29,8 @@ import json
 import os
 import unittest
 
+import pytest
+
 import encode_utils.tests
 from encode_utils import utils
 
@@ -143,6 +145,25 @@ class TestUtils(unittest.TestCase):
         """
         alias = "michael-snyder:B-167"
         self.assertEqual(utils.strip_alias_prefix(alias), "B-167")
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        (0, 0),
+        (True, True),
+        ("awesome", "awe"),
+        ({"foo": "bar"}, {"foo": "bar"}),
+        ({"foobar": "bazqux"}, {"foo": "baz"}),
+        (["foo"], ["foo"]),
+        (["foobar"], ["foo"]),
+        ({"foobar": {"bazqux": "quuxcorge"}}, {"foo": {"baz": "quu"}}),
+        (["foobar", {"bazqux": "quuxcorge"}], ["foo", {"baz": "quu"}]),
+    ],
+)
+def test_truncate_long_strings(input, expected):
+    result = utils.truncate_long_strings(input, max_num_chars=3)
+    assert result == expected
 
 
 if __name__ == "__main__":
