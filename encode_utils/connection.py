@@ -124,7 +124,7 @@ class Connection():
     #: Constant
     PATCH = "patch"
 
-    def __init__(self, dcc_mode=None, dry_run=False, submission=False):
+    def __init__(self, dcc_mode=None, dry_run=False, submission=False, no_log_file=False):
 
         #: A reference to the `debug` logging instance that was created earlier in ``encode_utils.debug_logger``.
         #: This class adds a file handler, such that all messages sent to it are logged to this
@@ -150,14 +150,10 @@ class Connection():
         #: :meth:`set_live_run`.
         self.dry_run = dry_run
 
-        # Add debug file handler to debug_logger:
-        self._add_file_handler(logger=self.debug_logger, level=logging.DEBUG, tag="debug")
-
         #: A ``logging`` instance with a file handler for logging terse error messages.
         #: The log file resides locally within the directory specified by the constant
         #: ``connection.LOG_DIR``. Accepts messages >= ``logging.ERROR``.
         self.error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME)
-        self._add_file_handler(logger=self.error_logger, level=logging.ERROR, tag="error")
         self.log_error("Connecting to {}".format(self.dcc_host))
 
         #: A ``logging`` instance with a file handler for logging successful POST operations.
@@ -166,7 +162,12 @@ class Connection():
         self.post_logger = logging.getLogger(eu.POST_LOGGER_NAME)
         log_level = logging.INFO
         self.post_logger.setLevel(log_level)
-        self._add_file_handler(logger=self.post_logger, level=log_level, tag="posted")
+
+        # Add file handlers
+        if not no_log_file:
+            self._add_file_handler(logger=self.debug_logger, level=logging.DEBUG, tag="debug")
+            self._add_file_handler(logger=self.error_logger, level=logging.ERROR, tag="error")
+            self._add_file_handler(logger=self.post_logger, level=log_level, tag="posted")
 
         self.check_dry_run() #If on, signal this in the logs.
 
