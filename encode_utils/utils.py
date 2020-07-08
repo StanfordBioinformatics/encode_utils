@@ -278,11 +278,11 @@ def print_format_dict(dico, indent=2, truncate_long_strings=False):
     """
     # Could use pprint, but that looks too ugly with dicts due to all the extra spacing.
     if truncate_long_strings:
-        dico = truncate_long_strings(dico)
+        dico = truncate_long_strings_in_objects(dico)
     return json.dumps(dico, indent=indent, sort_keys=True)
 
 
-def truncate_long_strings(obj, max_num_chars=1000):
+def truncate_long_strings_in_objects(obj, max_num_chars=1000):
     """
     Recursively truncates long strings in JSON objects, useful for reducing size of
     log messsages containing payloads with attachments using data URLs.
@@ -294,14 +294,14 @@ def truncate_long_strings(obj, max_num_chars=1000):
     if isinstance(obj, dict):
         new = {}
         for key, value in obj.items():
-            new_key = truncate_long_strings(key, max_num_chars)
-            new_value = truncate_long_strings(value, max_num_chars)
+            new_key = truncate_long_strings_in_objects(key, max_num_chars)
+            new_value = truncate_long_strings_in_objects(value, max_num_chars)
             new[new_key] = new_value
         return new
     elif isinstance(obj, list):
         new = []
         for item in obj:
-            new.append(truncate_long_strings(item, max_num_chars))
+            new.append(truncate_long_strings_in_objects(item, max_num_chars))
         return new
     elif isinstance(obj, str):
         return obj[:max_num_chars]

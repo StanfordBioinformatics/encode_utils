@@ -161,8 +161,8 @@ class TestUtils(unittest.TestCase):
         (["foobar", {"bazqux": "quuxcorge"}], ["foo", {"baz": "quu"}]),
     ],
 )
-def test_truncate_long_strings(input, expected):
-    result = utils.truncate_long_strings(input, max_num_chars=3)
+def test_truncate_long_strings_in_objects(input, expected):
+    result = utils.truncate_long_strings_in_objects(input, max_num_chars=3)
     assert result == expected
 
 
