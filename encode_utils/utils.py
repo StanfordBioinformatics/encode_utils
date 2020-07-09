@@ -266,16 +266,47 @@ def calculate_file_size(file_path):
         raise FileNotFoundError(msg)
     return os.path.getsize(file_path) 
 
-def print_format_dict(dico, indent=2):
+def print_format_dict(dico, indent=2, truncate_long_strings=False):
     """Formats a dictionary for printing purposes to ease visual inspection.
     Wraps the ``json.dumps()`` function.
 
     Args:
         indent: `int`. The number of spaces to indent each level of nesting. Passed directly
             to the ``json.dumps()`` function.
+        truncate_long_strings: `bool`. Defaults to `False`. If `True`, then long strings
+            will be truncated before the object is serialized.
     """
     # Could use pprint, but that looks too ugly with dicts due to all the extra spacing.
+    if truncate_long_strings:
+        dico = truncate_long_strings_in_objects(dico)
     return json.dumps(dico, indent=indent, sort_keys=True)
+
+
+def truncate_long_strings_in_objects(obj, max_num_chars=1000):
+    """
+    Recursively truncates long strings in JSON objects, useful for reducing size of
+    log messsages containing payloads with attachments using data URLs.
+
+    Args:
+        obj: Any type supported by `json.dump`, usually called with a `dict`.
+        max_num_chars: `int`. The number of characters to truncate long strings to.
+    """
+    if isinstance(obj, dict):
+        new = {}
+        for key, value in obj.items():
+            new_key = truncate_long_strings_in_objects(key, max_num_chars)
+            new_value = truncate_long_strings_in_objects(value, max_num_chars)
+            new[new_key] = new_value
+        return new
+    elif isinstance(obj, list):
+        new = []
+        for item in obj:
+            new.append(truncate_long_strings_in_objects(item, max_num_chars))
+        return new
+    elif isinstance(obj, str):
+        return obj[:max_num_chars]
+    else:
+        return obj
 
 
 def clean_aliases(aliases):

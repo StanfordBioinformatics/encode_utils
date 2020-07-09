@@ -926,6 +926,7 @@ class Connection():
         require_aliases=True,
         upload_file=True,
         return_original_status_code=False,
+        truncate_long_strings_in_payload_log=False,
     ):
         """POST a record to the Portal.
 
@@ -958,6 +959,9 @@ class Connection():
             return_original_status_code: `bool`. Defaults to `False`. If `True`, then
                 will return the original `requests.Response.status_code` of the initial
                 post, in addition to the usual `dict` response.
+            truncate_long_strings_in_payload_log: `bool`. Defaults to `False`. If
+                `True`, then long strings (> 1000 characters) present in the payload
+                will be truncated before being logged.
 
         Returns:
             `dict`: The JSON response from the POST operation, or the existing record if it already
@@ -1040,8 +1044,19 @@ class Connection():
         #    raise Exception(euu.print_format_dict(validation_error[0]))
 
         self.debug_logger.debug(
-            ("<<<<<< POST {} record {alias} To DCC with URL {url} and this"
-             " payload:\n\n{payload}\n\n").format(profile.name, alias=aliases[0], url=url, payload=euu.print_format_dict(payload)))
+            (
+                "<<<<<< POST {} record {alias} To DCC with URL {url} and this payload:"
+                "\n\n{payload}\n\n"
+            ).format(
+                profile.name,
+                alias=aliases[0],
+                url=url,
+                payload=euu.print_format_dict(
+                    payload,
+                    truncate_long_strings=truncate_long_strings_in_payload_log
+                )
+            )
+        )
 
         if self.check_dry_run():
             return {}

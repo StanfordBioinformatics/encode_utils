@@ -45,6 +45,11 @@ setup(
     "pillow",
     "requests",
     "urllib3"],
+  extras_require={
+      "dev": [
+          "pytest",
+      ],
+  },
   long_description = long_description,
   long_description_content_type = "text/markdown",
   name = "encode-utils",
