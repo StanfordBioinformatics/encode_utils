@@ -24,6 +24,8 @@ import encode_utils as eu
 from encode_utils.profiles import Profiles
 import encode_utils.utils as euu
 
+# EU-21 add support for attachment in autosql file type
+mimetypes.add_type('text/autosql', '.as')
 
 #: The directory that contains the log files created by the `Connection` class.
 LOG_DIR = "EU_Logs"

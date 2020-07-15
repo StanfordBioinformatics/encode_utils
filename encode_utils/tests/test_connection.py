@@ -183,8 +183,24 @@ class TestConnection(unittest.TestCase):
         filepath = self.conn.download(rec_id="michael-snyder:P-17", directory=os.getcwd())
         self.assertTrue(os.stat(filepath).st_size > 0)
         
-        
-        
+    def test_autosql_attachment(self):
+        """
+        Tests the method ``set_attachment`` for autosql attachment.
+        """
+        encoded_uri = self.conn.set_attachment(
+            os.path.join(DATA_DIR, "estarr_counts.as")
+        )
+        print(encoded_uri)
+        self.assertTrue(
+            encoded_uri['href'] == (
+                'data:text/autosql;base64,'
+                'dGFibGUgZXN0YXJyX2NvdW50cwoiZVNUQVJSIGNvdW50cyIKKApzdHJpbmcgS'
+                'UQ7ICJDYW5kaWRhdGUgaWRlbnRpZmllciIKc3RyaW5nIERpcmVjdGlvbjsgIk'
+                'Nsb25pbmcgZGlyZWN0aW9uIgp1aW50IFVNSV9jb3VudDsgIlVuaXF1ZSBNb2x'
+                'lY3VsYXIgSWRlbnRpZmllciBjb3VudCIKKQ=='
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
