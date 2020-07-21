@@ -48,6 +48,7 @@ setup(
   extras_require={
       "dev": [
           "pytest",
+          "pytest-mock",
       ],
   },
   long_description = long_description,

@@ -11,16 +11,22 @@ import json
 import logging
 import mimetypes
 import os
-import re
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import subprocess
-import sys
 import urllib
 
 # inhouse libraries
 import encode_utils.transfer_to_gcp
 import encode_utils as eu
+from encode_utils.exceptions import (
+    AwardPropertyMissing,
+    FileUploadFailed,
+    LabPropertyMissing,
+    MissingAlias,
+    ProfileNotSpecified,
+    RecordIdNotPresent,
+)
 from encode_utils.profiles import Profiles
 import encode_utils.utils as euu
 
@@ -34,59 +40,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 # urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class AwardPropertyMissing(Exception):
-    """
-    Raised when the `award` property isn't set in the payload when doing a POST, and a default isn't
-    set by the environment variable `DCC_AWARD` either.
-    """
-    message = ("The property '{}' is missing from the payload and a default isn't set either. To"
-               " store a default, set the DCC_AWARD environment variable.")
-
-class FileUploadFailed(Exception):
-    """
-    Raised when the AWS CLI returns a non-zero exit status.
-    """
-
-class MissingAlias(Exception):
-    """
-    Raised when POSTING a payload that doesn't contain the 'aliases' property and the argument
-    require_aliases in Connection.post() is set to False.
-    """
-
-class LabPropertyMissing(Exception):
-    """
-    Raised when the `lab` property isn't set in the payload when doing a POST, and a default isn't
-    set by the environment variable `DCC_LAB` either.
-    """
-    message = ("The property '{}' is missing from the payload and a default isn't set either. To"
-               " store a default, set the DCC_LAB environment variable.")
-
-
-class ProfileNotSpecified(Exception):
-    """
-    Raised when the profile (object schema) to submit to isn't specifed in a POST payload.
-    """
-    pass
-
-
-class RecordIdNotPresent(Exception):
-    pass
-
-
-class RecordNotFound(Exception):
-    """
-    Raised when a record that should exist on the Portal can't be retrieved via a GET request.
-    """
-    pass
-
-class S3ToGCPFailed(Exception):
-    """
-    Raised when a file from an ENCODE S3 bucket fails to copy to a GCP bucket path.
-    """
-    pass
-
-
-class Connection():
+class Connection:
     """Handles communication with the Portal regarding data submission and retrieval.
 
     For data submission or modification, and working with non-released datasets, you must have
@@ -140,10 +94,11 @@ class Connection():
         #: and 'dev' for the development Portal. Alternatively, you can set an explicit host, such as
         #: demo.encodedcc.org. Leaving the default of None means to use the value of the `DCC_MODE`
         #: environment variable.
-        self.dcc_mode = self._set_dcc_mode(dcc_mode)
-        self.dcc_host = eu.DCC_MODES[self.dcc_mode]["host"]
-        self.dcc_url = eu.DCC_MODES[self.dcc_mode]["url"]
-        self.profiles = Profiles(self.dcc_url)
+        self.dcc_modes = DccModes()
+        for name, host in eu.DCC_MODES.items():
+            self.dcc_modes.add_mode(host["url"], mode_name=name)
+        self._dcc_mode = dcc_mode
+        self._profiles = None
 
         #: Set to True to prevent any server-side changes on the ENCODE Portal, i.e. PUT, POST,
         #: PATCH, DELETE requests will not be sent to the Portal. After-POST and after-PATCH
@@ -156,7 +111,6 @@ class Connection():
         #: The log file resides locally within the directory specified by the constant
         #: ``connection.LOG_DIR``. Accepts messages >= ``logging.ERROR``.
         self.error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME)
-        self.log_error("Connecting to {}".format(self.dcc_host))
 
         #: A ``logging`` instance with a file handler for logging successful POST operations.
         #: The log file resides locally within the directory specified by the constant
@@ -180,68 +134,54 @@ class Connection():
         #: objects in turn and the new objects haven't yet had time to be indexed (otherwise you risk
         #: getting a 404 response back meaning "Resource Not Found". This attribute can be also set
         #: via the instance method ``self.set_submission``.
-        self.set_submission(submission) #sets self.submission attribute.
+        self.set_submission(submission)  #sets self.submission attribute.
+        self._auth = ()
 
-        #: The API key to use when authenticating with the DCC servers. This is set automatically
-        #: to the value of the `DCC_API_KEY` environment variable in the ``_set_api_keys()`` private
-        #: instance method.
-        self.api_key = self._set_api_keys()[0]
-        #: The secret key to use when authenticating with the DCC servers. This is set automatically
-        #: to the value of the `DCC_SECRET_KEY` environment variable in the ``_set_api_keys()`` private
-        #: instance method.
-        self.secret_key = self._set_api_keys()[1]
-        if self.api_key and self.secret_key:
-            self.auth = (self.api_key, self.secret_key)
-        else:
-            self.auth = ()
-            self.log_error(
-                "WARNING: API keys {} not set, all functions have no permission".format(
-                    self.auth))
+    @property
+    def profiles(self):
+        if self._profiles is None:
+            self._profiles = Profiles(self.dcc_mode.url)
+        return self._profiles
 
-        # Create a dict attribute of all source records
-        sources_response = requests.get(euu.url_join([self.dcc_url, "sources?limit=all&format=json"]),
-                                auth=self.auth,
-                                timeout=eu.TIMEOUT,
-                                headers=euu.REQUEST_HEADERS_JSON,
-                                verify=False)
-        sources_response.raise_for_status()
-        sources = sources_response.json()["@graph"]
-        #: `dict` where each key is a source record name and each value is the corresponding 
-        #: JSON record. The key is parsed out of the records '@id' property by
-        #: tokenizing on the '/' character and taking only the last field, i.e. 
-        #: '/sources/michael-snyder/' becomes simply 'michael-snyder'. 
-        self.sources = {}
-        for s in sources:
-            s_id = s["@id"].strip("/").split("/")[-1]
-            self.sources[s_id] = s
-    
-    def _set_dcc_mode(self, dcc_mode=False):
-        if not dcc_mode:
-            try:
-                dcc_mode = os.environ["DCC_MODE"]
-                self.debug_logger.debug("Utilizing DCC_MODE environment variable.")
-            except KeyError:
-                print("ERROR: You must supply the `dcc_mode` argument or set the environment variable DCC_MODE.")
-                sys.exit(-1)
-        dcc_mode = dcc_mode.lower().rstrip("/")
-        if dcc_mode not in eu.DCC_MODES:
-            # Assume dcc_mode is a valid demo host.
-            url = 'https://' + dcc_mode + '/'
-            try:
-                requests.get(url, timeout=2)
-            except requests.exceptions.ConnectionError:
-                print(
-                    "ERROR: The specified dcc_mode of '{}' is not valid. Should be one of '{}' or a valid demo.encodedcc.org hostname.".format(
-                        dcc_mode,
-                        list(
-                            eu.DCC_MODES.keys())))
-                sys.exit(-1)
+    @property
+    def dcc_mode(self):
+        if self._dcc_mode is None:
+            dcc_mode = self._get_dcc_mode_from_env()
+            self._dcc_mode = dcc_mode
+        if not self.dcc_modes.has_mode(self._dcc_mode):
+            self.dcc_modes.add_mode(self._dcc_mode)
+        mode = self.dcc_modes.get_mode(self._dcc_mode)
+        if not mode.has_been_validated:
+            self._validate_dcc_mode(mode.url)
+            mode.has_been_validated = True
+        return mode
 
-            eu.DCC_MODES[dcc_mode] = {
-                'host': dcc_mode,
-                'url': url
-            }
+    def _get_dcc_mode_from_env(self):
+        try:
+            dcc_mode = os.environ["DCC_MODE"]
+            self.debug_logger.debug("Utilizing DCC_MODE environment variable.")
+        except KeyError:
+            self.log_error((
+                "ERROR: You must supply the `dcc_mode` argument or set the environment "
+                "variable DCC_MODE"
+            ))
+            raise
         return dcc_mode
+
+    def _validate_dcc_mode(self, url):
+        try:
+            requests.get(url, timeout=2)
+        except requests.exceptions.ConnectionError:
+            self.log_error(
+                (
+                    "ERROR: The specified dcc_mode of '{}' is not valid. Should be one "
+                    "of '{}' or a valid demo.encodedcc.org hostname."
+                ).format(
+                    self._dcc_mode,
+                    list(eu.DCC_MODES.keys()),
+                ),
+            )
+            raise
 
     def _get_logfile_name(self, tag):
         """
@@ -257,7 +197,7 @@ class Connection():
         """
         if not os.path.exists(LOG_DIR):
             os.mkdir(LOG_DIR)
-        filename = "log_eu_" + self.dcc_mode + "_" + tag + ".txt"
+        filename = "log_eu_" + self._dcc_mode + "_" + tag + ".txt"
         filename = os.path.join(LOG_DIR, filename)
         return filename
 
@@ -282,7 +222,26 @@ class Connection():
         handler.setFormatter(f_formatter)
         logger.addHandler(handler)
 
-    def _set_api_keys(self):
+    @property
+    def auth(self):
+        """
+        Sets the API and secret keys to use when authenticating with the DCC servers.
+        These are determined from the values of the `DCC_API_KEY` and `DCC_SECRET_KEY`
+        environment variables via the ``_get_api_keys_from_env()`` private instance
+        method.
+        """
+        if self._auth is None:
+            api_key, secret_key = self._get_api_keys_from_env()
+            if api_key and secret_key:
+                self._auth = (api_key, secret_key)
+            else:
+                self.log_error(
+                    "WARNING: API keys {} not set, all functions have no permission"
+                    .format(self.auth)
+                )
+        return self._auth
+
+    def _get_api_keys_from_env(self):
         """
         Retrieves the API key and secret key based on the environment variables `DCC_API_KEY` and
         `DCC_SECRET_KEY`.
@@ -362,7 +321,7 @@ class Connection():
     def log_error(self, msg):
         """Sends 'msg' to both ``self.error_logger`` and ``self.debug_logger``.
         """
-        self.debug_logger.debug(msg)
+        self.debug_logger.error(msg)
         self.error_logger.error(msg)
 
     def add_alias_prefix(self, aliases, prefix=False):
@@ -453,7 +412,7 @@ class Connection():
         """
         # urllib doesn't contain the parse() method until you import urllib3 (weird, but that's what I noticed).
         query = urllib.parse.urlencode(search_args)
-        url = euu.url_join([self.dcc_url, "search/?"]) + query
+        url = euu.url_join([self.dcc_mode.url, "search/?"]) + query
         return url
 
     def search(self, search_args=[], url=None, limit=None):
@@ -546,7 +505,7 @@ class Connection():
             `str`: The ID of the profile if all validations pass, otherwise.
 
         Raises:
-            encode_utils.connection.ProfileNotSpecified: Both keys ``self.PROFILE_KEY`` and `@id` are
+            encode_utils.exceptions.ProfileNotSpecified: Both keys ``self.PROFILE_KEY`` and `@id` are
               missing in the payload.
             encode_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
                 `encode_utils.profiles.Profile`.
@@ -600,7 +559,7 @@ class Connection():
     # def delete(self,rec_id):
     #    """Not supported at present by the DCC - Only wranglers can delete objects.
     #    """
-    #    url = os.path.join(self.dcc_url,rec_id)
+    #    url = os.path.join(self.dcc_mode.url,rec_id)
     #    self.logger.info(
     #      (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
     #    if self.dry_run:
@@ -645,7 +604,7 @@ class Connection():
         status_codes = {}  # key is return code, value is the record ID
         for r in rec_ids:
             r = r.strip("/")
-            url = euu.url_join([self.dcc_url, r, "?format=json"])
+            url = euu.url_join([self.dcc_mode.url, r, "?format=json"])
             if database:
                 url += "&datastore=database"
             if frame:
@@ -973,13 +932,13 @@ class Connection():
             status code on POST of the initial payload.
 
         Raises:
-            encode_utils.connection.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
+            encode_utils.exceptions.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
                 defualt set by the environment variable `DCC_AWARD`.
-            encode_utils.connection.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
+            encode_utils.exceptions.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
                 default set by the environment variable `DCC_LAB`.
-            encode_utils.connection.MissingAlias: The argument 'require_aliases' is set to True and
+            encode_utils.exceptions.MissingAlias: The argument 'require_aliases' is set to True and
                 the 'aliases' property is missing in the payload or is empty.
-            encode_utils.connection.requests.exceptions.HTTPError: The return status is not ok.
+            requests.exceptions.HTTPError: The return status is not ok.
 
         Side effects:
             self.PROFILE_KEY will be popped out of the payload if present, otherwise, the key "@id"
@@ -991,7 +950,7 @@ class Connection():
         payload = json.loads(json.dumps(payload))
         profile = self.get_profile_from_payload(payload)
         payload[self.PROFILE_KEY] = profile.name
-        url = euu.url_join([self.dcc_url, profile.name])
+        url = euu.url_join([self.dcc_mode.url, profile.name])
         if self.ENCID_KEY in payload:
             # Shouldn't be here, unless maybe a PATCH was attempted and the record didn't exist, so
             # a POST was then attempted.
@@ -1190,7 +1149,7 @@ class Connection():
             # Some client software may add this key in; won't hurt to remove it.
             payload.pop(self.PROFILE_KEY)
 
-        url = euu.url_join([self.dcc_url, encode_id.lstrip("/")])
+        url = euu.url_join([self.dcc_mode.url, encode_id.lstrip("/")])
         self.debug_logger.debug(
             ("<<<<<< PATCHING {encode_id} To DCC with URL"
              " {url} and this payload:\n\n{payload}\n\n").format(
@@ -1261,7 +1220,7 @@ class Connection():
                 # Then it is safe to remove this property.
                 editable_json.pop(prop)
 
-        url = euu.url_join([self.dcc_url, rec_id])
+        url = euu.url_join([self.dcc_mode.url, rec_id])
         self.debug_logger.debug("Attempting to remove properties {} from record '{}' by sending a PUT request with payload {}.".format(props, rec_id, euu.print_format_dict(editable_json)))
         if self.check_dry_run():
             return
@@ -1378,7 +1337,7 @@ class Connection():
         payload.pop(self.ENCID_KEY)
         payload.pop(self.PROFILE_KEY, None)
 
-        url = euu.url_join([self.dcc_url, encode_id.lstrip("/")])
+        url = euu.url_join([self.dcc_mode.url, encode_id.lstrip("/")])
         self.debug_logger.debug(
             "<<<<<< PUTTING {encode_id} To DCC with URL"
             " {url} and this payload:\n\n{payload}\n\n".format(
@@ -1588,16 +1547,9 @@ class Connection():
             `requests.exceptions.HTTPError`: The response from the server isn't a successful status code.
         """
         self.debug_logger.debug("Attempting to generate new file upload credentials")
-        # Don't use curl since it
-        #   1) requires that all users have it installed, and
-        #   2) only works for the most recent versions when interacting with the ENCODE servers.
-
-#        cmd = ("curl -X POST -H 'Accept: application/json' -H 'Content-Type: application/json'"
-#               " https://{api_key}:{secret_key}@{host}/files/{file_id}/upload -d '{{}}'"
-#               " | python3 -m json.tool").format(api_key=self.api_key, secret_key=self.secret_key, host=self.dcc_host, file_id=file_id)
 
         response = requests.post(
-            euu.url_join([self.dcc_url, "files", file_id, "@@upload"]),
+            euu.url_join([self.dcc_mode.url, "files", file_id, "@@upload"]),
             auth=self.auth,
             headers=euu.REQUEST_HEADERS_JSON,
             json = {},
@@ -1769,7 +1721,7 @@ class Connection():
               uploading a new file. 
 
         Raises:
-            encode_utils.connection.FileUploadFailed: The return code of the AWS upload command was non-zero.
+            encode_utils.exceptions.FileUploadFailed: The return code of the AWS upload command was non-zero.
 
         .. _`wiki documentation`: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration#aws-keys
         """
@@ -1910,9 +1862,9 @@ class Connection():
             raise Exception("This method can only download records of type 'File' and 'Document'; '{}' is neither of these.".format(rec_id))
         # Formulate download URL:
         if file_type:
-            url = euu.url_join([self.dcc_url, rec["href"].lstrip("/")])
+            url = euu.url_join([self.dcc_mode.url, rec["href"].lstrip("/")])
         else:
-            url = euu.url_join([self.dcc_url, "documents", rec["uuid"], rec["attachment"]["href"]])
+            url = euu.url_join([self.dcc_mode.url, "documents", rec["uuid"], rec["attachment"]["href"]])
         r = requests.get(
             url,
             auth=auth,
@@ -2024,7 +1976,53 @@ class Connection():
             raise Exception("BiosampleType search returned more than one result.")
         return results[0]
 
-# When appending "?datastore=database" to the URL. As Esther stated: "_indexer to the end of the
-# URL to see the status of elastic search like
-# https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing",
-# versus waiting" and the results property will indicate the last object that was indexed."
+
+class DccMode:
+    DEFAULT_SCHEME = "https"
+
+    def __init__(self, host_or_url):
+        self._host_or_url = host_or_url
+        self.has_been_validated = False
+
+    @property
+    def host(self):
+        """
+        Returns:
+            `str`. The URL without scheme.
+        """
+        parsed = urllib.parse.urlparse(self._host_or_url)
+        url_without_scheme = urllib.parse.ParseResult("", *parsed[1:]).geturl()
+        return url_without_scheme.lstrip("/")
+
+    @property
+    def url(self):
+        """
+        Returns:
+            `str`. The URL with scheme.
+        """
+        parsed = urllib.parse.urlparse(self._host_or_url, scheme=self.DEFAULT_SCHEME)
+        if parsed.netloc:
+            return urllib.parse.urlunparse(parsed)
+        url = urllib.parse.ParseResult(
+            parsed.scheme,
+            parsed.path,
+            "",
+            *parsed[3:],
+        ).geturl()
+        return url
+
+
+class DccModes:
+    def __init__(self):
+        self._modes = {}
+
+    def add_mode(self, host_or_url, mode_name=None):
+        new_mode = DccMode(host_or_url)
+        name = mode_name if mode_name is not None else host_or_url
+        self._modes[name] = new_mode
+
+    def get_mode(self, mode_name):
+        return self._modes[mode_name]
+
+    def has_mode(self, mode_name):
+        return mode_name in self._modes
