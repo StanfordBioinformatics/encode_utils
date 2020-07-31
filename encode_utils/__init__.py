@@ -78,7 +78,7 @@ ENCODE_PROD_S3BUCKET="encode-files"
 ENCODE_TEST_S3BUCKET="encoded-files-dev"
 
 #: The timeout in seconds when making HTTP requests via the ``requests`` module.
-TIMEOUT = 20
+TIMEOUT = 60
 
 #: The name of the debug ``logging`` instance.
 DEBUG_LOGGER_NAME = "eu_debug"
