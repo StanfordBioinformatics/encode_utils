@@ -67,11 +67,10 @@ DCC_DEV_MODE = "dev"
 DCC_PROD_MODE = "prod"
 
 #: A hash of known hosts one can connect to, where the key can be passed to the `dcc_mode` argument
-#: when instantiating the `connection.Connection` class. If the user instantiates that class with
-#: a novel host, i.e. demo.encodedcc.org, it will be added to this hash.
+#: when instantiating the `connection.Connection` class.
 DCC_MODES = {
-    DCC_DEV_MODE: {"host": "test.encodedcc.org", "url": "https://test.encodedcc.org"},
-    DCC_PROD_MODE: {"host": "www.encodeproject.org", "url": "https://www.encodeproject.org"}
+    DCC_DEV_MODE: {"url": "https://test.encodedcc.org"},
+    DCC_PROD_MODE: {"url": "https://www.encodeproject.org"}
 }
 
 ENCODE_PROD_S3BUCKET="encode-files"

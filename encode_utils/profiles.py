@@ -240,7 +240,7 @@ class Profiles:
     def __init__(self, dcc_url):
         """
         Args:
-            dcc_url: `str`. The dcc_url as specified by Connection.dcc_url.
+            dcc_url: `str`. The dcc_url as specified by Connection.dcc_mode.url.
         """
         self.dcc_url = dcc_url
         self._profiles = None
