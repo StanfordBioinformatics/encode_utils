@@ -135,7 +135,7 @@ class Connection:
         #: getting a 404 response back meaning "Resource Not Found". This attribute can be also set
         #: via the instance method ``self.set_submission``.
         self.set_submission(submission)  #sets self.submission attribute.
-        self._auth = ()
+        self._auth = None
 
     @property
     def profiles(self):
@@ -1218,7 +1218,7 @@ class Connection:
                 raise Exception("Can't remove read-only property.")
             else:
                 # Then it is safe to remove this property.
-                editable_json.pop(prop)
+                editable_json.pop(prop.name)
 
         url = euu.url_join([self.dcc_mode.url, rec_id])
         self.debug_logger.debug("Attempting to remove properties {} from record '{}' by sending a PUT request with payload {}.".format(props, rec_id, euu.print_format_dict(editable_json)))
@@ -1310,7 +1310,7 @@ class Connection:
                 raise Exception("Can't remove read-only property.")
             else:
                 # Then it is safe to remove this property.
-                payload.pop(prop, None)
+                payload.pop(prop.name, None)
         for key in patch:
             if all([
                 extend_array_values,
