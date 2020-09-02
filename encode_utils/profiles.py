@@ -186,6 +186,7 @@ class EncodeSchemaProperty:
         self.is_required = is_required
         self.is_identifying = is_identifying
 
+    @property
     def is_not_submittable(self):
         """
         Indicates whether the provided property name is one that a user can submit when
@@ -198,6 +199,7 @@ class EncodeSchemaProperty:
             return True
         return False
 
+    @property
     def is_read_only(self):
         """
         Indicates whether the provided property name is one that is read-only and hence

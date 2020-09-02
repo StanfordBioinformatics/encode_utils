@@ -135,7 +135,7 @@ class Connection:
         #: getting a 404 response back meaning "Resource Not Found". This attribute can be also set
         #: via the instance method ``self.set_submission``.
         self.set_submission(submission)  #sets self.submission attribute.
-        self._auth = ()
+        self._auth = None
 
     @property
     def profiles(self):
@@ -230,7 +230,7 @@ class Connection:
         environment variables via the ``_get_api_keys_from_env()`` private instance
         method.
         """
-        if not self._auth:
+        if self._auth is None:
             api_key, secret_key = self._get_api_keys_from_env()
             if api_key and secret_key:
                 self._auth = (api_key, secret_key)
@@ -1212,9 +1212,9 @@ class Connection:
             prop = profile.get_property_from_name(prop_name)
             if prop.is_required:
                 raise Exception("Can't remove required property")
-            elif prop.is_not_submittable():
+            elif prop.is_not_submittable:
                 raise Exception("Can't remove non-submittable property.")
-            elif prop.is_read_only():
+            elif prop.is_read_only:
                 raise Exception("Can't remove read-only property.")
             else:
                 # Then it is safe to remove this property.
@@ -1304,9 +1304,9 @@ class Connection:
             prop = profile.get_property_from_name(prop_name)
             if prop.is_required:
                 raise Exception("Can't remove required property")
-            elif prop.is_not_submittable():
+            elif prop.is_not_submittable:
                 raise Exception("Can't remove non-submittable property.")
-            elif prop.is_read_only():
+            elif prop.is_read_only:
                 raise Exception("Can't remove read-only property.")
             else:
                 # Then it is safe to remove this property.
