@@ -31,22 +31,7 @@ class File(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_uri_without_scheme(self) -> str:
-        """
-        String representing the scheme for URIs for files represented by the class.
-        """
-        raise NotImplementedError("Derived classes should provide their own SCHEMEs")
-
-    @abstractmethod
     def read(self, num_bytes: Optional[int] = None) -> bytes:
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_bytes(self) -> bytes:
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_json(self) -> Dict[str, Any]:
         raise NotImplementedError
 
 
@@ -102,9 +87,6 @@ class GSFile(File):
     def b64_to_hex(value: str) -> str:
         return b64decode(value).hex()
 
-    def get_uri_without_scheme(self) -> str:
-        return f"{self.blob.bucket.name}/{self.blob.name}"
-
     def read(self, num_bytes: Optional[int] = None) -> bytes:
         """
         `Blob.download_as_string()` takes `start` and `end` kwargs to specify a byte
@@ -126,16 +108,3 @@ class GSFile(File):
                 )
                 self.pos += num_bytes
         return read_bytes
-
-    def read_bytes(self) -> bytes:
-        """
-        Downloads file as bytes. We bypass the `read` interface so we don't mess with
-        `self.pos`.
-        """
-        return self.blob.download_as_string()
-
-    def read_json(self) -> Dict[str, Any]:
-        """
-        Read file and convert to JSON
-        """
-        return json.loads(self.read_bytes().decode())
