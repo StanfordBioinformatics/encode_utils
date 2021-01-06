@@ -15,6 +15,7 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import subprocess
 import urllib
+import boto3
 
 # inhouse libraries
 import encode_utils.transfer_to_gcp
@@ -29,12 +30,16 @@ from encode_utils.exceptions import (
 )
 from encode_utils.profiles import Profiles
 import encode_utils.utils as euu
+import encode_utils.gc_storage
 
 # EU-21 add support for attachment in autosql file type
 mimetypes.add_type('text/autosql', '.as')
 
 #: The directory that contains the log files created by the `Connection` class.
 LOG_DIR = "EU_Logs"
+
+BOTO3_DEFAULT_MULTIPART_CHUNKSIZE = 8_388_608
+BOTO3_MULTIPART_MAX_PARTS = 10_000
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 # urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -1695,13 +1700,9 @@ class Connection:
 
           1. Path to a local file,
           2. S3 object, or
-          3. Google Storage object (Not yet supported; see ticket at https://github.com/GoogleCloudPlatform/gsutil/issues/535)
+          3. Google Storage object
 
         For the AWS option above, the user must set the proper AWS keys, see the `wiki documentation`_.
-
-        For the GCP option above, the user must have gsutil insalled with credentials configured (
-        see https://github.com/StanfordBioinformatics/encode_utils/wiki/could-to-cloud-file-transfers
-        for more details).
 
         If the dry-run feature is enabled, then this method will return prior to launching the
         upload command.
@@ -1747,7 +1748,25 @@ class Connection:
 
         cmd_args = "{file_path} {upload_url}".format(file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         if file_path.startswith("gs://"):
-            cmd = "gsutil cp"
+            gs_file = encode_utils.gc_storage.GSFile(name=file_path)
+            s3 = boto3.client(
+                "s3",
+                aws_access_key_id=aws_creds["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=aws_creds["AWS_SECRET_ACCESS_KEY"],
+                aws_session_token=aws_creds["AWS_SESSION_TOKEN"],
+            )
+            s3_uri = aws_creds["UPLOAD_URL"]
+            path_parts = s3_uri.replace("s3://", "").split("/")
+            bucket = path_parts.pop(0)
+            key = "/".join(path_parts)
+            multipart_chunksize = self._calculate_multipart_chunksize(gs_file.size)
+            transfer_config = boto3.s3.transfer.TransferConfig(
+                multipart_chunksize=multipart_chunksize
+            )
+            self.debug_logger.debug("Uploading file %s to %s", gs_file.filename, s3_uri)
+            s3.upload_fileobj(gs_file, bucket, key, Config=transfer_config)
+            self.debug_logger.debug("Finished uploading file %s", gs_file.filename)
+            return
         else:
             cmd = "aws s3 cp"
         cmd += " " + cmd_args
@@ -1772,6 +1791,19 @@ class Connection:
             self.debug_logger.debug(error_msg)
             raise FileUploadFailed(error_msg)
         self.debug_logger.debug("AWS upload successful.")
+
+    def _calculate_multipart_chunksize(self, file_size_bytes: int) -> int:
+        """
+        Calculates the `multipart_chunksize` to use for `boto3` `TransferConfig` to
+        ensure that the file can be uploaded successfully without reaching the 100000
+        part limit. The default values are the same as the defaults for `TransferConfig`
+        """
+        multipart_chunksize = BOTO3_DEFAULT_MULTIPART_CHUNKSIZE * (
+            max((file_size_bytes - 1), 0)
+            // (BOTO3_MULTIPART_MAX_PARTS * BOTO3_DEFAULT_MULTIPART_CHUNKSIZE)
+            + 1
+        )
+        return multipart_chunksize
 
     def get_platforms_on_experiment(self, rec_id):
         """
