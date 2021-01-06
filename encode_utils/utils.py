@@ -24,6 +24,7 @@ import exifread
 
 import encode_utils as eu
 import encode_utils.aws_storage
+import encode_utils.gc_storage
 
 
 #: Stores the HTTP headers to indicate JSON content in a request.
@@ -136,7 +137,7 @@ def orient_jpg(image):
         flip = True
     else:
         raise InvalidExifOrientation("Unknown exif orientation value {}.".format(orientation))
-    
+
     transformed = True
     if degrees:
         img = img.rotate(degrees, expand=True)
@@ -147,11 +148,12 @@ def orient_jpg(image):
 
     res = {}
     bio = io.BytesIO()
-    img.save(bio, format="JPEG")    
+    img.save(bio, format="JPEG")
     res["from"] = orientation
     res["transformed"] = transformed
     res["stream"] = bio.getvalue()
     return res
+
 
 def url_join(parts=[]):
     """
@@ -161,6 +163,7 @@ def url_join(parts=[]):
     parts = [i.strip("/") for i in parts] 
     url = "/".join(parts)
     return url
+
 
 def get_record_id(rec):
     """
@@ -231,6 +234,8 @@ def calculate_md5sum(file_path):
     """
     if file_path.startswith("s3:"):
         return encode_utils.aws_storage.S3Object(s3_uri=file_path).md5sum()
+    elif file_path.startswith("gs:"):
+        return encode_utils.gc_storage.GSFile(name=file_path).md5sum
     m = hashlib.md5()
     # Assume local file
     if not os.path.exists(file_path):
@@ -244,6 +249,7 @@ def calculate_md5sum(file_path):
                 break
             m.update(chunk)
     return m.hexdigest()
+
 
 def calculate_file_size(file_path):
     """
@@ -260,11 +266,14 @@ def calculate_file_size(file_path):
     """
     if file_path.startswith("s3:"):
         return encode_utils.aws_storage.S3Object(s3_uri=file_path).size()
+    elif file_path.startswith("gs:"):
+        return encode_utils.gc_storage.GSFile(name=file_path).size
     if not os.path.exists(file_path):
         msg = "File path '{}' does not exist.".format(file_path)
         logging.error(msg)
         raise FileNotFoundError(msg)
     return os.path.getsize(file_path) 
+
 
 def print_format_dict(dico, indent=2, truncate_long_strings=False):
     """Formats a dictionary for printing purposes to ease visual inspection.
