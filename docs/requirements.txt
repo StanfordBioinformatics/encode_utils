@@ -1,9 +1,11 @@
 awscli
 boto3
 exifread
-inflection
 google-api-python-client
+google-cloud-storage==1.28.1
+inflection
 jsonschema
 pillow
+requests
 sphinx-argparse
 urllib3
