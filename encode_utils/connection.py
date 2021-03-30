@@ -1331,7 +1331,7 @@ class Connection:
                 if len(val) == 0:
                     continue
                 if isinstance(val[0], str):
-                    payload[key] = profile.remove_duplicate_associations(val)
+                    payload[key] = self.profiles.remove_duplicate_associations(val)
                 elif isinstance(val[0], dict):
                     payload[key] = euu.remove_duplicate_objects(val)
             else:
