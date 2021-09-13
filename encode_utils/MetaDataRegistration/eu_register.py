@@ -74,6 +74,12 @@ def get_parser():
     it'll be very easy to create duplicate objects on the Portal.  For example, you can easily 
     create the same biosample as many times as you want on the Portal when not providing an alias.""")
 
+    parser.add_argument(
+        "--no-upload-file",
+        action="store_true",
+        help="Don't upload files when POSTing file objects",
+    )
+
     parser.add_argument("-p", "--profile_id", required=True, help="""
     The ID of the profile to submit to, i.e. use 'genetic_modification' for
     https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for
@@ -175,7 +181,11 @@ def main():
     gen = create_payloads(schema=schema, infile=infile)
     for payload in gen:
         if not patch and not rmpatch:
-            conn.post(payload, require_aliases=not no_aliases)
+            conn.post(
+                payload,
+                require_aliases=not no_aliases,
+                upload_file=not args.no_upload_file,
+            )
         elif rmpatch:
             record_id = payload.get(RECORD_ID_FIELD, False)
             if not record_id:
