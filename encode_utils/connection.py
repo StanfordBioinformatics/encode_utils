@@ -202,7 +202,10 @@ class Connection:
         """
         if not os.path.exists(LOG_DIR):
             os.mkdir(LOG_DIR)
-        filename = "log_eu_" + self._dcc_mode + "_" + tag + ".txt"
+        dcc_mode = self._dcc_mode
+        if dcc_mode is None:
+            dcc_mode = self._get_dcc_mode_from_env()
+        filename = "log_eu_" + dcc_mode + "_" + tag + ".txt"
         filename = os.path.join(LOG_DIR, filename)
         return filename
 

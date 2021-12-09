@@ -162,11 +162,7 @@ def main():
     no_aliases = args.no_aliases
     overwrite_array_values = args.overwrite_array_values
 
-    if dcc_mode:
-        conn = euc.Connection(dcc_mode, dry_run)
-    else:
-        # Default dcc_mode taken from environment variable DCC_MODE.
-        conn = euc.Connection()
+    conn = euc.Connection(dcc_mode, dry_run)
 
     # Put conn into submit mode:
     conn.set_submission(True)
