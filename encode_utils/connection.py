@@ -775,15 +775,75 @@ class Connection:
         Returns:
             `dict`: The potentially modified payload.
         """
-        attachment_prop = "attachment"
+        attachment_props = [
+            "attachment",
+            # atac_alignment_enrichment_quality_metric, chip_alignment_enrichment_quality_metric, complexity_xcorr_quality_metric
+            "cross_correlation_plot",
+            "gc_bias_plot",
+            "jsd_plot",
+            "tss_enrichment_plot",
+            # atac_peak_enrichment_quality_metric
+            "peak_width_distribution_plot",
+            # atac_replication_quality_metric and chip_replication_quality_metric
+            "idr_dispersion_plot",
+            "idr_parameters",
+            # dnase_alignment_quality_metric
+            "insert_size_histogram",
+            "insert_size_metric",
+            "nuclear_preseq",
+            "nuclear_preseq_targets",
+            # dnase_footprinting_quality_metric
+            "dispersion_model",
+            # gembs_alignment_quality_metric
+            "insert_size_plot",
+            "mapq_plot",
+            # idr_quality_metric
+            "IDR_plot_true",
+            "IDR_plot_rep1_pr",
+            "IDR_plot_rep2_pr",
+            "IDR_plot_pool_pr",
+            "IDR_parameters_true",
+            "IDR_parameters_rep1_pr",
+            "IDR_parameters_rep2_pr",
+            "IDR_parameters_pool_pr",
+            # sc_atac_alignment_quality_metric
+            "mito_stats",
+            "samstats",
+            # sc_atac_analysis_quality_metric
+            "archr_doublet_summary_figure",
+            "archr_fragment_size_distribution",
+            "archr_tss_by_unique_frags",
+            "archr_doublet_summary_text",
+            "archr_pre_filter_metadata",
+            # sc_atac_library_complexity_quality_metric
+            "pbc_stats",
+            "picard_markdup_stats",
+            # sc_atac_multiplet_quality_metric
+            "barcodes_status",
+            "barcode_pairs_multiplets",
+            "barcode_pairs_expanded",
+            "multiplet_stats",
+            "multiplet_threshold_plot",
+            # sc_atac_read_quality_metric
+            "adapter_trimming_stats",
+            "barcode_matching_stats",
+            "barcode_revcomp_stats",
+            # segway_quality_metric
+            "feature_aggregation_tab",
+            "length_distribution_tab",
+            "segment_sizes_tab",
+            "signal_distribution_tab",
+            "trackname_assay",
+        ]
         path = "path"
 
-        if attachment_prop in payload:
-            val = payload[attachment_prop]  # dict
-            if path in val:
-                # Then set the actual attachment object:
-                attachment = self.set_attachment(document=val[path])
-                payload[attachment_prop] = attachment
+        for prop in attachment_props:
+            if prop in payload:
+                val = payload[prop]  # dict
+                if path in val:
+                    # Then set the actual attachment object:
+                    attachment = self.set_attachment(document=val[path])
+                    payload[prop] = attachment
         return payload
 
     def before_post_file(self, payload):
