@@ -655,7 +655,12 @@ class Connection:
             `dict`: The 'attachment' propery value.
         """
         download_filename = os.path.basename(document)
-        mime_type = mimetypes.guess_type(download_filename)[0]
+        (mime_type, extension) = mimetypes.guess_type(download_filename)
+        # Because the portal treats all gzipped files as application/gzip,
+        # force the type to be application/gzip for any files with .gz
+        # extension, even if the content is another type.
+        if extension == 'gzip':
+            mime_type = 'application/gzip'
         data = None
         if euu.is_jpg_or_tiff(document):
             orientation_stats = euu.orient_jpg(document)
