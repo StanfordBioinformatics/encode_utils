@@ -833,12 +833,19 @@ class Connection:
             "adapter_trimming_stats",
             "barcode_matching_stats",
             "barcode_revcomp_stats",
+            # scrna_seq_counts_summary_quality_metric
+            "total_counts_vs_pct_mitochondria",
+            "total_counts_vs_genes_by_count",
+            "counts_violin_plot",
             # segway_quality_metric
             "feature_aggregation_tab",
             "length_distribution_tab",
             "segment_sizes_tab",
             "signal_distribution_tab",
             "trackname_assay",
+            # star_solo_quality_metric
+            "barcode_rank_plot",
+            "sequencing_saturation_plot",
         ]
         path = "path"
 
