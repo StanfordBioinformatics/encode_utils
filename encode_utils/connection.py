@@ -261,8 +261,8 @@ class Connection:
         Returns:
             `tuple`: Two item tuple containing the API Key and the Secret Key
         """
-        api_key = os.environ.get("DCC_API_KEY")
-        secret_key = os.environ.get("DCC_SECRET_KEY")
+        api_key = os.environ.get("IGVF_API_KEY")
+        secret_key = os.environ.get("IGVF_SECRET_KEY")
         return api_key, secret_key
 
     def _log_post(self, aliases, dcc_id):
