@@ -205,7 +205,11 @@ class Connection:
         dcc_mode = self._dcc_mode
         if dcc_mode is None:
             dcc_mode = self._get_dcc_mode_from_env()
-        filename = "log_eu_" + dcc_mode + "_" + tag + ".txt"
+        bad_characters = ['/', ':']
+        cleaned_dcc_mode = dcc_mode
+        for c in bad_characters:
+            cleaned_dcc_mode = cleaned_dcc_mode.replace(c, '')
+        filename = "log_eu_" + cleaned_dcc_mode + "_" + tag + ".txt"
         filename = os.path.join(LOG_DIR, filename)
         return filename
 
@@ -257,8 +261,8 @@ class Connection:
         Returns:
             `tuple`: Two item tuple containing the API Key and the Secret Key
         """
-        api_key = os.environ.get("DCC_API_KEY")
-        secret_key = os.environ.get("DCC_SECRET_KEY")
+        api_key = os.environ.get("IGVF_API_KEY")
+        secret_key = os.environ.get("IGVF_SECRET_KEY")
         return api_key, secret_key
 
     def _log_post(self, aliases, dcc_id):

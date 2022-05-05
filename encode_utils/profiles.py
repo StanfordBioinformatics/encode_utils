@@ -265,7 +265,7 @@ class Profiles:
                                 timeout=eu.TIMEOUT,
                                 headers=euu.REQUEST_HEADERS_JSON).json()
         # Remove the "private" profiles, since these have differing semantics.
-        private_profiles = [x for x in profiles if x.startswith("_")]  # i.e. _subtypes
+        private_profiles = [x for x in profiles if x.startswith("_") or x.startswith("Testing")]  # i.e. _subtypes
         for i in private_profiles:
             # _subtypes should be the only one
             profiles.pop(i)
@@ -274,7 +274,7 @@ class Profiles:
 
         profile_id_hash = {}  # Instead of name as key, profile ID is key.
         for schema in profiles.values():  # i.e. name=GeneticModification
-            profile_id = schema["id"].split("/")[-1].split(".json")[0]
+            profile_id = schema["$id"].split("/")[-1].split(".json")[0]
             profile_id_hash[profile_id] = EncodeSchema(profile_id, schema)
         return profile_id_hash
 
