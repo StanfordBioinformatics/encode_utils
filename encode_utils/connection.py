@@ -1078,15 +1078,15 @@ class Connection:
         # Validate the payload against the schema
         ### This doesn't work as locally I can't use jsonschema to validate a profile with
         ### custom objects specified in the value of a linkTo property.
-        #self.debug_logger.debug("Validating the payload against the schema")
-        #validation_error = euu.err_context(payload=payload, schema=self.profiles.get_profile_from_id(profile_id))
-        #if validation_error:
-        #    self.log_error("Invalid schema instance of the {} profile.".format(profile_id))
-        #    self.debug_logger.debug("Payload is: {}".format(euu.print_format_dict(payload)))
-        #    self.log_error(validation_error[0]) # The top-level validation message
-        #    if validation_error[1]: # The validation context can be empty
-        #        self.debug_logger.debug(euu.print_format_dict(validation_error[1]))
-        #    raise Exception(euu.print_format_dict(validation_error[0]))
+        self.debug_logger.debug("Validating the payload against the schema")
+        validation_error = euu.err_context(payload=payload, schema=self.profiles.get_profile_from_id(profile.name).schema)
+        if validation_error:
+           self.log_error("Invalid schema instance of the {} profile.".format(profile.name))
+           self.debug_logger.debug("Payload is: {}".format(euu.print_format_dict(payload)))
+           self.log_error(validation_error[0]) # The top-level validation message
+           if validation_error[1]: # The validation context can be empty
+               self.debug_logger.debug(euu.print_format_dict(validation_error[1]))
+           raise Exception(euu.print_format_dict(validation_error[0]))
 
         self.debug_logger.debug(
             (
