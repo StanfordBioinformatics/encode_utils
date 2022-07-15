@@ -22,9 +22,9 @@ import subprocess
 
 import exifread
 
-import encode_utils as eu
-import encode_utils.aws_storage
-import encode_utils.gc_storage
+import igvf_utils as eu
+import igvf_utils.aws_storage
+import igvf_utils.gc_storage
 
 
 #: Stores the HTTP headers to indicate JSON content in a request.
@@ -167,14 +167,14 @@ def url_join(parts=[]):
 
 def get_record_id(rec):
     """
-    Extracts the most suitable identifier from a JSON-serialized record on the ENCODE Portal.
+    Extracts the most suitable identifier from a JSON-serialized record on the IGVF Portal.
     This is useful, for example, for other applications that need to store identifiers of specific 
     records on the Portal. The identifier chosen is determined to be the 'accession' if that 
     property is present, otherwise it's the first alias of the 'aliases' property is present, 
     otherwise its the value of the 'uuid' property.
 
     Args:
-        rec: `dict`. The JSON-serialization of a record on the ENCODE Portal.
+        rec: `dict`. The JSON-serialization of a record on the IGVF Portal.
 
     Returns:
         `str`: The extracted record identifier.
@@ -188,7 +188,7 @@ def get_record_id(rec):
         return rec["aliases"][0]
     elif "uuid" in rec:
         return rec["uuid"]
-    raise Exception("Could not extract an uptream identifier for ENCODE record '{}'.".format(rec))
+    raise Exception("Could not extract an uptream identifier for IGVF record '{}'.".format(rec))
 
 def err_context(payload, schema):
     """
@@ -233,9 +233,9 @@ def calculate_md5sum(file_path):
         `FileNotFoundError`: The given file_path does not exist. 
     """
     if file_path.startswith("s3:"):
-        return encode_utils.aws_storage.S3Object(s3_uri=file_path).md5sum()
+        return igvf_utils.aws_storage.S3Object(s3_uri=file_path).md5sum()
     elif file_path.startswith("gs:"):
-        return encode_utils.gc_storage.GSFile(name=file_path).md5sum
+        return igvf_utils.gc_storage.GSFile(name=file_path).md5sum
     m = hashlib.md5()
     # Assume local file
     if not os.path.exists(file_path):
@@ -265,9 +265,9 @@ def calculate_file_size(file_path):
         `FileNotFoundError`: The given file_path does not exist. 
     """
     if file_path.startswith("s3:"):
-        return encode_utils.aws_storage.S3Object(s3_uri=file_path).size()
+        return igvf_utils.aws_storage.S3Object(s3_uri=file_path).size()
     elif file_path.startswith("gs:"):
-        return encode_utils.gc_storage.GSFile(name=file_path).size
+        return igvf_utils.gc_storage.GSFile(name=file_path).size
     if not os.path.exists(file_path):
         msg = "File path '{}' does not exist.".format(file_path)
         logging.error(msg)

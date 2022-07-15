@@ -75,7 +75,7 @@ class GSFile(File):
     def md5sum(self) -> str:
         """
         Returns md5sum of the file in hex. Need to wrap around gcloud API's md5sums,
-        which are returned as base64, to match ENCODE portal md5sums.
+        which are returned as base64, to match IGVF portal md5sums.
         """
         return self.b64_to_hex(self.blob.md5_hash)
 

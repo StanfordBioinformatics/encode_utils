@@ -13,4 +13,4 @@ dcc_login_parser.add_argument(
     "-m",
     "--dcc-mode",
     help="""
-    The ENCODE Portal site ('prod' or 'dev', or an explicit host name, i.e. 'demo.encodedcc.org') to connect to.""")
+    The IGVF Portal site ('prod' or 'dev', or an explicit host name, i.e. 'demo.encodedcc.org') to connect to.""")

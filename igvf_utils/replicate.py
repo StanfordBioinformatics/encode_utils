@@ -4,7 +4,7 @@ class ExpReplicates():
     def __init__(self, conn, experiment_id):
         """
         Args:
-            conn: `encode_utils.connection.Connection` instance.
+            conn: `igvf_utils.connection.Connection` instance.
             experiment_id: `str`. An identifier for an experiment record on the ENCODE Portal.
         """
         self.conn = conn

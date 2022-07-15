@@ -18,9 +18,9 @@ import urllib
 import boto3
 
 # inhouse libraries
-import encode_utils.transfer_to_gcp
-import encode_utils as eu
-from encode_utils.exceptions import (
+import igvf_utils.transfer_to_gcp
+import igvf_utils as eu
+from igvf_utils.exceptions import (
     AwardPropertyMissing,
     FileUploadFailed,
     LabPropertyMissing,
@@ -28,9 +28,9 @@ from encode_utils.exceptions import (
     ProfileNotSpecified,
     RecordIdNotPresent,
 )
-from encode_utils.profiles import Profiles
-import encode_utils.utils as euu
-import encode_utils.gc_storage
+from igvf_utils.profiles import Profiles
+import igvf_utils.utils as euu
+import igvf_utils.gc_storage
 
 # EU-21 add support for attachment in autosql file type
 mimetypes.add_type('text/autosql', '.as')
@@ -49,7 +49,7 @@ class Connection:
     """Handles communication with the Portal regarding data submission and retrieval.
 
     For data submission or modification, and working with non-released datasets, you must have
-    the environment variables `DCC_API_KEY` and `DCC_SECRET_KEY` set. Check with your DCC data wrangler
+    the environment variables `IGVF_API_KEY` and `IGVF_SECRET_KEY` set. Check with your DCC data wrangler
     if you haven't been assigned these keys.
 
     There are three log files opened in append mode in the directory specified by ``connection.LOG_DIR`` that
@@ -69,10 +69,10 @@ class Connection:
        used.
     """
 
-    #: Identifies the name of the key in the payload that stores a valid ENCODE-assigned
+    #: Identifies the name of the key in the payload that stores a valid IGVF-assigned
     #: identifier for a record, such as alias, accession, uuid, md5sum, ... depending on
     #: the object being submitted.
-    #: This is not a valid property of any ENCODE object schema, and is used in the ``patch()``
+    #: This is not a valid property of any IGVF object schema, and is used in the ``patch()``
     #: instance method to designate the record to update.
     ENCID_KEY = "_enc_id"
 
@@ -87,7 +87,7 @@ class Connection:
 
     def __init__(self, dcc_mode=None, dry_run=False, submission=False, no_log_file=False):
 
-        #: A reference to the `debug` logging instance that was created earlier in ``encode_utils.debug_logger``.
+        #: A reference to the `debug` logging instance that was created earlier in ``igvf_utils.debug_logger``.
         #: This class adds a file handler, such that all messages sent to it are logged to this
         #: file in addition to STDOUT.
         self.debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME)
@@ -105,7 +105,7 @@ class Connection:
         self._dcc_mode = dcc_mode
         self._profiles = None
 
-        #: Set to True to prevent any server-side changes on the ENCODE Portal, i.e. PUT, POST,
+        #: Set to True to prevent any server-side changes on the IGVF Portal, i.e. PUT, POST,
         #: PATCH, DELETE requests will not be sent to the Portal. After-POST and after-PATCH
         #: hooks (see the instance method :meth:`after_submit_hooks`) will not be run either in
         #: this case. You can turn off this dry-run feature by calling the instance method
@@ -238,7 +238,7 @@ class Connection:
     def auth(self):
         """
         Sets the API and secret keys to use when authenticating with the DCC servers.
-        These are determined from the values of the `DCC_API_KEY` and `DCC_SECRET_KEY`
+        These are determined from the values of the `IGVF_API_KEY` and `IGVF_SECRET_KEY`
         environment variables via the ``_get_api_keys_from_env()`` private instance
         method.
         """
@@ -255,8 +255,8 @@ class Connection:
 
     def _get_api_keys_from_env(self):
         """
-        Retrieves the API key and secret key based on the environment variables `DCC_API_KEY` and
-        `DCC_SECRET_KEY`.
+        Retrieves the API key and secret key based on the environment variables `IGVF_API_KEY` and
+        `IGVF_SECRET_KEY`.
 
         Returns:
             `tuple`: Two item tuple containing the API Key and the Secret Key
@@ -280,7 +280,7 @@ class Connection:
         Args:
             aliases: `list`. The value of the 'aliases' key in the payload for the record that
                 was POSTED.
-            dcc_id: `str`. An ENCODE-generated identifier on the ENCODE Portal for the new record
+            dcc_id: `str`. An IGVF-generated identifier on the IGVF Portal for the new record
                 that was POSTED, i.e. accession, uuid, md5sum.
         """
         try:
@@ -309,7 +309,7 @@ class Connection:
     def check_dry_run(self):
         """
         Checks if the dry-run feature is enabled, and if so, logs the fact. This is mainly meant to
-        be called by other methods that are designed to make modifications on the ENCODE Portal.
+        be called by other methods that are designed to make modifications on the IGVF Portal.
 
         Returns:
             `True`: The dry-run feature is enabled.
@@ -383,10 +383,10 @@ class Connection:
 
     def get_aliases(self, dcc_id, strip_alias_prefix=False):
         """
-        Given an ENCODE identifier for an object, performs a GET request and extracts the aliases.
+        Given an IGVF identifier for an object, performs a GET request and extracts the aliases.
 
         Args:
-            dcc_id: `str`. The ENCODE ID for a given object, i.e ENCSR999EHG.
+            dcc_id: `str`. The IGVF ID for a given object, i.e ENCSR999EHG.
             strip_alias_prefix: `bool`. `True` means to remove the alias prefix if all return aliases.
 
         Returns:
@@ -441,7 +441,7 @@ class Connection:
         Args:
             search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...]``.
                 To support a != style query, append "!" to the key name.
-            url: `str`. A URL used to search for records interactively in the ENCODE Portal. The
+            url: `str`. A URL used to search for records interactively in the IGVF Portal. The
                 query will be extracted from the URL.
             limit: `int`. The number of search results to send from the server. The default means
                 to return all results.
@@ -507,7 +507,7 @@ class Connection:
         """
         Useful to call when doing a POST (and ``self.post()`` does call this). Ensures that the profile key
         identified by ``self.PROFILE_KEY`` exists in the passed-in payload and that the value is
-        a recognized ENCODE object profile (schema) identifier. Alternatively, the user can set the profile in
+        a recognized IGVF object profile (schema) identifier. Alternatively, the user can set the profile in
         the more convoluted `@id` property.
 
         Args:
@@ -517,10 +517,10 @@ class Connection:
             `str`: The ID of the profile if all validations pass, otherwise.
 
         Raises:
-            encode_utils.exceptions.ProfileNotSpecified: Both keys ``self.PROFILE_KEY`` and `@id` are
+            igvf_utils.exceptions.ProfileNotSpecified: Both keys ``self.PROFILE_KEY`` and `@id` are
               missing in the payload.
-            encode_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
-                `encode_utils.profiles.Profile`.
+            igvf_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
+                `igvf_utils.profiles.Profile`.
         """
 
         profile_id = payload.get(self.PROFILE_KEY)
@@ -563,7 +563,7 @@ class Connection:
         if not lookup_ids:
             raise RecordIdNotPresent(
                 ("The payload does not contain a recognized identifier for traceability. For example,"
-                 " you need to set the 'aliases' key, or specify an ENCODE assigned identifier in the"
+                 " you need to set the 'aliases' key, or specify an IGVF assigned identifier in the"
                  " non-schematic key {}.".format(self.ENCID_KEY)))
 
         return lookup_ids
@@ -634,7 +634,7 @@ class Connection:
 
         if requests.codes.FORBIDDEN in status_codes:
             raise Exception(
-                "Access to ENCODE record {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
+                "Access to IGVF record {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
         elif requests.codes.NOT_FOUND in status_codes:
             self.debug_logger.debug("NOT FOUND")
             if ignore404:
@@ -875,8 +875,8 @@ class Connection:
             `dict`: The potentially modified payload.
 
         Raises:
-            encode_utils.utils.MD5SumError: Perculated through the function
-              `encode_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
+            igvf_utils.utils.MD5SumError: Perculated through the function
+              `igvf_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
         """
         profile_id = payload[self.PROFILE_KEY]
         if profile_id != self.profiles.FILE_PROFILE_ID:
@@ -976,7 +976,7 @@ class Connection:
         """POST a record to the Portal.
 
         Requires that you include in the payload the non-schematic key ``self.PROFILE_KEY`` to
-        designate the name of the ENCODE object profile that you are submitting to, or the
+        designate the name of the IGVF object profile that you are submitting to, or the
         actual `@id` property itself.
 
         If the `lab` property isn't present in the payload, then the default will be set to the value
@@ -1016,11 +1016,11 @@ class Connection:
             status code on POST of the initial payload.
 
         Raises:
-            encode_utils.exceptions.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
+            igvf_utils.exceptions.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
                 defualt set by the environment variable `DCC_AWARD`.
-            encode_utils.exceptions.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
+            igvf_utils.exceptions.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
                 default set by the environment variable `DCC_LAB`.
-            encode_utils.exceptions.MissingAlias: The argument 'require_aliases' is set to True and
+            igvf_utils.exceptions.MissingAlias: The argument 'require_aliases' is set to True and
                 the 'aliases' property is missing in the payload or is empty.
             requests.exceptions.HTTPError: The return status is not ok.
 
@@ -1073,7 +1073,7 @@ class Connection:
                 raise MissingAlias(
                     ("Missing property '{}' in payload {}. This is required by default for the profiles"
                      " that include this property, and can be disabled by setting the `require_aliases`"
-                     " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
+                     " argument to False in the call to this method, being `igvf_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
 
         # Validate the payload against the schema
         ### This doesn't work as locally I can't use jsonschema to validate a profile with
@@ -1699,15 +1699,15 @@ class Connection:
 
     def gcp_transfer_from_aws(self, file_ids, gcp_bucket, gcp_project, description="", aws_creds=()):
         """
-        Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google STS.
+        Copies one or more IGVF files from AWS S3 storage to GCP storage by using the Google STS.
         This is similar to the :meth:`gcp_transfer_urllist` method - the difference is that S3 object
         paths are copied directly instead of using public HTTPS URIs, and AWS keys are required here. 
 
-        See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
+        See :func:`igvf_utils.transfer_to_gcp.Transfer` for full documentation.
 
         Args:
-            file_ids: `list`. One or more ENCODE files to transfer. They can be any valid ENCODE File
-                object identifier. Don't mix ENCODE files from across buckets.
+            file_ids: `list`. One or more IGVF files to transfer. They can be any valid IGVF File
+                object identifier. Don't mix IGVF files from across buckets.
             gcp_bucket: `str`. The name of the GCP bucket.
             gcp_project: `str`. The GCP project that is associated with gcp_bucket. Can be given
                 in either integer form  or the user-friendly name form (i.e. sigma-night-206802)
@@ -1724,7 +1724,7 @@ class Connection:
         s3_paths = []
         for i in file_ids:
             s3_paths.append(self.s3_object_path(rec_id=i))
-        t = encode_utils.transfer_to_gcp.Transfer(gcp_project=gcp_project, aws_creds=aws_creds)
+        t = igvf_utils.transfer_to_gcp.Transfer(gcp_project=gcp_project, aws_creds=aws_creds)
         # Figure out the s3 bucket by looking at the first s3 object. All specified s3 files should
         # from the same bucket.
         s3_bucket = s3_paths[0].split("/")[2]
@@ -1774,7 +1774,7 @@ class Connection:
     def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
         Uploads a file to the Portal for the indicated file record.  The file to upload can be
-        specified by setting the `file_path` parameter, or by using the value of the ENCODE file 
+        specified by setting the `file_path` parameter, or by using the value of the IGVF file 
         profile's `submitted_file_name` property of the given file object represented by the 
         `file_id` parameter. The file to upload can be from any of the following sources:
 
@@ -1788,7 +1788,7 @@ class Connection:
         upload command.
 
         Args:
-            file_id: `str`. An identifier of a `file` record on the ENCODE Portal.
+            file_id: `str`. An identifier of a `file` record on the IGVF Portal.
             file_path: `str`. The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt),
               or a Google Storage object (i.e. gs://mybucket/test.txt).
               If not set, defaults to `None` in which case the local file path will be extracted from the
@@ -1802,9 +1802,9 @@ class Connection:
               uploading a new file. 
 
         Raises:
-            encode_utils.exceptions.FileUploadFailed: The return code of the AWS upload command was non-zero.
+            igvf_utils.exceptions.FileUploadFailed: The return code of the AWS upload command was non-zero.
 
-        .. _`wiki documentation`: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration#aws-keys
+        .. _`wiki documentation`: https://github.com/StanfordBioinformatics/igvf_utils/wiki/Configuration#aws-keys
         """
         self.debug_logger.debug("\nIN upload_file()\n")
         #upload_credentials = self.get_upload_credentials(file_id) # Don't use this - they may have expired.
@@ -1828,7 +1828,7 @@ class Connection:
 
         cmd_args = "{file_path} {upload_url}".format(file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         if file_path.startswith("gs://"):
-            gs_file = encode_utils.gc_storage.GSFile(name=file_path)
+            gs_file = igvf_utils.gc_storage.GSFile(name=file_path)
             s3 = boto3.client(
                 "s3",
                 aws_access_key_id=aws_creds["AWS_ACCESS_KEY_ID"],
@@ -1941,7 +1941,7 @@ class Connection:
 
     def download(self, rec_id, get_stream=False, directory=None):
         """
-        Downloads the contents of the specified file or document object from the ENCODE Portal to
+        Downloads the contents of the specified file or document object from the IGVF Portal to
         either the calling directory or the indicated download directory. The downloaded file will
         be named as it is on the Portal.
 
@@ -2006,7 +2006,7 @@ class Connection:
 
     def s3_object_path(self, rec_id, url=False):
         """
-        Given an ENCODE File object's id (such as accession, uuid, alias), returns the full S3 object
+        Given an IGVF File object's id (such as accession, uuid, alias), returns the full S3 object
         URI, or HTTP/HTTPS URI if url=True. 
 
         Args:

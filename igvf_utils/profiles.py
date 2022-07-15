@@ -15,8 +15,8 @@ import inflection
 import logging
 import requests
 
-import encode_utils as eu
-import encode_utils.utils as euu
+import igvf_utils as eu
+import igvf_utils.utils as euu
 
 
 #: A debug ``logging`` instance.
@@ -219,7 +219,7 @@ class Profiles:
     methods for working with a given profile.
 
     A defining purpose of this class is to validate the profile ID specified in a POST
-    payload passed to ``encode_utils.connection.Connection.post()``.  This class is used
+    payload passed to ``igvf_utils.connection.Connection.post()``.  This class is used
     to ensure that the profile specified there is a known profile on the Portal.
 
     Args:

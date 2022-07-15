@@ -54,11 +54,11 @@ class S3Upload:
 class S3Object():
     """
     Represents an object in a S3 bucket. Internally used for calculating the md5sum and file size 
-    when submitting files to the ENCODE Portal.
+    when submitting files to the IGVF Portal.
 
     You must set the appropriate AWS keys as documented in the wiki_.
 
-    .. _wiki: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration#aws-keys
+    .. _wiki: https://github.com/StanfordBioinformatics/igvf_utils/wiki/Configuration#aws-keys
     """
     def __init__(self, bucket_name="", key="", s3_uri=""):
         """
