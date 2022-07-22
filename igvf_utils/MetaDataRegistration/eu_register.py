@@ -19,7 +19,7 @@ will be uploaded to AWS S3. In order for this to work, you must set the `submitt
 property to the full, local path to your file to upload. Alternatively, you can set
 `submitted_file_name` to and existing S3 object, i.e. s3://mybucket/reads.fastq.
 
-Note that there is a special 'trick' defined in the ``encode_utils.connection.Connection()``
+Note that there is a special 'trick' defined in the ``igvf_utils.connection.Connection()``
 class that can be taken advantage of to simplify submission under certain profiles.
 It concerns the `attachment` property in any profile that employs it, such as the `document`
 profile.  The trick works as follows: instead of constructing the `attachment` propery object
@@ -39,10 +39,10 @@ import re
 import sys
 import requests
 
-import encode_utils.utils as euu
-import encode_utils.connection as euc
-from encode_utils.parent_argparser import dcc_login_parser
-from encode_utils.profiles import Profiles
+import igvf_utils.utils as euu
+import igvf_utils.connection as euc
+from igvf_utils.parent_argparser import dcc_login_parser
+from igvf_utils.profiles import Profiles
 
 # Check that Python3 is being used
 v = sys.version_info
