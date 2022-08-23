@@ -57,7 +57,7 @@ setup(
   packages=find_packages(),
   package_data={"igvf_utils": [os.path.join("tests", "data", "*")]},
   project_urls={
-      "Read the Docs": "https://encode-utils.readthedocs.io/en/latest",
+      "Read the Docs": "http://igvf-utils.readthedocs.io/",
   },
   scripts=scripts,
   url="https://github.com/IGVF-DACC/igvf_utils",  # home page

@@ -157,7 +157,7 @@ def main():
         parser.error("Properties to remove were specified, but --rm-patch flag was not set.")
 
     profile_id = args.profile_id
-    dcc_mode = args.dcc_mode
+    dcc_mode = args.mode
     dry_run = args.dry_run
     no_aliases = args.no_aliases
     overwrite_array_values = args.overwrite_array_values

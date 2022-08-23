@@ -5,7 +5,7 @@ Tools that are useful to any IGVF Consortium submitting group, as well as the ge
 
 See the [wiki](https://github.com/IGVF-DACC/igvf_utils/wiki) to get started. 
 
-API and script documentation are available on [Read the Docs](http://encode-utils.readthedocs.io/en/latest/).
+API and script documentation are available on [Read the Docs](http://igvf-utils.readthedocs.io/).
 
 
 # Latest news

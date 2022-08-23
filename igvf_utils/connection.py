@@ -49,7 +49,7 @@ class Connection:
     """Handles communication with the Portal regarding data submission and retrieval.
 
     For data submission or modification, and working with non-released datasets, you must have
-    the environment variables `IGVF_API_KEY` and `IGVF_SECRET_KEY` set. Check with your DCC data wrangler
+    the environment variables `IGVF_API_KEY` and `IGVF_SECRET_KEY` set. Check with your DACC data wrangler
     if you haven't been assigned these keys.
 
     There are three log files opened in append mode in the directory specified by ``connection.LOG_DIR`` that
@@ -339,14 +339,14 @@ class Connection:
     def add_alias_prefix(self, aliases, prefix=False):
         """
         Given a list of aliases, adds the lab prefix to each one that doesn't yet have a prefix set.
-        The lab prefix is taken as the passed-in `prefix`, otherwise, it defaults to the `DCC_LAB`
-        environment variable, and it must be a value assigned by the DCC, i.e. "michael-snyder"
-        for the Snyder Production Center. The DCC requires that aliases be prefixed in this manner. 
+        The lab prefix is taken as the passed-in `prefix`, otherwise, it defaults to the `IGVF_LAB`
+        environment variable, and it must be a value assigned by the DACC, i.e. "michael-snyder"
+        for the Snyder Production Center. The DACC requires that aliases be prefixed in this manner. 
     
         Args:
             aliases: `list` of aliases.
-            prefix: `str`. The DCC assigned lab prefix to use. If not specified, then the default
-                is the value of the DCC_LAB environment variable.
+            prefix: `str`. The DACC assigned lab prefix to use. If not specified, then the default
+                is the value of the IGVF_LAB environment variable.
     
         Returns:
             `list`.
@@ -375,7 +375,7 @@ class Connection:
         for i in aliases:
             if ":" not in i:
                 if not prefix:
-                    raise Exception("Can't add alias prefix to aliases as it isn't specified; please set DCC_LAB environment variable to the lab identifier assigned to you by the DCC, i.e. michael-snyder for the Snyder Production Center.".format(prefix))
+                    raise Exception("Can't add alias prefix to aliases as it isn't specified; please set IGVF_LAB environment variable to the lab identifier assigned to you by the DCC, i.e. michael-snyder for the Snyder Production Center.".format(prefix))
                 else:
                     i = prefix + ":" + i
             res.append(i)
@@ -435,7 +435,7 @@ class Connection:
         values for both arguments in which case the query parameters specified in `search_args` will
         be added to the query parameters given in the URL.
 
-        If ``self.submission == True``, then the query will be searced with "datastore=database",
+        If ``self.submission == True``, then the query will be searched with "datastore=database",
         unless the 'database' query parameter is already set. 
 
         Args:
@@ -979,8 +979,8 @@ class Connection:
         actual `@id` property itself.
 
         If the `lab` property isn't present in the payload, then the default will be set to the value
-        of the `DCC_LAB` environment variable. Similarly, if the `award` property isn't present, then the
-        default will be set to the value of the `DCC_AWARD` environment variable.
+        of the `IGVF_LAB` environment variable. Similarly, if the `award` property isn't present, then the
+        default will be set to the value of the `IGVF_AWARD` environment variable.
 
         Before the POST is attempted, any pre-POST hooks are fist called; see the method
         ``self.before_submit_hooks``).  After a successfuly POST, any after-POST submit hooks are
@@ -988,7 +988,7 @@ class Connection:
 
         Args:
             payload: `dict`. The data to submit.
-            require_aliases: `bool`.  `True` means that the 'aliases' property is to be required in
+            require_aliases: `bool`. `True` means that the 'aliases' property is to be required in
                  `payload`. This is the default and it is highly recommended not to change this
                  because it'll be easy to create duplicates on the server if accidentally POSTING
                  the same payload again.  For example, you can easily create the same biosample
@@ -1016,9 +1016,9 @@ class Connection:
 
         Raises:
             igvf_utils.exceptions.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
-                defualt set by the environment variable `DCC_AWARD`.
+                default set by the environment variable `IGVF_AWARD`.
             igvf_utils.exceptions.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
-                default set by the environment variable `DCC_LAB`.
+                default set by the environment variable `IGVF_LAB`.
             igvf_utils.exceptions.MissingAlias: The argument 'require_aliases' is set to True and
                 the 'aliases' property is missing in the payload or is empty.
             requests.exceptions.HTTPError: The return status is not ok.
@@ -1089,7 +1089,7 @@ class Connection:
 
         self.debug_logger.debug(
             (
-                "<<<<<< POST {} record {alias} To DCC with URL {url} and this payload:"
+                "<<<<<< POST {} record {alias} To IGVF database with URL {url} and this payload:"
                 "\n\n{payload}\n\n"
             ).format(
                 profile.name,
@@ -1235,7 +1235,7 @@ class Connection:
 
         url = euu.url_join([self.dcc_mode.url, igvf_id.lstrip("/")])
         self.debug_logger.debug(
-            ("<<<<<< PATCHING {igvf_id} To DCC with URL"
+            ("<<<<<< PATCHING {igvf_id} To IGVF database with URL"
              " {url} and this payload:\n\n{payload}\n\n").format(
                  igvf_id=igvf_id, url=url, payload=euu.print_format_dict(payload)))
 
@@ -1260,7 +1260,7 @@ class Connection:
 
         message = "Failed to PATCH {}".format(igvf_id)
         self.log_error(message)
-        self.debug_logger.debug("<<<<<< DCC PATCH RESPONSE: ")
+        self.debug_logger.debug("<<<<<< PATCH RESPONSE: ")
         self.debug_logger.debug(euu.print_format_dict(response_json))
         response.raise_for_status()
 
@@ -1305,7 +1305,11 @@ class Connection:
                 editable_json.pop(prop.name)
 
         url = euu.url_join([self.dcc_mode.url, rec_id])
-        self.debug_logger.debug("Attempting to remove properties {} from record '{}' by sending a PUT request with payload {}.".format(props, rec_id, euu.print_format_dict(editable_json)))
+        self.debug_logger.debug(
+            "Attempting to remove properties {} from record '{}' by "
+            "sending a PUT request with payload {}.".format(
+                props, rec_id, euu.print_format_dict(editable_json))
+            )
         if self.check_dry_run():
             return
         response = requests.put(
@@ -1525,7 +1529,7 @@ class Connection:
 
     def get_fastqfile_replicate_hash(self, exp_id):
         """
-        Given a DCC experiment ID, gets its JSON representation from the Portal and looks in the
+        Given an IGVF experiment ID, gets its JSON representation from the Portal and looks in the
         `original` property to find FASTQ file objects and creates a `dict` organized by replicate
         numbers. Keying through the `dict` by replicate numbers, you can get to a particular file
         object's JSON serialization.
@@ -1772,7 +1776,7 @@ class Connection:
 
     def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
-        Uploads a file to the Portal for the indicated file record.  The file to upload can be
+        Uploads a file to the Portal for the indicated file record. The file to upload can be
         specified by setting the `file_path` parameter, or by using the value of the IGVF file 
         profile's `submitted_file_name` property of the given file object represented by the 
         `file_id` parameter. The file to upload can be from any of the following sources:
@@ -1906,7 +1910,7 @@ class Connection:
         """POSTS a document to the Portal.
 
         The alias for the document will be the lab prefix plus the file name. The lab prefix is taken
-        as the value of the `DCC_LAB` environment variable, i.e. 'michael-snyder'.
+        as the value of the `IGVF_LAB` environment variable, i.e. 'michael-snyder'.
 
         Args:
             document_type: `str`. For possible values, see
@@ -1944,7 +1948,7 @@ class Connection:
         either the calling directory or the indicated download directory. The downloaded file will
         be named as it is on the Portal.
 
-        Alternativly, you can get a reference to the response object by setting the `get_stream`
+        Alternatively, you can get a reference to the response object by setting the `get_stream`
         parameter to True. Useful if you want to inspect the response, i.e. see if there was a 
         redirect and where to, or download the byte stream in a customized manner.
 
@@ -2009,7 +2013,7 @@ class Connection:
         URI, or HTTP/HTTPS URI if url=True. 
 
         Args:
-            rec_id: `str`. A DCC object identifier of the record to link the document to.
+            rec_id: `str`. An IGVF object identifier of the record to link the document to.
             url: `bool`. True means to return the HTTP/HTTPS URI of the file rather than the S3 URI.
                  Useful if this is a released file since you can download via the URL.
         """
@@ -2054,7 +2058,7 @@ class Connection:
         identifies a biosample_type. 
 
         Args:
-            classification: `str`. A value for the 'classificaiton' property of the biosample_ontology
+            classification: `str`. A value for the 'classification' property of the biosample_ontology
                 profile.
             term_id: `str`. A value for the 'term_id' property of the biosample_ontology profile. 
             term_name: `str`. A value for the 'term_name' property of the biosample_ontology profile.
