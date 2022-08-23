@@ -8,12 +8,12 @@
 ###
 
 """
-Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google Storage
-Transfer Service. See :class:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
+Copies one or more IGVF files from AWS S3 storage to GCP storage by using the Google Storage
+Transfer Service. See :class:`igvf_utils.transfer_to_gcp.Transfer` for full documentation.
 
 Note: Currently, only priviledged users with appropriate DCC API keys will be able to make
 use of this script because the Google STS requires that the source buckets be publicly discoverable.
-Sice the encode bucket policies deny the action s3:GetBucketLocation on the public principal. 
+Since the IGVF bucket policies deny the action s3:GetBucketLocation on the public principal. 
 Non-priviledged users may find the alternative script `eu_create_gcp_url_list.py` to be a solution.
 """
 
@@ -22,8 +22,8 @@ import datetime
 import json
 import os
 
-import encode_utils.connection as euc
-from encode_utils.parent_argparser import dcc_login_parser
+import igvf_utils.connection as euc
+from igvf_utils.parent_argparser import dcc_login_parser
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -32,7 +32,7 @@ def get_parser():
         formatter_class=argparse.RawTextHelpFormatter)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-f", "--file-ids", nargs="+", help="""
-      An alternative to --infile, one or more ENCODE file identifiers. Don't mix ENCODE files 
+      An alternative to --infile, one or more IGVF file identifiers. Don't mix IGVF files 
       from across buckets.""")
     group.add_argument("-i", "--infile", help="""
       An alternative to --file-ids, the path to a file containing one or more file identifiers, 

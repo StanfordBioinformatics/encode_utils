@@ -14,16 +14,16 @@ import json
 import os
 import unittest
 
-import encode_utils.tests
-from encode_utils import utils
+import igvf_utils.tests
+from igvf_utils import utils
 
-DATA_DIR = os.path.join(encode_utils.tests.DATA_DIR)
+DATA_DIR = os.path.join(igvf_utils.tests.DATA_DIR)
 REGISTER_DIR = os.path.join(DATA_DIR, "register")
 
 
 class TestRegister(unittest.TestCase):
     """
-    Tests functions in the ``encode_utils.utils`` module.
+    Tests functions in the ``igvf_utils.utils`` module.
     """
 
     def setUp(self):

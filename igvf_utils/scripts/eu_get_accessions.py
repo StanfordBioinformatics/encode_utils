@@ -9,18 +9,18 @@
 ###
 
 """
-Use this script when there are records on the ENCODE Portal for which you know their aliases, but
+Use this script when there are records on the IGVF Portal for which you know their aliases, but
 want to retreive their DCC accessions. This will only work if the record aliases you provided are
-registered with the records on the ENCODE Portal. Note that if the particular DCC profile at hand
+registered with the records on the IGVF Portal. Note that if the particular DCC profile at hand
 doesn't support the accession property, then the uuid will be returned. 
 """
 
 import argparse
-import encode_utils
-from encode_utils.connection import Connection
-from encode_utils.parent_argparser import dcc_login_parser
-# dcc_login_parser  contains the arguments needed for logging in to the
-# ENCODE Portal, including which env.
+import igvf_utils
+from igvf_utils.connection import Connection
+from igvf_utils.parent_argparser import dcc_login_parser
+# dcc_login_parser contains the arguments needed for logging in to the
+# IGVF Portal, including which env.
 
 
 def get_parser():
@@ -54,7 +54,7 @@ def main():
     dcc_mode = args.dcc_mode
     submitter_lab = args.submitter_lab
     if not submitter_lab:
-        submitter_lab = encode_utils.LAB_PREFIX.rstrip(":")
+        submitter_lab = igvf_utils.LAB_PREFIX.rstrip(":")
 
     conn = Connection(dcc_mode=dcc_mode)
 

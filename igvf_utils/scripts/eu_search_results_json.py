@@ -8,7 +8,7 @@
 ###
 
 """
-Provided a search URL that is specific to the ENCODE Portal, saves the search results as JSON
+Provided a search URL that is specific to the IGVF Portal, saves the search results as JSON
 in the specified output file. The search results are stored as a list of JSON objects.
 
 |
@@ -19,8 +19,8 @@ import json
 import os
 import sys
 
-import encode_utils.connection as euc
-from encode_utils.parent_argparser import dcc_login_parser
+import igvf_utils.connection as euc
+from igvf_utils.parent_argparser import dcc_login_parser
 
 # Check that Python3 is being used
 v = sys.version_info
@@ -33,7 +33,7 @@ def get_parser():
         parents=[dcc_login_parser],
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-l", "--limit", type=int, help="The number of search results to get back. Leave blank if you want all.") 
-    parser.add_argument("-u", "--url", required=True, help="The ENCODE Portal URL that you use for searching. Wrap this in quotes to make sure its all treated as one argument.")
+    parser.add_argument("-u", "--url", required=True, help="The IGVF Portal URL that you use for searching. Wrap this in quotes to make sure its all treated as one argument.")
     parser.add_argument("-o", "--outfile", required=True, help="The JSON output file containing the search results.")
     return parser
 

@@ -69,8 +69,8 @@ DCC_PROD_MODE = "prod"
 #: A hash of known hosts one can connect to, where the key can be passed to the `dcc_mode` argument
 #: when instantiating the `connection.Connection` class.
 DCC_MODES = {
-    DCC_DEV_MODE: {"url": "https://test.encodedcc.org"},
-    DCC_PROD_MODE: {"url": "https://www.encodeproject.org"}
+    DCC_DEV_MODE: {"url": ""},
+    DCC_PROD_MODE: {"url": "https://igvfd-dev.demo.igvf.org/"}
 }
 
 ENCODE_PROD_S3BUCKET="encode-files"

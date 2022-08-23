@@ -29,8 +29,8 @@ import json
 import os
 import pdb
 
-import encode_utils.connection as euc
-from encode_utils.parent_argparser import dcc_login_parser
+import igvf_utils.connection as euc
+from igvf_utils.parent_argparser import dcc_login_parser
 
 def get_parser():
     parser = argparse.ArgumentParser(

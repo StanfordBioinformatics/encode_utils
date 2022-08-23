@@ -5,7 +5,7 @@ class ExpReplicates():
         """
         Args:
             conn: `igvf_utils.connection.Connection` instance.
-            experiment_id: `str`. An identifier for an experiment record on the ENCODE Portal.
+            experiment_id: `str`. An identifier for an experiment record on the IGVF Portal.
         """
         self.conn = conn
         exp = self.conn.get(rec_ids=experiment_id, ignore404=False)

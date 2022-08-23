@@ -1,18 +1,18 @@
-.. ENCODE Utils documentation master file, created by
+.. IGVF Utils documentation master file, created by
    sphinx-quickstart on Thu Jan 18 20:14:44 2018.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-ENCODE Utils package
+IGVF Utils package
 ========================================
 
 Installation_ and configuration_ instructions are provided on the project's `GitHub wiki`_.
 
-.. _installation: https://github.com/StanfordBioinformatics/encode_utils/wiki/Installation
+.. _installation: https://github.com/IGVF-DACC/igvf_utils/wiki/Installation
 
-.. _configuration: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration
+.. _configuration: https://github.com/IGVF-DACC/igvf_utils/wiki/Configuration
 
-.. _GitHub wiki: https://github.com/StanfordBioinformatics/encode_utils/wiki
+.. _GitHub wiki: https://github.com/IGVF-DACC/igvf_utils/wiki
 
 
 Examples
@@ -52,7 +52,7 @@ Client API Modules
 
    aws_storage
    connection
-   encode_utils
+   igvf_utils
    profiles 
    transfer_to_gcp 
    utils

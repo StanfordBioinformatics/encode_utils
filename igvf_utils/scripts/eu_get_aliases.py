@@ -12,10 +12,10 @@ Retrieves the aliases for the given set of DCC record identifiers.
 """
 
 import argparse
-from encode_utils.connection import Connection
-from encode_utils.parent_argparser import dcc_login_parser
-# dcc_login_parser  contains the arguments needed for logging in to the
-# ENCODE Portal, including which env.
+from igvf_utils.connection import Connection
+from igvf_utils.parent_argparser import dcc_login_parser
+# dcc_login_parser contains the arguments needed for logging in to the
+# IGVF Portal, including which env.
 
 
 def get_parser():
@@ -24,7 +24,7 @@ def get_parser():
         description=__doc__,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-i", "--infile", required=True, help="""
-    Input file containing ENCODE object identifiers (one per line), i.e. UUID, accession, or @id.
+    Input file containing IGVF object identifiers (one per line), i.e. UUID, accession, or @id.
     Empty lines and lines beginning with a '#' will be ignored.
   """)
 

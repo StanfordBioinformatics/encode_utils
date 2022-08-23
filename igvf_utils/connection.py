@@ -97,7 +97,7 @@ class Connection:
 
         #: An indication of which Portal instance to use. Set to 'prod' for the production Portal,
         #: and 'dev' for the development Portal. Alternatively, you can set an explicit host, such as
-        #: demo.encodedcc.org. Leaving the default of None means to use the value of the `DCC_MODE`
+        #: demo.igvf.org. Leaving the default of None means to use the value of the `DCC_MODE`
         #: environment variable.
         self.dcc_modes = DccModes()
         for name, host in eu.DCC_MODES.items():
@@ -180,7 +180,7 @@ class Connection:
             self.log_error(
                 (
                     "ERROR: The specified dcc_mode of '{}' is not valid. Should be one "
-                    "of '{}' or a valid demo.encodedcc.org hostname."
+                    "of '{}' or a valid demo.igvf.org hostname."
                 ).format(
                     self._dcc_mode,
                     list(eu.DCC_MODES.keys()),
@@ -594,8 +594,7 @@ class Connection:
                 a record's `@id` property.
             database: `bool`. If True, then search the database directly instead of the Elasticsearch.
                  indices. Always True when in submission mode (`self.submission` is True).
-            frame: `str`. A value for the frame query parameter, i.e. 'object', 'edit'. See
-                https://www.encodeproject.org/help/rest-api/ for details.
+            frame: `str`. A value for the frame query parameter, i.e. 'object', 'edit'.
             ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
                 Portal.  In this case, If set to `True`, then an empty `dict` will be returned.
                 If set to `False`, then an Exception will be raised.
@@ -1199,9 +1198,9 @@ class Connection:
         # tuples become arrays, ...
         payload = json.loads(json.dumps(payload))
         self.debug_logger.debug("\nIN patch()")
-        encode_id = payload[self.ENCID_KEY]
+        igvf_id = payload[self.ENCID_KEY]
         # Ensure that the record exists on the Portal:
-        rec_json = self.get(rec_ids=encode_id, frame="edit", ignore404=True)
+        rec_json = self.get(rec_ids=igvf_id, frame="edit", ignore404=True)
         if not rec_json:
             return {}
 
@@ -1234,11 +1233,11 @@ class Connection:
             # Some client software may add this key in; won't hurt to remove it.
             payload.pop(self.PROFILE_KEY)
 
-        url = euu.url_join([self.dcc_mode.url, encode_id.lstrip("/")])
+        url = euu.url_join([self.dcc_mode.url, igvf_id.lstrip("/")])
         self.debug_logger.debug(
-            ("<<<<<< PATCHING {encode_id} To DCC with URL"
+            ("<<<<<< PATCHING {igvf_id} To DCC with URL"
              " {url} and this payload:\n\n{payload}\n\n").format(
-                 encode_id=encode_id, url=url, payload=euu.print_format_dict(payload)))
+                 igvf_id=igvf_id, url=url, payload=euu.print_format_dict(payload)))
 
         if self.check_dry_run():
             return {}
@@ -1259,7 +1258,7 @@ class Connection:
             if not raise_403:
                 return rec_json
 
-        message = "Failed to PATCH {}".format(encode_id)
+        message = "Failed to PATCH {}".format(igvf_id)
         self.log_error(message)
         self.debug_logger.debug("<<<<<< DCC PATCH RESPONSE: ")
         self.debug_logger.debug(euu.print_format_dict(response_json))
@@ -1379,12 +1378,12 @@ class Connection:
         # tuples become arrays, ...
         patch = json.loads(json.dumps(patch))
         self.debug_logger.debug("\nIN remove_and_patch()")
-        encode_id = patch[self.ENCID_KEY]
-        rec_json = self.get(rec_ids=encode_id, frame="object", ignore404=True)
+        igvf_id = patch[self.ENCID_KEY]
+        rec_json = self.get(rec_ids=igvf_id, frame="object", ignore404=True)
         if not rec_json:  # Ensure that the record exists on the Portal:
             return {}
         profile = self.profiles.get_profile_from_id(rec_json["@id"])
-        payload = self.get(rec_ids=encode_id, frame="edit", ignore404=False)
+        payload = self.get(rec_ids=igvf_id, frame="edit", ignore404=False)
         for prop_name in props:
             prop = profile.get_property_from_name(prop_name)
             if prop.is_required:
@@ -1422,11 +1421,11 @@ class Connection:
         payload.pop(self.ENCID_KEY)
         payload.pop(self.PROFILE_KEY, None)
 
-        url = euu.url_join([self.dcc_mode.url, encode_id.lstrip("/")])
+        url = euu.url_join([self.dcc_mode.url, igvf_id.lstrip("/")])
         self.debug_logger.debug(
-            "<<<<<< PUTTING {encode_id} To DCC with URL"
+            "<<<<<< PUTTING {igvf_id} To DCC with URL"
             " {url} and this payload:\n\n{payload}\n\n".format(
-                encode_id=encode_id,
+                igvf_id=igvf_id,
                 url=url,
                 payload=euu.print_format_dict(payload)
             )
@@ -1457,7 +1456,7 @@ class Connection:
             if not raise_403:
                 return rec_json
 
-        message = "Failed to PUT {}".format(encode_id)
+        message = "Failed to PUT {}".format(igvf_id)
         self.log_error(message)
         self.debug_logger.debug("<<<<<< DCC PUT RESPONSE: ")
         self.debug_logger.debug(euu.print_format_dict(response_json))
@@ -1501,8 +1500,8 @@ class Connection:
         else:
             # PATCH
             if self.ENCID_KEY not in payload:
-                encode_id = aliases[0]
-                payload[self.ENCID_KEY] = encode_id
+                igvf_id = aliases[0]
+                payload[self.ENCID_KEY] = igvf_id
             return self.patch(
                 payload=payload, extend_array_values=extend_array_values, raise_403=raise_403)
 
@@ -1911,7 +1910,7 @@ class Connection:
 
         Args:
             document_type: `str`. For possible values, see
-              https://www.encodeproject.org/profiles/document.json. It appears that one should use
+              https://igvf-ui-dev.demo.igvf.org/profiles/document. It appears that one should use
               "data QA" for analysis results documents.
             description: `str`. The description for the document.
             document: `str`. Local file path to the document to be submitted.

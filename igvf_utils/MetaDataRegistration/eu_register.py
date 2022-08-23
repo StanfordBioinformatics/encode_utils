@@ -9,7 +9,7 @@
 
 """
 Given a tab-delimited or JSON input file containing one or more records belonging to one of the profiles
-listed on the ENCODE Portal (such as https://www.encodeproject.org/profiles/biosample.json),
+listed on the IGVF Portal (such as https://igvfd-dev.demo.igvf.org/profiles/document.json),
 either POSTS or PATCHES the records. The default is to POST each record; to PATCH instead, see
 the ``--patch`` option.
 
@@ -62,13 +62,13 @@ def get_parser():
 
     parser.add_argument("-d", "--dry-run", action="store_true", help="""
     Set this option to enable the dry-run feature, such that no modifications are performed on the
-    ENCODE Portal.  This is useful if you'd like to inspect the logs or ensure the validity of
+    IGVF Portal.  This is useful if you'd like to inspect the logs or ensure the validity of
     your input file.""")
 
     parser.add_argument("--no-aliases", action="store_true", help="""
     Setting this option is NOT advised. Set this option for doing a POST when your input file 
     doesn't contain an 'aliases' column, even though this property is supported in the corresponding
-    ENCODE profile.
+    IGVF profile.
     When POSTING a record to a profile that includes the 'aliases' property, this package requires
     the 'aliases' property be used for traceability purposes and because without this property, 
     it'll be very easy to create duplicate objects on the Portal.  For example, you can easily 
@@ -81,8 +81,8 @@ def get_parser():
     )
 
     parser.add_argument("-p", "--profile_id", required=True, help="""
-    The ID of the profile to submit to, i.e. use 'genetic_modification' for
-    https://www.encodeproject.org/profiles/genetic_modification.json. The profile will be pulled down for
+    The ID of the profile to submit to, i.e. use 'document' for
+    https://igvfd-dev.demo.igvf.org/profiles/document.json. The profile will be pulled down for
     type-checking in order to type-cast any values in the input file to the proper type (i.e. some
     values need to be submitted as integers, not strings).""")
 
@@ -103,7 +103,7 @@ def get_parser():
     2) [str1,str2,str3]
 
     On the other hand, if a property takes a JSON object as a value, then the value you enter must be
-    valid JSON. This is true anytime you have to specify a JSON object.  Thus, if you are submitting a
+    valid JSON. This is true anytime you have to specify a JSON object. Thus, if you are submitting a
     genetic_modification and you have two 'introduced_tags' to provide, you can supply them in either
     of the following two ways:
 
@@ -112,11 +112,11 @@ def get_parser():
 
     **The JSON input file**
     Can be a single JSON object, or an array of JSON objects. Key names must match property names of
-    an ENCODE record type (profile).
+    an IGVF record type (profile).
 
     **The following applies to either input file formats**
     When patching objects, you must specify the 'record_id' field to indicate the identifier of the record.
-    Note that this a special field that is not present in the ENCODE schema, and doesn't use the '#'
+    Note that this a special field that is not present in the IGVF schema, and doesn't use the '#'
     prefix to mark it as non-schematic. Here you can specify any valid record identifier
     (i.e. UUID, accession, alias).
 
@@ -127,13 +127,13 @@ def get_parser():
 
     parser.add_argument("-w", "--overwrite-array-values", action="store_true", help="""
     Only has meaning in combination with the --patch option. When this is specified, it means that
-    any keys with array values will be overwritten on the ENCODE Portal with the corresponding value
+    any keys with array values will be overwritten on the IGVF Portal with the corresponding value
     to patch. The default action is to extend the array value with the patch value and then to remove
     any duplicates.""")
 
     parser.add_argument("-r", "--remove-property", help="""
     Only has meaning in combination with the --rm-patch option. Properties specified in this argument
-    will be popped from the record fetched from the ENCODE portal. Can specify as comma delimited
+    will be popped from the record fetched from the IGVF portal. Can specify as comma delimited
     string.""")
 
     group = parser.add_mutually_exclusive_group()
@@ -215,7 +215,7 @@ def check_valid_json(prop, val, row_count):
         ValueError: The input is malformed JSON.
     """
 
-    # Don't try to break down the individual pieces of a nested object. That will be too complext for this script, and will also
+    # Don't try to break down the individual pieces of a nested object. That will be too complex for this script, and will also
     # be too complex for the end user to try and represent in some flattened way. Thus, require the end user to supply proper JSON
     # for a nested object.
     try:
@@ -239,7 +239,7 @@ def typecast(field_name, value, data_type, line_num):
         field_name: The name of the field in the input file whose value is being potentially typecast.
             Used only in error messages. 
         value: The value to potentially typecast.
-        data_type: Specifies the data type of field_name as indicated in the ENCODE profile. 
+        data_type: Specifies the data type of field_name as indicated in the IGVF profile. 
         line_num: The current line number in the input file. Used only in error messages. 
     """
     if data_type == "integer":
@@ -265,7 +265,7 @@ def create_payloads(schema, infile):
     First attempts to read the input file as JSON. If that fails, tries the TSV parser.
 
     Args:
-        schema: `EncodeSchema`. The schema of the objects to be submitted.
+        schema: `IgvfSchema`. The schema of the objects to be submitted.
     """
     try:
         with open(infile) as f:
@@ -280,7 +280,7 @@ def create_payloads_from_json(schema, payloads):
     Generates payloads from a JSON file
 
     Args:
-        schema: `EncodeSchema`. The schema of the objects to be submitted.
+        schema: `IgvfSchema`. The schema of the objects to be submitted.
         payloads: dict or list parsed from a JSON input file.
 
     Yields: dict. The payload that can be used to either register or patch the
@@ -298,14 +298,14 @@ def create_payloads_from_tsv(schema, infile):
     Generates the payload for each row in 'infile'.
 
     Args:
-        schema: EncodeSchema. The schema of the objects to be submitted.
+        schema: IgvfSchema. The schema of the objects to be submitted.
         infile - str. Path to input file.
 
     Yields  : dict. The payload that can be used to either register or patch the metadata for each row.
     """
     STR_REGX = re.compile(r'\'|"')
-    # Fetch the schema from the ENCODE Portal so we can set attr values to the
-    # right type when generating the  payload (dict).
+    # Fetch the schema from the IGVF Portal so we can set attr values to the
+    # right type when generating the payload (dict).
     schema_props = [prop.name for prop in schema.properties]
     field_index = {}
     fh = open(infile, 'r')
@@ -320,8 +320,7 @@ def create_payloads_from_tsv(schema, infile):
         if field not in schema_props:
             if field != RECORD_ID_FIELD:
                 raise Exception(
-                    "Unknown field name '{}', which is not registered as a property in the specified schema at {}.".format(
-                        field, schema.name))
+                    f"Unknown field name '{field}', which is not registered as a property in the specified schema at {schema.name}.")
         field_index[fi_count] = field
 
     line_count = 1  # already read header line

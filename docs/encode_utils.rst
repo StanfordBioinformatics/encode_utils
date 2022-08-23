@@ -1,6 +1,6 @@
-encode\_utils
+igvf\_utils
 -------------
 
-.. automodule:: encode_utils
+.. automodule:: igvf_utils
    :members:
    :show-inheritance:

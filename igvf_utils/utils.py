@@ -424,7 +424,7 @@ def does_lib_replicate_exist(replicates_json, lib_accession,
                              biological_replicate_number=False, technical_replicate_number=False):
     """
     Regarding the replicates on the specified experiment, determines whether any of them belong
-    to the specified library.  Optional constraints are the 'biological_replicate_number' and
+    to the specified library. Optional constraints are the 'biological_replicate_number' and
     the 'technical_replicate_number' props of the replicates.
 
     Args:

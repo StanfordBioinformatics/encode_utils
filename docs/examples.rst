@@ -6,8 +6,8 @@ Imports
 
 ::
 
-  import encode_utils as eu
-  from encode_utils.connection import Connection
+  import igvf_utils as eu
+  from igvf_utils.connection import Connection
 
 Connecting to the production and development Portals
 ----------------------------------------------------
@@ -25,12 +25,12 @@ argument.
 You can provide a custom host name as well, such as a demo host, granted that you have access to
 it::
 
-  conn = Connection("demo.encodedcc.org")
+  conn = Connection("igvfd-dev.demo.igvf.org/")
 
 Dry Runs
 ^^^^^^^^
 The second argument, ``dry_run``, can be set to ``True``, which allows you to test things out
-without worrying about any ENCODE Portal modifications being made::
+without worrying about any IGVF Portal modifications being made::
 
   conn = Connection("dev",True)
 
@@ -54,7 +54,7 @@ calling directory.  Three log files are created:
   2. An error log file that contains only terse error messages. This is your first stop for checking
      to see if any errors occurred. Anything that is written to this file is also written to STDOUT,
      hence the debug log as well.
-  3. A POST log file, which only logs new records that are successfully added to the ENCODE Portal.
+  3. A POST log file, which only logs new records that are successfully added to the IGVF Portal.
      Everything written to this file is also written to STDOUT, hence the debug log as well.
 
 These log files are specific to the host that you connect to. Each host will have a different trio
@@ -63,9 +63,9 @@ of logs, with the host name included in the log file names.
 GET Request
 -----------
 
-Retrieve the JSON serialization for the Experiment record with accession ENCSR161EAA::
+Retrieve the JSON serialization for the record with accession IGVFSM935WYN::
 
-  conn.get("ENCSR161EAA")
+  conn.get("IGVFSM935WYN")
 
 Search
 ------
@@ -141,13 +141,13 @@ the file to AWS once that is done:
       },
       "output": "reads",
       "paired_end": "1",
-      "platform": "encode:HiSeq4000",
+      "platform": "igvf:HiSeq4000",
       "read_length": 101,
       "replicate": "michael-snyder:GM12878_eGFP-ZBTB11_CRISPR_ChIP_input_R1",
       "submitted_file_name": "/path/to/SCGPM_SReq-1103_HG7CL_L3_GGCTAC_R1.fastq.gz"
   }
 
-Notice that we didn't specify the required `award` and `lab` properties (required by the ENCODE
+Notice that we didn't specify the required `award` and `lab` properties (required by the IGVF
 profiles). When not specified, the defaults will be taken from the environment variables 
 `DCC_AWARD` and `DCC_LAB` when present. Otherwise, you will get an error when trying to submit.
 Before we can POST this though, we need to indicate the profile of the record-to-be.

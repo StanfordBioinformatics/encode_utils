@@ -8,7 +8,7 @@
 ###
 
 """
-Tests functions in the ``encode_utils.utils`` module. A few test data files are used from within the 'data' folder.
+Tests functions in the ``igvf_utils.utils`` module. A few test data files are used from within the 'data' folder.
 The contents of the files are explained here. When a test utilizes any of them, you can check here
 to read the documentation about the contents of that file.
 
@@ -31,15 +31,15 @@ import unittest
 
 import pytest
 
-import encode_utils.tests
-from encode_utils import utils
+import igvf_utils.tests
+from igvf_utils import utils
 
-DATA_DIR = encode_utils.tests.DATA_DIR
+DATA_DIR = igvf_utils.tests.DATA_DIR
 
 
 class TestUtils(unittest.TestCase):
     """
-    Tests functions in the ``encode_utils.utils`` module.
+    Tests functions in the ``igvf_utils.utils`` module.
     """
 
     def setUp(self):

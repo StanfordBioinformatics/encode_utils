@@ -1,6 +1,6 @@
-encode\_utils\.connection
+igvf\_utils\.connection
 -------------------------
 
-.. automodule:: encode_utils.connection
+.. automodule:: igvf_utils.connection
    :members:
    :show-inheritance:

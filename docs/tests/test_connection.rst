@@ -1,7 +1,7 @@
-encode\_utils\.tests\.test\_connection
+igvf\_utils\.tests\.test\_connection
 --------------------------------------
 
-.. automodule:: encode_utils.tests.test_connection
+.. automodule:: igvf_utils.tests.test_connection
    :members:
    :private-members:
    :show-inheritance:

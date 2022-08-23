@@ -14,16 +14,16 @@ Tests logic in the Connection class in the connection module.
 import os
 import unittest
 
-import encode_utils as eu
-import encode_utils.tests
-from encode_utils.connection import Connection, DccMode, DccModes
-from encode_utils.exceptions import ProfileNotSpecified
-from encode_utils import profiles
+import igvf_utils as eu
+import igvf_utils.tests
+from igvf_utils.connection import Connection, DccMode, DccModes
+from igvf_utils.exceptions import ProfileNotSpecified
+from igvf_utils import profiles
 
 import pytest
 
 
-DATA_DIR = encode_utils.tests.DATA_DIR
+DATA_DIR = igvf_utils.tests.DATA_DIR
 
 
 def test_connection_dcc_mode_https_url(mocker):

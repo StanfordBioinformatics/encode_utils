@@ -11,27 +11,27 @@ The Google Storage Transfer API documentation for Python is available `here
 <https://developers.google.com/resources/api-libraries/documentation/storagetransfer/v1/python/latest/>`_ 
 for more details. This package exports a few ways for interfacing with this logic.
 
-  1. A  module named :mod:`encode_utils.transfer_to_gcp` that defines the `Transfer` class, which
+  1. A  module named :mod:`igvf_utils.transfer_to_gcp` that defines the `Transfer` class, which
      provides the ability to transfer files from an S3 bucket (even non-ENCODE S3 buckets) to a 
      GCP bucket. It does so by creating what the STS calls a transferJob. A transferJob can also
      be created by passing in a URL list, which is a public file accessible through HTTP/S; GCS
      details at https://cloud.google.com/storage-transfer/docs/create-url-list.  
   
-  2. The :class:`encode_utils.connection.Connection`
-     class has a method named :func:`encode_utils.connection.Connection.gcp_transfer_from_aws` that uses the above
-     module and is specific towards working with ENCODE files.  Note: this requires AWS keys.  If 
-     you simply want to copy released ENCODE files, you should 
+  2. The :class:`igvf_utils.connection.Connection`
+     class has a method named :func:`igvf_utils.connection.Connection.gcp_transfer_from_aws` that uses the above
+     module and is specific towards working with IGVF files.  Note: this requires AWS keys.  If 
+     you simply want to copy released IGVF files, you should 
      When using this method, you don't need to specify the S3 bucket or full path of an S3 object 
-     to transfer. All you need to do is specify an ENCODE file identifier, such as an accession or 
+     to transfer. All you need to do is specify an IGVF file identifier, such as an accession or 
      alias, and it will figure out the bucket and path to the file in the bucket for you.
 
-  3. The method :func:`encode_utils.connection.Connection.gcp_transfer_from_urllist`, which doesn't
-     require AWS keys since it only works with released ENCODE files. This method just creates the
+  3. The method :func:`igvf_utils.connection.Connection.gcp_transfer_from_urllist`, which doesn't
+     require AWS keys since it only works with released IGVF files. This method just creates the
      file that can be used directly as input to the Google Storage Transfer Service in the Google Console,
-     or programatically to the method :func:`encode_utils.transfer_to_gcp.Transfer.from_urllist`. 
+     or programatically to the method :func:`igvf_utils.transfer_to_gcp.Transfer.from_urllist`. 
   
   4. The script :doc:`scripts/eu_s3_to_gcp` can be used, which calls the aforementioned
-     method `gcp_transfer_from_aws` method, to transfer one or more ENCODE files to GCP.  Requires
+     method `gcp_transfer_from_aws` method, to transfer one or more IGVF files to GCP.  Requires
      AWS keys. 
 
 The Transfer class
@@ -40,15 +40,15 @@ The Transfer class
 Create a one-off transferJob that executes immediately
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This example is not ENCODE specific.
+This example is not IGVF specific.
 
 ::
 
-  import encode_utils.transfer_to_gcp as gcp
+  import igvf_utils.transfer_to_gcp as gcp
 
   transfer = gcp.Transfer(gcp_project="sigma-night-206802")
 
-The :func:`encode_utils.transfer_to_gcp.Transfer.from_s3` method is used to create what the STS
+The :func:`igvf_utils.transfer_to_gcp.Transfer.from_s3` method is used to create what the STS
 calls a transferJob. A transferJob either runs once (a one-off job) or is scheduled
 to run repeatedly, depending on how the job schedule is specified. However, the `from_s3` method shown below
 only schedules one-off jobs at present::
@@ -105,13 +105,13 @@ only schedules one-off jobs at present::
   #      }
   #  }
 
-The `gcp_transfer_from_aws()` method of the `encode_utils.connection.Connection` class
+The `gcp_transfer_from_aws()` method of the `igvf_utils.connection.Connection` class
 ---------------------------------------------------------------------------------------
-Requires that the user has AWS key permissions on the ENCODE buckets and file objects.
+Requires that the user has AWS key permissions on the IGVF buckets and file objects.
 
 ::
 
-  import encode_utils.connection as euc
+  import igvf_utils.connection as euc
   conn = euc.Connection("prod")
   # In production mode, the S3 source bucket is set to encode-files. In any other mode, the
   # bucket is set to encoded-files-dev.
@@ -128,8 +128,8 @@ No AWS keys required, but all files being copied must have a status of released.
 
 ::
 
-  import encode_utils.transfer_to_gcp as gcp 
-  import encode_utils.connection as euc
+  import igvf_utils.transfer_to_gcp as gcp 
+  import igvf_utils.connection as euc
   conn = euc.Connection("prod")
   # Create URL list file
   url_file = conn.gcp_transfer_urllist(
@@ -149,7 +149,7 @@ No AWS keys required, but all files being copied must have a status of released.
 
 Running the script
 ------------------
-Requires that the user has AWS key permissions on the ENCODE buckets and file objects.
+Requires that the user has AWS key permissions on the IGVF buckets and file objects.
 
 ::
 

@@ -23,10 +23,10 @@ where variables are defined as:
 
 import argparse
 
-from encode_utils.connection import Connection
-from encode_utils.parent_argparser import dcc_login_parser
+from igvf_utils.connection import Connection
+from igvf_utils.parent_argparser import dcc_login_parser
 # dcc_login_parser  contains the arguments needed for logging in to the
-# ENCODE Portal, including which env.
+# IGVF Portal, including which env.
 
 
 def get_parser():

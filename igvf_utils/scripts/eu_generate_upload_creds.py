@@ -8,7 +8,7 @@
 ### 
 
 """
-Generates upload credentials for one or more File records on the ENCODE Portal. The upload credentials store
+Generates upload credentials for one or more File records on the IGVF Portal. The upload credentials store
 AWS authorization tokens to allow a user to upload a file to a presigned S3 URL.
 
 The Exception `requests.exceptions.HTTPError` will be raised if the response from the server a not a
@@ -22,8 +22,8 @@ import datetime
 import json
 import os
 
-import encode_utils.connection as euc
-from encode_utils.parent_argparser import dcc_login_parser
+import igvf_utils.connection as euc
+from igvf_utils.parent_argparser import dcc_login_parser
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -32,7 +32,7 @@ def get_parser():
         formatter_class=argparse.RawTextHelpFormatter)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-f", "--file-ids", default=[], nargs="+", help="""
-      One or more ENCODE File identifiers. They can be any valid ENCODE File object identifier, i.e.
+      One or more IGVF File identifiers. They can be any valid IGVF File object identifier, i.e.
       alias, uuid, accession, md5sum.""")
     group.add_argument("-i", "--infile", help="""Input file containing File object identifiers, one
         per line.""")

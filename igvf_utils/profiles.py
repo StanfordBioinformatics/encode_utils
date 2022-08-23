@@ -32,7 +32,7 @@ class UnknownProfile(Exception):
     pass
 
 
-class EncodeSchema:
+class IgvfSchema:
     def __init__(self, name, schema):
         """
         Args:
@@ -49,7 +49,7 @@ class EncodeSchema:
     def properties(self):
         """
         Returns:
-            `list[EncodeSchemaProperty]`: A list of properties in the schema
+            `list[IgvfSchemaProperty]`: A list of properties in the schema
         """
         if self._properties is None:
             props = []
@@ -57,7 +57,7 @@ class EncodeSchema:
                 is_identifying = prop_name in self.identifying_properties
                 is_required = prop_name in self.required_properties
                 props.append(
-                    EncodeSchemaProperty(prop_name, prop, is_required, is_identifying)
+                    IgvfSchemaProperty(prop_name, prop, is_required, is_identifying)
                 )
             self._properties = props
         return self._properties
@@ -67,7 +67,7 @@ class EncodeSchema:
         Args:
             name: `str`. The name of the property to search for.
         Returns:
-            `EncodeSchemaProperty`: The property corresponding to `name`
+            `IgvfSchemaProperty`: The property corresponding to `name`
         Raises:
             `ValueError` if a property with `name` is not found.
         """
@@ -161,7 +161,7 @@ class EncodeSchema:
         return rec_json
 
 
-class EncodeSchemaProperty:
+class IgvfSchemaProperty:
     #: Constant storing the name of the property in a JSON object sub-schema that
     #:  indicates whether the object is read only.
     READ_ONLY_FLAG = "readonly"
@@ -275,7 +275,7 @@ class Profiles:
         profile_id_hash = {}  # Instead of name as key, profile ID is key.
         for schema in profiles.values():  # i.e. name=GeneticModification
             profile_id = schema["$id"].split("/")[-1].split(".json")[0]
-            profile_id_hash[profile_id] = EncodeSchema(profile_id, schema)
+            profile_id_hash[profile_id] = IgvfSchema(profile_id, schema)
         return profile_id_hash
 
     @property
