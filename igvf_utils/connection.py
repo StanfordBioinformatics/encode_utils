@@ -568,18 +568,6 @@ class Connection:
 
         return lookup_ids
 
-    # def delete(self,rec_id):
-    #    """Not supported at present by the DCC - Only wranglers can delete objects.
-    #    """
-    #    url = os.path.join(self.dcc_mode.url,rec_id)
-    #    self.logger.info(
-    #      (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
-    #    if self.dry_run:
-    #        return {}
-    #    response = requests.delete(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
-    #    if response.ok:
-    #        return response.json()
-    #    response.raise_for_status()
 
     def get(self, rec_ids, database=False, ignore404=True, frame=None):
         """GET a record from the Portal.
@@ -785,70 +773,6 @@ class Connection:
         """
         attachment_props = [
             "attachment",
-            # atac_alignment_enrichment_quality_metric, chip_alignment_enrichment_quality_metric, complexity_xcorr_quality_metric
-            "cross_correlation_plot",
-            "gc_bias_plot",
-            "jsd_plot",
-            "tss_enrichment_plot",
-            # atac_peak_enrichment_quality_metric
-            "peak_width_distribution_plot",
-            # atac_replication_quality_metric and chip_replication_quality_metric
-            "idr_dispersion_plot",
-            "idr_parameters",
-            # dnase_alignment_quality_metric
-            "insert_size_histogram",
-            "insert_size_metric",
-            "nuclear_preseq",
-            "nuclear_preseq_targets",
-            # dnase_footprinting_quality_metric
-            "dispersion_model",
-            # gembs_alignment_quality_metric
-            "insert_size_plot",
-            "mapq_plot",
-            # idr_quality_metric
-            "IDR_plot_true",
-            "IDR_plot_rep1_pr",
-            "IDR_plot_rep2_pr",
-            "IDR_plot_pool_pr",
-            "IDR_parameters_true",
-            "IDR_parameters_rep1_pr",
-            "IDR_parameters_rep2_pr",
-            "IDR_parameters_pool_pr",
-            # sc_atac_alignment_quality_metric
-            "mito_stats",
-            "samstats",
-            # sc_atac_analysis_quality_metric
-            "archr_doublet_summary_figure",
-            "archr_fragment_size_distribution",
-            "archr_tss_by_unique_frags",
-            "archr_doublet_summary_text",
-            "archr_pre_filter_metadata",
-            # sc_atac_library_complexity_quality_metric
-            "pbc_stats",
-            "picard_markdup_stats",
-            # sc_atac_multiplet_quality_metric
-            "barcodes_status",
-            "barcode_pairs_multiplets",
-            "barcode_pairs_expanded",
-            "multiplet_stats",
-            "multiplet_threshold_plot",
-            # sc_atac_read_quality_metric
-            "adapter_trimming_stats",
-            "barcode_matching_stats",
-            "barcode_revcomp_stats",
-            # scrna_seq_counts_summary_quality_metric
-            "total_counts_vs_pct_mitochondria",
-            "total_counts_vs_genes_by_count",
-            "counts_violin_plot",
-            # segway_quality_metric
-            "feature_aggregation_tab",
-            "length_distribution_tab",
-            "segment_sizes_tab",
-            "signal_distribution_tab",
-            "trackname_assay",
-            # star_solo_quality_metric
-            "barcode_rank_plot",
-            "sequencing_saturation_plot",
         ]
         path = "path"
 
@@ -991,8 +915,8 @@ class Connection:
             require_aliases: `bool`. `True` means that the 'aliases' property is to be required in
                  `payload`. This is the default and it is highly recommended not to change this
                  because it'll be easy to create duplicates on the server if accidentally POSTING
-                 the same payload again.  For example, you can easily create the same biosample
-                 as many times as you want on the Portal when not providing an alias.  Furthermore,
+                 the same payload again. For example, you can easily create the same biosample
+                 as many times as you want on the Portal when not providing an alias. Furthermore,
                  submitting labs should include at least one alias per record being submitted
                  to the Portal for traceabilty purposes in the submitting lab.
             upload_file: `bool`. If `False`, when POSTing files the file data will not
@@ -1466,48 +1390,6 @@ class Connection:
         self.debug_logger.debug(euu.print_format_dict(response_json))
         response.raise_for_status()
 
-    def send(self, payload, error_if_not_found=False, extend_array_values=True, raise_403=True):
-        """
-        .. deprecated:: 1.1.1
-           Will be removed in the next major release.
-
-        A wrapper over ``self.post()`` and ``self.patch()`` that determines which to call based on whether the
-        record exists on the Portal.  Especially useful when submitting a high-level object,
-        such as an experiment which contains many dependent objects, in which case you could have a mix
-        where some need to be POST'd and some PATCH'd.
-
-        Args:
-            payload: `dict`. The data to submit.
-            error_if_not_found: `bool`. If set to `True`, then a PATCH will be attempted and a
-                ``requests.exceptions.HTTPError`` will be raised if the record doesn't exist on the Portal.
-            extend_array_values: `bool`. Only matters when doing a PATCH, and Only affects keys with
-                array values. `True` (default) means to extend the corresponding value on the Portal
-                with what's specified in the payload. `False` means to replace the value on the Portal
-                with what's in the payload.
-            raise_403: `bool`. Only matters when doing a PATCH. `True` means to raise an
-                requests.exceptions.HTTPError if a 403 status (forbidden) is returned.
-                If set to `False` and there still is a 403 return status, then the object you were
-                trying to PATCH will be fetched from the Portal in JSON format as this function's
-                return value (as handled by ``self.patch()``).
-
-        Raises:
-              requests.exceptions.HTTPError: You want to do a PATCH (indicated by setting
-                  ``error_if_not_found=True``) but the record isn't found.
-        """
-        # Check wither record already exists on the portal
-        self.debug_logger.debug("WARNING: Connection.send() is deprecated since v1.1.1.")
-        lookup_ids = self.get_lookup_ids_from_payload(payload)
-        rec_json = self.get(rec_ids=lookup_ids, ignore404=not error_if_not_found)
-
-        if not rec_json:
-            return self.post(payload=payload)
-        else:
-            # PATCH
-            if self.ENCID_KEY not in payload:
-                igvf_id = aliases[0]
-                payload[self.ENCID_KEY] = igvf_id
-            return self.patch(
-                payload=payload, extend_array_values=extend_array_values, raise_403=raise_403)
 
     def get_fastqfiles_on_exp(self, exp_id):
         """Returns a list of all FASTQ file objects in the experiment.
@@ -1954,7 +1836,7 @@ class Connection:
 
         Args:
 
-           rec_id: `str`. A DCC identifier for a file or document record on the Portal.
+           rec_id: `str`. An identifier for a file or document record on the Portal.
            directory: `str`. The full path to the directory in which to download the file. If not
                specified, then the file will be downloaded in the calling directory.
 
@@ -1967,8 +1849,6 @@ class Connection:
         rec_type = rec["@type"]
         if "Document" in rec_type:
             file_type = False
-            # There is a bug on the ENCODE Portal where setting the auth results in a 400 status
-            # since documents are using some other type of authorization protocol.
             auth = ()
         elif "File" in rec_type:
             file_type = True

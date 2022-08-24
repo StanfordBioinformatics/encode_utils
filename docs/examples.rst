@@ -81,7 +81,7 @@ Search for ChIP-seq assays performed on primary cells from blood::
 
   conn.search(query)
 
-The query will be URL encoded for you.  If you want to use the search functionality 
+The query will be URL encoded for you. If you want to use the search functionality 
 programmatically, you should first test your search interactively on the Portal. The result will 
 be an array of record results, where each result is given in its JSON representation.
 
@@ -149,7 +149,7 @@ the file to AWS once that is done:
 
 Notice that we didn't specify the required `award` and `lab` properties (required by the IGVF
 profiles). When not specified, the defaults will be taken from the environment variables 
-`DCC_AWARD` and `DCC_LAB` when present. Otherwise, you will get an error when trying to submit.
+`IGVF_AWARD` and `IGVF_LAB` when present. Otherwise, you will get an error when trying to submit.
 Before we can POST this though, we need to indicate the profile of the record-to-be.
 
 Specifying the profile key
@@ -186,7 +186,7 @@ updated JSON representation is then sent to the Portal via a PUT operation.
 For example, say you have a biosample record and you want to remove the `pooled_from` property.
 This property stores a list of other biosample records.  You can't just empty out the list interactively
 in the Portal, or programmatically via a PATCH operation since this property, when present, can't be
-empty.  This is where the PUT HTTP method comes in handy.  Let's look at an example::
+empty. This is where the PUT HTTP method comes in handy. Let's look at an example::
 
   conn = Connection("dev")
   conn.remove_props(rec_id="ENCBS133ZSU",props=["pooled_from"])
@@ -203,5 +203,5 @@ as indicated in the profile (JSON schema) of the record of interest. The Portal 
 reject or silently ignore any attempt to remove such properties, nonetheless, to be a good citizen,
 this client performs these checks regardless for good measure.
 
-It should also be noted that some properties simply can't be deleted.  For example, any attempt
+It should also be noted that some properties simply can't be deleted. For example, any attempt
 to delete the `aliases` property will only empty out its list. 

@@ -11,7 +11,7 @@
 Copies one or more IGVF files from AWS S3 storage to GCP storage by using the Google Storage
 Transfer Service. See :class:`igvf_utils.transfer_to_gcp.Transfer` for full documentation.
 
-Note: Currently, only priviledged users with appropriate DCC API keys will be able to make
+Note: Currently, only privileged users with appropriate IGVF API keys will be able to make
 use of this script because the Google STS requires that the source buckets be publicly discoverable.
 Since the IGVF bucket policies deny the action s3:GetBucketLocation on the public principal. 
 Non-priviledged users may find the alternative script `eu_create_gcp_url_list.py` to be a solution.
@@ -48,7 +48,7 @@ def get_parser():
     parser.add_argument("-c", "--s3creds", help="""
         AWS credentials. Provide them in the form `AWS_ACCESS_KEY_ID:AWS_SECRET_ACCESS_KEY`.
         Ideally, they'll be stored in the environment in variables by the same names. However, 
-        for additional flexability you can specify them here as well.""")
+        for additional flexibility you can specify them here as well.""")
     return parser
 
 def main():
