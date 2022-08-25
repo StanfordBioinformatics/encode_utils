@@ -11,6 +11,6 @@ import argparse
 dcc_login_parser = argparse.ArgumentParser(add_help=False)
 dcc_login_parser.add_argument(
     "-m",
-    "--mode",
+    "--dcc-mode",
     help="""
     The IGVF Portal site ('prod' or 'dev', or an explicit host name, i.e. 'demo.igvf.org') to connect to.""")
