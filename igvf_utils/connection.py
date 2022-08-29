@@ -1554,7 +1554,7 @@ class Connection:
             # You also get this when the file object no-longer has read access (was
             # archived by wranglers).
 
-        #Don't log the full response as it contains sensative security information.
+        # Don't log the full response as it contains sensitive security information.
 
     def gcp_transfer_urllist(self, file_ids, filename):
         """
@@ -1689,7 +1689,7 @@ class Connection:
         Raises:
             igvf_utils.exceptions.FileUploadFailed: The return code of the AWS upload command was non-zero.
 
-        .. _`wiki documentation`: https://github.com/StanfordBioinformatics/igvf_utils/wiki/Configuration#aws-keys
+        .. _`wiki documentation`: https://github.com/IGVF-DACC/igvf_utils/wiki/Configuration#aws-keys
         """
         self.debug_logger.debug("\nIN upload_file()\n")
         #upload_credentials = self.get_upload_credentials(file_id) # Don't use this - they may have expired.

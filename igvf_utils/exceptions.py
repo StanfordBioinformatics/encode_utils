@@ -5,7 +5,7 @@ class AwardPropertyMissing(Exception):
     """
     message = (
         "The property '{}' is missing from the payload and a default isn't set either. "
-        "To store a default, set the DCC_AWARD environment variable."
+        "To store a default, set the IGVF_AWARD environment variable."
     )
 
 
@@ -29,7 +29,7 @@ class LabPropertyMissing(Exception):
     """
     message = (
         "The property '{}' is missing from the payload and a default isn't set either. "
-        "To store a default, set the DCC_LAB environment variable."
+        "To store a default, set the IGVF_LAB environment variable."
     )
 
 

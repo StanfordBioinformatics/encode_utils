@@ -163,7 +163,7 @@ class IgvfSchema:
 
 class IgvfSchemaProperty:
     #: Constant storing the name of the property in a JSON object sub-schema that
-    #:  indicates whether the object is read only.
+    #: indicates whether the object is read only.
     READ_ONLY_FLAG = "readonly"
     #: Constant storing the name of the property in a JSON object sub-schema that
     #: indicates whether the object is submittable.
