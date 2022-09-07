@@ -27,7 +27,7 @@ class TestRegister(unittest.TestCase):
     """
 
     def setUp(self):
-        rep_json_file = os.path.join(DATA_DIR, "replicates_for_ENCSR502NRF.json")
+        rep_json_file = os.path.join(DATA_DIR, "replicates_for_IGVFSR502NRF.json")
         with open(rep_json_file, 'r') as fh:
             self.replicates_json = json.loads(fh.read())
         self.fqfile = os.path.join(DATA_DIR, "test_fq_40recs.fastq.gz")

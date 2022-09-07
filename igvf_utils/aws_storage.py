@@ -58,7 +58,7 @@ class S3Object():
 
     You must set the appropriate AWS keys as documented in the wiki_.
 
-    .. _wiki: https://github.com/StanfordBioinformatics/igvf_utils/wiki/Configuration#aws-keys
+    .. _wiki: https://github.com/IGVF-DACC/igvf_utils/wiki/Configuration#aws-keys
     """
     def __init__(self, bucket_name="", key="", s3_uri=""):
         """

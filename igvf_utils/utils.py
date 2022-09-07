@@ -7,7 +7,7 @@
 ###
 
 """
-Contains utilities that don't require authorization on the DCC servers.
+Contains utilities that don't require authorization on the DACC servers.
 """
 
 import hashlib
@@ -22,7 +22,7 @@ import subprocess
 
 import exifread
 
-import igvf_utils as eu
+import igvf_utils as iu
 import igvf_utils.aws_storage
 import igvf_utils.gc_storage
 

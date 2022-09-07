@@ -15,14 +15,14 @@ import inflection
 import logging
 import requests
 
-import igvf_utils as eu
-import igvf_utils.utils as euu
+import igvf_utils as iu
+import igvf_utils.utils as iuu
 
 
 #: A debug ``logging`` instance.
-DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
+DEBUG_LOGGER = logging.getLogger(iu.DEBUG_LOGGER_NAME + "." + __name__)
 #: An error ``logging`` instance.
-ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
+ERROR_LOGGER = logging.getLogger(iu.ERROR_LOGGER_NAME + "." + __name__)
 
 
 class UnknownProfile(Exception):
@@ -90,7 +90,7 @@ class IgvfSchema:
         Returns:
             `bool`: Indicates if the schema has an `award` property present.
         """
-        return eu.AWARD_PROP_NAME in self.schema
+        return iu.AWARD_PROP_NAME in self.schema
 
     @property
     def has_alias(self):
@@ -98,7 +98,7 @@ class IgvfSchema:
         Returns:
             `bool`: Indicates if the schema has an `alias` property present.
         """
-        return eu.ALIAS_PROP_NAME in self.schema
+        return iu.ALIAS_PROP_NAME in self.schema
 
     @property
     def non_writable_props(self):
@@ -223,7 +223,7 @@ class Profiles:
     to ensure that the profile specified there is a known profile on the Portal.
 
     Args:
-        dcc_url: str. The portal URL being submitted to.
+        igvf_url: str. The portal URL being submitted to.
     """
     #: Constant storing the `file.json` profile's ID.
     #: This is asserted for inclusion in ``Profile.PROFILES``.
@@ -239,12 +239,12 @@ class Profiles:
     #: Constant sotring a property name of the `file.json` profile.
     FILE_SIZE_PROP_NAME = "file_size"
 
-    def __init__(self, dcc_url):
+    def __init__(self, igvf_url):
         """
         Args:
-            dcc_url: `str`. The dcc_url as specified by Connection.dcc_mode.url.
+            igvf_url: `str`. The igvf_url as specified by Connection.igvf_mode.url.
         """
-        self.dcc_url = dcc_url
+        self.igvf_url = igvf_url
         self._profiles = None
 
     def _get_profiles(self):
@@ -260,10 +260,10 @@ class Profiles:
             `/profiles/genetic_modification.json`. The corresponding key in this `dict`
             is `genetic_modification`.
         """
-        url = euu.url_join([self.dcc_url, eu.PROFILES_URL, "?format=json"])
+        url = iuu.url_join([self.igvf_url, iu.PROFILES_URL, "?format=json"])
         profiles = requests.get(url,
-                                timeout=eu.TIMEOUT,
-                                headers=euu.REQUEST_HEADERS_JSON).json()
+                                timeout=iu.TIMEOUT,
+                                headers=iuu.REQUEST_HEADERS_JSON).json()
         # Remove the "private" profiles, since these have differing semantics.
         private_profiles = [x for x in profiles if x.startswith("_") or x.startswith("Testing")]  # i.e. _subtypes
         for i in private_profiles:

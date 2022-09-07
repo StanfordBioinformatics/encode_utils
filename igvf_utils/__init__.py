@@ -63,14 +63,14 @@ except KeyError:
 #: The relative ENCODE Portal URL that points to all the profiles (schemas).
 PROFILES_URL = "profiles"
 
-DCC_DEV_MODE = "dev"
-DCC_PROD_MODE = "prod"
+IGVF_DEV_MODE = "dev"
+IGVF_PROD_MODE = "prod"
 
-#: A hash of known hosts one can connect to, where the key can be passed to the `dcc_mode` argument
+#: A hash of known hosts one can connect to, where the key can be passed to the `igvf_mode` argument
 #: when instantiating the `connection.Connection` class.
-DCC_MODES = {
-    DCC_DEV_MODE: {"url": ""},
-    DCC_PROD_MODE: {"url": "https://igvfd-dev.demo.igvf.org/"}
+IGVF_MODES = {
+    IGVF_DEV_MODE: {"url": ""},
+    IGVF_PROD_MODE: {"url": "https://igvfd-dev.demo.igvf.org/"}
 }
 
 ENCODE_PROD_S3BUCKET="encode-files"

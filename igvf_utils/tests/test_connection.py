@@ -14,9 +14,9 @@ Tests logic in the Connection class in the connection module.
 import os
 import unittest
 
-import igvf_utils as eu
+import igvf_utils as iu
 import igvf_utils.tests
-from igvf_utils.connection import Connection, DccMode, DccModes
+from igvf_utils.connection import Connection, IgvfMode, IgvfModes
 from igvf_utils.exceptions import ProfileNotSpecified
 from igvf_utils import profiles
 
@@ -26,40 +26,40 @@ import pytest
 DATA_DIR = igvf_utils.tests.DATA_DIR
 
 
-def test_connection_dcc_mode_https_url(mocker):
+def test_connection_igvf_mode_https_url(mocker):
     mocker.patch("requests.get")
     conn = Connection("https://www.foo.bar", no_log_file=True)
-    assert conn.dcc_mode.url == "https://www.foo.bar"
+    assert conn.igvf_mode.url == "https://www.foo.bar"
 
 
-@pytest.mark.parametrize("dcc_mode", ["www.foo.bar", "https://www.foo.bar"])
-def test_dcc_mode_host(dcc_mode):
-    dcc_mode = DccMode(dcc_mode)
-    assert dcc_mode.host == "www.foo.bar"
+@pytest.mark.parametrize("igvf_mode", ["www.foo.bar", "https://www.foo.bar"])
+def test_igvf_mode_host(igvf_mode):
+    igvf_mode = IgvfMode(igvf_mode)
+    assert igvf_mode.host == "www.foo.bar"
 
 
-@pytest.mark.parametrize("dcc_mode", ["www.foo.bar", "https://www.foo.bar"])
-def test_dcc_mode_url(dcc_mode):
-    dcc_mode = DccMode(dcc_mode)
-    assert dcc_mode.url == "https://www.foo.bar"
+@pytest.mark.parametrize("igvf_mode", ["www.foo.bar", "https://www.foo.bar"])
+def test_igvf_mode_url(igvf_mode):
+    igvf_mode = IgvfMode(igvf_mode)
+    assert igvf_mode.url == "https://www.foo.bar"
 
 
-def test_dcc_modes_add_mode():
-    dcc_modes = DccModes()
-    dcc_modes.add_mode("www.foo.bar")
-    assert dcc_modes._modes
+def test_igvf_modes_add_mode():
+    igvf_modes = IgvfModes()
+    igvf_modes.add_mode("www.foo.bar")
+    assert igvf_modes._modes
 
 
-def test_dcc_modes_add_mode_with_mode_name():
-    dcc_modes = DccModes()
-    dcc_modes.add_mode("www.foo.bar", mode_name="baz")
-    assert dcc_modes._modes["baz"]
+def test_igvf_modes_add_mode_with_mode_name():
+    igvf_modes = IgvfModes()
+    igvf_modes.add_mode("www.foo.bar", mode_name="baz")
+    assert igvf_modes._modes["baz"]
 
 
-def test_dcc_modes_get_mode():
-    dcc_modes = DccModes()
-    dcc_modes.add_mode("www.foo.bar", mode_name="baz")
-    assert dcc_modes.get_mode("baz")
+def test_igvf_modes_get_mode():
+    igvf_modes = IgvfModes()
+    igvf_modes.add_mode("www.foo.bar", mode_name="baz")
+    assert igvf_modes.get_mode("baz")
 
 
 class TestConnection(unittest.TestCase):
@@ -67,10 +67,10 @@ class TestConnection(unittest.TestCase):
     """
 
     def setUp(self):
-        self.conn = Connection(eu.DCC_DEV_MODE, no_log_file=True)
+        self.conn = Connection(iu.DCC_DEV_MODE, no_log_file=True)
 
     def test_arbitrary_host(self):
-        self.conn = Connection(dcc_mode='test.encodedcc.org', no_log_file=True)
+        self.conn = Connection(igvf_mode='test.encodedcc.org', no_log_file=True)
 
     def test_before_file_post(self):
         """
@@ -193,7 +193,7 @@ class TestConnection(unittest.TestCase):
 
         res = self.conn.make_search_url(search_args=query)
         query = "search/?assay_title=ChIP-seq&biosample_type=primary+cell&organ_slims=blood&type=Experiment"
-        self.assertEqual(res, os.path.join(self.conn.dcc_mode.url, query))
+        self.assertEqual(res, os.path.join(self.conn.igvf_mode.url, query))
 
     def test_get(self):
         res = self.conn.get('experiments/ENCSR502NRF/', frame='object')

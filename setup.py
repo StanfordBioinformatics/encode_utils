@@ -22,7 +22,7 @@ with open("README.md", "r") as fh:
 SCRIPTS_DIR = os.path.join("igvf_utils", "scripts")
 scripts = glob.glob(os.path.join(SCRIPTS_DIR, "*.py"))
 scripts.remove(os.path.join(SCRIPTS_DIR, "__init__.py"))
-scripts.append(os.path.join("igvf_utils", "MetaDataRegistration", "eu_register.py"))
+scripts.append(os.path.join("igvf_utils", "MetaDataRegistration", "iu_register.py"))
 
 setup(
   author="Nathaniel Watson",
@@ -61,5 +61,5 @@ setup(
   },
   scripts=scripts,
   url="https://github.com/IGVF-DACC/igvf_utils",  # home page
-  version="2.11.0",
+  version="1.0.0",
 )
