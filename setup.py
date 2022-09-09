@@ -25,8 +25,8 @@ scripts.remove(os.path.join(SCRIPTS_DIR, "__init__.py"))
 scripts.append(os.path.join("igvf_utils", "MetaDataRegistration", "iu_register.py"))
 
 setup(
-  author="Nathaniel Watson",
-  author_email="nathankw@stanford.edu",
+  author="Nathaniel Watson, Jennifer Jou",
+  author_email="nathankw@stanford.edu, jjou@stanford.edu",
   classifiers=[
       "Programming Language :: Python :: 3",
       "License :: OSI Approved :: MIT License",

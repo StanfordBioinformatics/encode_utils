@@ -237,7 +237,7 @@ class Connection:
     @property
     def auth(self):
         """
-        Sets the API and secret keys to use when authenticating with the DCC servers.
+        Sets the API and secret keys to use when authenticating with the DACC servers.
         These are determined from the values of the `IGVF_API_KEY` and `IGVF_SECRET_KEY`
         environment variables via the ``_get_api_keys_from_env()`` private instance
         method.
@@ -265,22 +265,22 @@ class Connection:
         secret_key = os.environ.get("IGVF_SECRET_KEY")
         return api_key, secret_key
 
-    def _log_post(self, aliases, dcc_id):
+    def _log_post(self, aliases, dacc_id):
         """
-        Uses the self.post_logger to log a newly POSTED object's aliases and dcc_id. 
+        Uses the self.post_logger to log a newly POSTED object's aliases and dacc_id.
         Each message is written in a three column format delimited by a tab character. The columns are:
           1) primary alias: The first alias appearing in the provided 'aliases' list argument.
           2) secondary aliases: Any additional aliases appearing in the provided 'aliases' list argument.
                  These will be comma-delimited.
-          2) DCC identifier: The value of the dcc_id argument. 
+          2) DACC identifier: The value of the dacc_id argument.
 
-        Note that it is possible that the aliases list is empty, in which case only the dcc_id will
+        Note that it is possible that the aliases list is empty, in which case only the dacc_id will
         be present in the last column of the written line. 
 
         Args:
             aliases: `list`. The value of the 'aliases' key in the payload for the record that
                 was POSTED.
-            dcc_id: `str`. An IGVF-generated identifier on the IGVF Portal for the new record
+            dacc_id: `str`. An IGVF-generated identifier on the IGVF Portal for the new record
                 that was POSTED, i.e. accession, uuid, md5sum.
         """
         try:
@@ -291,7 +291,7 @@ class Connection:
             secondary = aliases[1:]
         except KeyError:
             secondary = []
-        entry = primary + "\t" + ",".join(secondary) + "\t" + dcc_id
+        entry = primary + "\t" + ",".join(secondary) + "\t" + dacc_id
         self.post_logger.info(entry)
 
     def set_submission(self, status):
@@ -375,7 +375,7 @@ class Connection:
         for i in aliases:
             if ":" not in i:
                 if not prefix:
-                    raise Exception("Can't add alias prefix to aliases as it isn't specified; please set IGVF_LAB environment variable to the lab identifier assigned to you by the DCC, i.e. michael-snyder for the Snyder Production Center.".format(prefix))
+                    raise Exception("Can't add alias prefix to aliases as it isn't specified; please set IGVF_LAB environment variable to the lab identifier assigned to you by the DACC.".format(prefix))
                 else:
                     i = prefix + ":" + i
             res.append(i)
@@ -490,7 +490,7 @@ class Connection:
                 query_list.append(("datastore", "database"))
 
         url = self.make_search_url(search_args=query_list)
-        self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
+        self.debug_logger.debug("Searching DACC with query {url}.".format(url=url))
         response = requests.get(url,
                                 auth=self.auth,
                                 timeout=iu.TIMEOUT,
@@ -1085,7 +1085,7 @@ class Connection:
         else:
             message = "Failed to POST {}".format(aliases[0])
             self.log_error(message)
-            self.debug_logger.debug("<<<<<< DCC POST RESPONSE: ")
+            self.debug_logger.debug("<<<<<< DACC POST RESPONSE: ")
             self.debug_logger.debug(iuu.print_format_dict(response_json))
             response.raise_for_status()
 
@@ -1351,7 +1351,7 @@ class Connection:
 
         url = iuu.url_join([self.igvf_mode.url, igvf_id.lstrip("/")])
         self.debug_logger.debug(
-            "<<<<<< PUTTING {igvf_id} To DCC with URL"
+            "<<<<<< PUTTING {igvf_id} To DACC with URL"
             " {url} and this payload:\n\n{payload}\n\n".format(
                 igvf_id=igvf_id,
                 url=url,
@@ -1386,7 +1386,7 @@ class Connection:
 
         message = "Failed to PUT {}".format(igvf_id)
         self.log_error(message)
-        self.debug_logger.debug("<<<<<< DCC PUT RESPONSE: ")
+        self.debug_logger.debug("<<<<<< DACC PUT RESPONSE: ")
         self.debug_logger.debug(iuu.print_format_dict(response_json))
         response.raise_for_status()
 
@@ -1574,7 +1574,7 @@ class Connection:
         fout.write("TsvHttpData-1.0\n")
         for i in file_ids:
             url = self.s3_object_path(rec_id=i, url=True)
-            # One with DCC API keys can get the URL in a more straightforward manner by doing a GET on
+            # One with IGVF API keys can get the URL in a more straightforward manner by doing a GET on
             # the files @@upload endpoint. But this even requires AWS keys even when the file in 
             # question is released. For broader community support, the above workaround is in use.
             rec = self.get(i, ignore404=False)
@@ -1778,7 +1778,7 @@ class Connection:
         multiple different platforms present as normally all reads should come from the same platform.
 
         Args:
-            rec_id: `str`. DCC identifier for an experiment.
+            rec_id: `str`. DACC identifier for an experiment.
         Returns:
             `list`: The de-duplicated list of platforms seen on the experiment's FASTQ files.
         """
@@ -1802,7 +1802,7 @@ class Connection:
             document: `str`. Local file path to the document to be submitted.
 
         Returns:
-            `str`: The DCC UUID of the new document.
+            `str`: The DACC UUID of the new document.
         """
         document_filename = os.path.basename(document)
         document_alias = iu.LAB[iu.LAB_PROP_NAME] + ":" + document_filename
