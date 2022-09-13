@@ -1048,7 +1048,7 @@ class Connection:
                 # Some objects don't have an accession, i.e. replicates.
                 encid = response_json["uuid"]
             self.debug_logger.debug(f"Object posted with identifier: {encid}")
-            self._log_post(aliases=aliases, dcc_id=encid)
+            self._log_post(aliases=aliases, dacc_id=encid)
             # Run 'after' hooks:
             self.after_submit_hooks(encid, profile.name, method=self.POST, upload_file=upload_file)
             if return_original_status_code is True:
