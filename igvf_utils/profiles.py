@@ -15,14 +15,14 @@ import inflection
 import logging
 import requests
 
-import encode_utils as eu
-import encode_utils.utils as euu
+import igvf_utils as iu
+import igvf_utils.utils as iuu
 
 
 #: A debug ``logging`` instance.
-DEBUG_LOGGER = logging.getLogger(eu.DEBUG_LOGGER_NAME + "." + __name__)
+DEBUG_LOGGER = logging.getLogger(iu.DEBUG_LOGGER_NAME + "." + __name__)
 #: An error ``logging`` instance.
-ERROR_LOGGER = logging.getLogger(eu.ERROR_LOGGER_NAME + "." + __name__)
+ERROR_LOGGER = logging.getLogger(iu.ERROR_LOGGER_NAME + "." + __name__)
 
 
 class UnknownProfile(Exception):
@@ -32,7 +32,7 @@ class UnknownProfile(Exception):
     pass
 
 
-class EncodeSchema:
+class IgvfSchema:
     def __init__(self, name, schema):
         """
         Args:
@@ -49,7 +49,7 @@ class EncodeSchema:
     def properties(self):
         """
         Returns:
-            `list[EncodeSchemaProperty]`: A list of properties in the schema
+            `list[IgvfSchemaProperty]`: A list of properties in the schema
         """
         if self._properties is None:
             props = []
@@ -57,7 +57,7 @@ class EncodeSchema:
                 is_identifying = prop_name in self.identifying_properties
                 is_required = prop_name in self.required_properties
                 props.append(
-                    EncodeSchemaProperty(prop_name, prop, is_required, is_identifying)
+                    IgvfSchemaProperty(prop_name, prop, is_required, is_identifying)
                 )
             self._properties = props
         return self._properties
@@ -67,7 +67,7 @@ class EncodeSchema:
         Args:
             name: `str`. The name of the property to search for.
         Returns:
-            `EncodeSchemaProperty`: The property corresponding to `name`
+            `IgvfSchemaProperty`: The property corresponding to `name`
         Raises:
             `ValueError` if a property with `name` is not found.
         """
@@ -90,7 +90,7 @@ class EncodeSchema:
         Returns:
             `bool`: Indicates if the schema has an `award` property present.
         """
-        return eu.AWARD_PROP_NAME in self.schema
+        return iu.AWARD_PROP_NAME in self.schema
 
     @property
     def has_alias(self):
@@ -98,7 +98,7 @@ class EncodeSchema:
         Returns:
             `bool`: Indicates if the schema has an `alias` property present.
         """
-        return eu.ALIAS_PROP_NAME in self.schema
+        return iu.ALIAS_PROP_NAME in self.schema
 
     @property
     def non_writable_props(self):
@@ -161,9 +161,9 @@ class EncodeSchema:
         return rec_json
 
 
-class EncodeSchemaProperty:
+class IgvfSchemaProperty:
     #: Constant storing the name of the property in a JSON object sub-schema that
-    #:  indicates whether the object is read only.
+    #: indicates whether the object is read only.
     READ_ONLY_FLAG = "readonly"
     #: Constant storing the name of the property in a JSON object sub-schema that
     #: indicates whether the object is submittable.
@@ -219,11 +219,11 @@ class Profiles:
     methods for working with a given profile.
 
     A defining purpose of this class is to validate the profile ID specified in a POST
-    payload passed to ``encode_utils.connection.Connection.post()``.  This class is used
+    payload passed to ``igvf_utils.connection.Connection.post()``.  This class is used
     to ensure that the profile specified there is a known profile on the Portal.
 
     Args:
-        dcc_url: str. The portal URL being submitted to.
+        igvf_url: str. The portal URL being submitted to.
     """
     #: Constant storing the `file.json` profile's ID.
     #: This is asserted for inclusion in ``Profile.PROFILES``.
@@ -239,12 +239,12 @@ class Profiles:
     #: Constant sotring a property name of the `file.json` profile.
     FILE_SIZE_PROP_NAME = "file_size"
 
-    def __init__(self, dcc_url):
+    def __init__(self, igvf_url):
         """
         Args:
-            dcc_url: `str`. The dcc_url as specified by Connection.dcc_mode.url.
+            igvf_url: `str`. The igvf_url as specified by Connection.igvf_mode.url.
         """
-        self.dcc_url = dcc_url
+        self.igvf_url = igvf_url
         self._profiles = None
 
     def _get_profiles(self):
@@ -260,10 +260,10 @@ class Profiles:
             `/profiles/genetic_modification.json`. The corresponding key in this `dict`
             is `genetic_modification`.
         """
-        url = euu.url_join([self.dcc_url, eu.PROFILES_URL, "?format=json"])
+        url = iuu.url_join([self.igvf_url, iu.PROFILES_URL, "?format=json"])
         profiles = requests.get(url,
-                                timeout=eu.TIMEOUT,
-                                headers=euu.REQUEST_HEADERS_JSON).json()
+                                timeout=iu.TIMEOUT,
+                                headers=iuu.REQUEST_HEADERS_JSON).json()
         # Remove the "private" profiles, since these have differing semantics.
         private_profiles = [x for x in profiles if x.startswith("_") or x.startswith("Testing")]  # i.e. _subtypes
         for i in private_profiles:
@@ -275,7 +275,7 @@ class Profiles:
         profile_id_hash = {}  # Instead of name as key, profile ID is key.
         for schema in profiles.values():  # i.e. name=GeneticModification
             profile_id = schema["$id"].split("/")[-1].split(".json")[0]
-            profile_id_hash[profile_id] = EncodeSchema(profile_id, schema)
+            profile_id_hash[profile_id] = IgvfSchema(profile_id, schema)
         return profile_id_hash
 
     @property

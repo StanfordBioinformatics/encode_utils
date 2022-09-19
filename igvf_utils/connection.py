@@ -18,9 +18,9 @@ import urllib
 import boto3
 
 # inhouse libraries
-import encode_utils.transfer_to_gcp
-import encode_utils as eu
-from encode_utils.exceptions import (
+import igvf_utils.transfer_to_gcp
+import igvf_utils as iu
+from igvf_utils.exceptions import (
     AwardPropertyMissing,
     FileUploadFailed,
     LabPropertyMissing,
@@ -28,15 +28,15 @@ from encode_utils.exceptions import (
     ProfileNotSpecified,
     RecordIdNotPresent,
 )
-from encode_utils.profiles import Profiles
-import encode_utils.utils as euu
-import encode_utils.gc_storage
+from igvf_utils.profiles import Profiles
+import igvf_utils.utils as iuu
+import igvf_utils.gc_storage
 
 # EU-21 add support for attachment in autosql file type
 mimetypes.add_type('text/autosql', '.as')
 
 #: The directory that contains the log files created by the `Connection` class.
-LOG_DIR = "EU_Logs"
+LOG_DIR = "IU_Logs"
 
 BOTO3_DEFAULT_MULTIPART_CHUNKSIZE = 8_388_608
 BOTO3_MULTIPART_MAX_PARTS = 10_000
@@ -49,7 +49,7 @@ class Connection:
     """Handles communication with the Portal regarding data submission and retrieval.
 
     For data submission or modification, and working with non-released datasets, you must have
-    the environment variables `DCC_API_KEY` and `DCC_SECRET_KEY` set. Check with your DCC data wrangler
+    the environment variables `IGVF_API_KEY` and `IGVF_SECRET_KEY` set. Check with your DACC data wrangler
     if you haven't been assigned these keys.
 
     There are three log files opened in append mode in the directory specified by ``connection.LOG_DIR`` that
@@ -69,10 +69,10 @@ class Connection:
        used.
     """
 
-    #: Identifies the name of the key in the payload that stores a valid ENCODE-assigned
+    #: Identifies the name of the key in the payload that stores a valid IGVF-assigned
     #: identifier for a record, such as alias, accession, uuid, md5sum, ... depending on
     #: the object being submitted.
-    #: This is not a valid property of any ENCODE object schema, and is used in the ``patch()``
+    #: This is not a valid property of any IGVF object schema, and is used in the ``patch()``
     #: instance method to designate the record to update.
     ENCID_KEY = "_enc_id"
 
@@ -85,27 +85,27 @@ class Connection:
     #: Constant
     PATCH = "patch"
 
-    def __init__(self, dcc_mode=None, dry_run=False, submission=False, no_log_file=False):
+    def __init__(self, igvf_mode=None, dry_run=False, submission=False, no_log_file=False):
 
-        #: A reference to the `debug` logging instance that was created earlier in ``encode_utils.debug_logger``.
+        #: A reference to the `debug` logging instance that was created earlier in ``igvf_utils.debug_logger``.
         #: This class adds a file handler, such that all messages sent to it are logged to this
         #: file in addition to STDOUT.
-        self.debug_logger = logging.getLogger(eu.DEBUG_LOGGER_NAME)
+        self.debug_logger = logging.getLogger(iu.DEBUG_LOGGER_NAME)
 
-        # Be sure to set self.dcc_mode before creating the logging file handlers since the mode is
+        # Be sure to set self.igvf_mode before creating the logging file handlers since the mode is
         # used as part of the file name.
 
         #: An indication of which Portal instance to use. Set to 'prod' for the production Portal,
         #: and 'dev' for the development Portal. Alternatively, you can set an explicit host, such as
-        #: demo.encodedcc.org. Leaving the default of None means to use the value of the `DCC_MODE`
+        #: demo.igvf.org. Leaving the default of None means to use the value of the `IGVF_MODE`
         #: environment variable.
-        self.dcc_modes = DccModes()
-        for name, host in eu.DCC_MODES.items():
-            self.dcc_modes.add_mode(host["url"], mode_name=name)
-        self._dcc_mode = dcc_mode
+        self.igvf_modes = IgvfModes()
+        for name, host in iu.IGVF_MODES.items():
+            self.igvf_modes.add_mode(host["url"], mode_name=name)
+        self._igvf_mode = igvf_mode
         self._profiles = None
 
-        #: Set to True to prevent any server-side changes on the ENCODE Portal, i.e. PUT, POST,
+        #: Set to True to prevent any server-side changes on the IGVF Portal, i.e. PUT, POST,
         #: PATCH, DELETE requests will not be sent to the Portal. After-POST and after-PATCH
         #: hooks (see the instance method :meth:`after_submit_hooks`) will not be run either in
         #: this case. You can turn off this dry-run feature by calling the instance method
@@ -115,12 +115,12 @@ class Connection:
         #: A ``logging`` instance with a file handler for logging terse error messages.
         #: The log file resides locally within the directory specified by the constant
         #: ``connection.LOG_DIR``. Accepts messages >= ``logging.ERROR``.
-        self.error_logger = logging.getLogger(eu.ERROR_LOGGER_NAME)
+        self.error_logger = logging.getLogger(iu.ERROR_LOGGER_NAME)
 
         #: A ``logging`` instance with a file handler for logging successful POST operations.
         #: The log file resides locally within the directory specified by the constant
         #: ``connection.LOG_DIR``. Accepts messages >= ``logging.INFO``.
-        self.post_logger = logging.getLogger(eu.POST_LOGGER_NAME)
+        self.post_logger = logging.getLogger(iu.POST_LOGGER_NAME)
         log_level = logging.INFO
         self.post_logger.setLevel(log_level)
 
@@ -145,45 +145,45 @@ class Connection:
     @property
     def profiles(self):
         if self._profiles is None:
-            self._profiles = Profiles(self.dcc_mode.url)
+            self._profiles = Profiles(self.igvf_mode.url)
         return self._profiles
 
     @property
-    def dcc_mode(self):
-        if self._dcc_mode is None:
-            dcc_mode = self._get_dcc_mode_from_env()
-            self._dcc_mode = dcc_mode
-        if not self.dcc_modes.has_mode(self._dcc_mode):
-            self.dcc_modes.add_mode(self._dcc_mode)
-        mode = self.dcc_modes.get_mode(self._dcc_mode)
+    def igvf_mode(self):
+        if self._igvf_mode is None:
+            igvf_mode = self._get_igvf_mode_from_env()
+            self._igvf_mode = igvf_mode
+        if not self.igvf_modes.has_mode(self._igvf_mode):
+            self.igvf_modes.add_mode(self._igvf_mode)
+        mode = self.igvf_modes.get_mode(self._igvf_mode)
         if not mode.has_been_validated:
-            self._validate_dcc_mode(mode.url)
+            self._validate_igvf_mode(mode.url)
             mode.has_been_validated = True
         return mode
 
-    def _get_dcc_mode_from_env(self):
+    def _get_igvf_mode_from_env(self):
         try:
-            dcc_mode = os.environ["DCC_MODE"]
-            self.debug_logger.debug("Utilizing DCC_MODE environment variable.")
+            igvf_mode = os.environ["IGVF_MODE"]
+            self.debug_logger.debug("Utilizing IGVF_MODE environment variable.")
         except KeyError:
             self.log_error((
-                "ERROR: You must supply the `dcc_mode` argument or set the environment "
-                "variable DCC_MODE"
+                "ERROR: You must supply the `igvf_mode` argument or set the environment "
+                "variable IGVF_MODE"
             ))
             raise
-        return dcc_mode
+        return igvf_mode
 
-    def _validate_dcc_mode(self, url):
+    def _validate_igvf_mode(self, url):
         try:
             requests.get(url, timeout=2)
         except requests.exceptions.ConnectionError:
             self.log_error(
                 (
-                    "ERROR: The specified dcc_mode of '{}' is not valid. Should be one "
-                    "of '{}' or a valid demo.encodedcc.org hostname."
+                    "ERROR: The specified igvf_mode of '{}' is not valid. Should be one "
+                    "of '{}' or a valid demo.igvf.org hostname."
                 ).format(
-                    self._dcc_mode,
-                    list(eu.DCC_MODES.keys()),
+                    self._igvf_mode,
+                    list(iu.IGVF_MODES.keys()),
                 ),
             )
             raise
@@ -202,14 +202,14 @@ class Connection:
         """
         if not os.path.exists(LOG_DIR):
             os.mkdir(LOG_DIR)
-        dcc_mode = self._dcc_mode
-        if dcc_mode is None:
-            dcc_mode = self._get_dcc_mode_from_env()
+        igvf_mode = self._igvf_mode
+        if igvf_mode is None:
+            igvf_mode = self._get_igvf_mode_from_env()
         bad_characters = ['/', ':']
-        cleaned_dcc_mode = dcc_mode
+        cleaned_igvf_mode = igvf_mode
         for c in bad_characters:
-            cleaned_dcc_mode = cleaned_dcc_mode.replace(c, '')
-        filename = "log_eu_" + cleaned_dcc_mode + "_" + tag + ".txt"
+            cleaned_igvf_mode = cleaned_igvf_mode.replace(c, '')
+        filename = "log_eu_" + cleaned_igvf_mode + "_" + tag + ".txt"
         filename = os.path.join(LOG_DIR, filename)
         return filename
 
@@ -237,8 +237,8 @@ class Connection:
     @property
     def auth(self):
         """
-        Sets the API and secret keys to use when authenticating with the DCC servers.
-        These are determined from the values of the `DCC_API_KEY` and `DCC_SECRET_KEY`
+        Sets the API and secret keys to use when authenticating with the DACC servers.
+        These are determined from the values of the `IGVF_API_KEY` and `IGVF_SECRET_KEY`
         environment variables via the ``_get_api_keys_from_env()`` private instance
         method.
         """
@@ -255,8 +255,8 @@ class Connection:
 
     def _get_api_keys_from_env(self):
         """
-        Retrieves the API key and secret key based on the environment variables `DCC_API_KEY` and
-        `DCC_SECRET_KEY`.
+        Retrieves the API key and secret key based on the environment variables `IGVF_API_KEY` and
+        `IGVF_SECRET_KEY`.
 
         Returns:
             `tuple`: Two item tuple containing the API Key and the Secret Key
@@ -265,22 +265,22 @@ class Connection:
         secret_key = os.environ.get("IGVF_SECRET_KEY")
         return api_key, secret_key
 
-    def _log_post(self, aliases, dcc_id):
+    def _log_post(self, aliases, dacc_id):
         """
-        Uses the self.post_logger to log a newly POSTED object's aliases and dcc_id. 
+        Uses the self.post_logger to log a newly POSTED object's aliases and dacc_id.
         Each message is written in a three column format delimited by a tab character. The columns are:
           1) primary alias: The first alias appearing in the provided 'aliases' list argument.
           2) secondary aliases: Any additional aliases appearing in the provided 'aliases' list argument.
                  These will be comma-delimited.
-          2) DCC identifier: The value of the dcc_id argument. 
+          2) DACC identifier: The value of the dacc_id argument.
 
-        Note that it is possible that the aliases list is empty, in which case only the dcc_id will
+        Note that it is possible that the aliases list is empty, in which case only the dacc_id will
         be present in the last column of the written line. 
 
         Args:
             aliases: `list`. The value of the 'aliases' key in the payload for the record that
                 was POSTED.
-            dcc_id: `str`. An ENCODE-generated identifier on the ENCODE Portal for the new record
+            dacc_id: `str`. An IGVF-generated identifier on the IGVF Portal for the new record
                 that was POSTED, i.e. accession, uuid, md5sum.
         """
         try:
@@ -291,7 +291,7 @@ class Connection:
             secondary = aliases[1:]
         except KeyError:
             secondary = []
-        entry = primary + "\t" + ",".join(secondary) + "\t" + dcc_id
+        entry = primary + "\t" + ",".join(secondary) + "\t" + dacc_id
         self.post_logger.info(entry)
 
     def set_submission(self, status):
@@ -309,7 +309,7 @@ class Connection:
     def check_dry_run(self):
         """
         Checks if the dry-run feature is enabled, and if so, logs the fact. This is mainly meant to
-        be called by other methods that are designed to make modifications on the ENCODE Portal.
+        be called by other methods that are designed to make modifications on the IGVF Portal.
 
         Returns:
             `True`: The dry-run feature is enabled.
@@ -339,14 +339,14 @@ class Connection:
     def add_alias_prefix(self, aliases, prefix=False):
         """
         Given a list of aliases, adds the lab prefix to each one that doesn't yet have a prefix set.
-        The lab prefix is taken as the passed-in `prefix`, otherwise, it defaults to the `DCC_LAB`
-        environment variable, and it must be a value assigned by the DCC, i.e. "michael-snyder"
-        for the Snyder Production Center. The DCC requires that aliases be prefixed in this manner. 
+        The lab prefix is taken as the passed-in `prefix`, otherwise, it defaults to the `IGVF_LAB`
+        environment variable, and it must be a value assigned by the DACC, i.e. "michael-snyder"
+        for the Snyder Production Center. The DACC requires that aliases be prefixed in this manner. 
     
         Args:
             aliases: `list` of aliases.
-            prefix: `str`. The DCC assigned lab prefix to use. If not specified, then the default
-                is the value of the DCC_LAB environment variable.
+            prefix: `str`. The DACC assigned lab prefix to use. If not specified, then the default
+                is the value of the IGVF_LAB environment variable.
     
         Returns:
             `list`.
@@ -369,35 +369,35 @@ class Connection:
     
         """
         if not prefix:
-            prefix = eu.LAB_PREFIX
+            prefix = iu.LAB_PREFIX
         prefix = prefix.strip(":")
         res = []
         for i in aliases:
             if ":" not in i:
                 if not prefix:
-                    raise Exception("Can't add alias prefix to aliases as it isn't specified; please set DCC_LAB environment variable to the lab identifier assigned to you by the DCC, i.e. michael-snyder for the Snyder Production Center.".format(prefix))
+                    raise Exception("Can't add alias prefix to aliases as it isn't specified; please set IGVF_LAB environment variable to the lab identifier assigned to you by the DACC.".format(prefix))
                 else:
                     i = prefix + ":" + i
             res.append(i)
         return res
 
-    def get_aliases(self, dcc_id, strip_alias_prefix=False):
+    def get_aliases(self, dacc_id, strip_alias_prefix=False):
         """
-        Given an ENCODE identifier for an object, performs a GET request and extracts the aliases.
+        Given an IGVF identifier for an object, performs a GET request and extracts the aliases.
 
         Args:
-            dcc_id: `str`. The ENCODE ID for a given object, i.e ENCSR999EHG.
+            dacc_id: `str`. The IGVF ID for a given object, i.e IGVFSM000ABC.
             strip_alias_prefix: `bool`. `True` means to remove the alias prefix if all return aliases.
 
         Returns:
             `list`: The aliases.
         """
-        record = self.get(ignore404=False, rec_ids=dcc_id)
-        aliases = record[eu.ALIAS_PROP_NAME]
+        record = self.get(ignore404=False, rec_ids=dacc_id)
+        aliases = record[iu.ALIAS_PROP_NAME]
         for index in range(len(aliases)):
             alias = aliases[index]
             if strip_alias_prefix:
-                aliases[index] = euu.strip_alias_prefix(alias)
+                aliases[index] = iuu.strip_alias_prefix(alias)
         return aliases
 
     def indexing(self):
@@ -424,7 +424,7 @@ class Connection:
         """
         # urllib doesn't contain the parse() method until you import urllib3 (weird, but that's what I noticed).
         query = urllib.parse.urlencode(search_args)
-        url = euu.url_join([self.dcc_mode.url, "search/?"]) + query
+        url = iuu.url_join([self.igvf_mode.url, "search/?"]) + query
         return url
 
     def search(self, search_args=[], url=None, limit=None):
@@ -435,13 +435,13 @@ class Connection:
         values for both arguments in which case the query parameters specified in `search_args` will
         be added to the query parameters given in the URL.
 
-        If ``self.submission == True``, then the query will be searced with "datastore=database",
+        If ``self.submission == True``, then the query will be searched with "datastore=database",
         unless the 'database' query parameter is already set. 
 
         Args:
             search_args: `list` of two-item tuples of the form ``[(key, val), (key, val) ,...]``.
                 To support a != style query, append "!" to the key name.
-            url: `str`. A URL used to search for records interactively in the ENCODE Portal. The
+            url: `str`. A URL used to search for records interactively in the IGVF Portal. The
                 query will be extracted from the URL.
             limit: `int`. The number of search results to send from the server. The default means
                 to return all results.
@@ -490,11 +490,11 @@ class Connection:
                 query_list.append(("datastore", "database"))
 
         url = self.make_search_url(search_args=query_list)
-        self.debug_logger.debug("Searching DCC with query {url}.".format(url=url))
+        self.debug_logger.debug("Searching DACC with query {url}.".format(url=url))
         response = requests.get(url,
                                 auth=self.auth,
-                                timeout=eu.TIMEOUT,
-                                headers=euu.REQUEST_HEADERS_JSON,
+                                timeout=iu.TIMEOUT,
+                                headers=iuu.REQUEST_HEADERS_JSON,
                                 verify=False)
         status_code = response.status_code
         if not response.ok and status_code != requests.codes.NOT_FOUND:
@@ -507,7 +507,7 @@ class Connection:
         """
         Useful to call when doing a POST (and ``self.post()`` does call this). Ensures that the profile key
         identified by ``self.PROFILE_KEY`` exists in the passed-in payload and that the value is
-        a recognized ENCODE object profile (schema) identifier. Alternatively, the user can set the profile in
+        a recognized IGVF object profile (schema) identifier. Alternatively, the user can set the profile in
         the more convoluted `@id` property.
 
         Args:
@@ -517,10 +517,10 @@ class Connection:
             `str`: The ID of the profile if all validations pass, otherwise.
 
         Raises:
-            encode_utils.exceptions.ProfileNotSpecified: Both keys ``self.PROFILE_KEY`` and `@id` are
+            igvf_utils.exceptions.ProfileNotSpecified: Both keys ``self.PROFILE_KEY`` and `@id` are
               missing in the payload.
-            encode_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
-                `encode_utils.profiles.Profile`.
+            igvf_utils.profiles.UnknownProfile: The profile ID isn't recognized by the class
+                `igvf_utils.profiles.Profile`.
         """
 
         profile_id = payload.get(self.PROFILE_KEY)
@@ -552,8 +552,8 @@ class Connection:
         lookup_ids = []
         if self.ENCID_KEY in payload:
             lookup_ids.append(payload[self.ENCID_KEY])
-        if eu.ALIAS_PROP_NAME in payload:
-            lookup_ids.extend(payload[eu.ALIAS_PROP_NAME])
+        if iu.ALIAS_PROP_NAME in payload:
+            lookup_ids.extend(payload[iu.ALIAS_PROP_NAME])
         if "md5sum" in payload:
             # The case for file objects.
             lookup_ids.append(payload["md5sum"])
@@ -563,23 +563,11 @@ class Connection:
         if not lookup_ids:
             raise RecordIdNotPresent(
                 ("The payload does not contain a recognized identifier for traceability. For example,"
-                 " you need to set the 'aliases' key, or specify an ENCODE assigned identifier in the"
+                 " you need to set the 'aliases' key, or specify an IGVF assigned identifier in the"
                  " non-schematic key {}.".format(self.ENCID_KEY)))
 
         return lookup_ids
 
-    # def delete(self,rec_id):
-    #    """Not supported at present by the DCC - Only wranglers can delete objects.
-    #    """
-    #    url = os.path.join(self.dcc_mode.url,rec_id)
-    #    self.logger.info(
-    #      (">>>>>>DELETING {rec_id} From DCC with URL {url}").format(rec_id=rec_id,url=url))
-    #    if self.dry_run:
-    #        return {}
-    #    response = requests.delete(url,auth=self.auth,timeout=eu.TIMEOUT,headers=euu.REQUEST_HEADERS_JSON, verify=False)
-    #    if response.ok:
-    #        return response.json()
-    #    response.raise_for_status()
 
     def get(self, rec_ids, database=False, ignore404=True, frame=None):
         """GET a record from the Portal.
@@ -594,8 +582,7 @@ class Connection:
                 a record's `@id` property.
             database: `bool`. If True, then search the database directly instead of the Elasticsearch.
                  indices. Always True when in submission mode (`self.submission` is True).
-            frame: `str`. A value for the frame query parameter, i.e. 'object', 'edit'. See
-                https://www.encodeproject.org/help/rest-api/ for details.
+            frame: `str`. A value for the frame query parameter, i.e. 'object', 'edit'.
             ignore404: `bool`. Only matters when none of the passed in record IDs were found on the
                 Portal.  In this case, If set to `True`, then an empty `dict` will be returned.
                 If set to `False`, then an Exception will be raised.
@@ -616,17 +603,17 @@ class Connection:
         status_codes = {}  # key is return code, value is the record ID
         for r in rec_ids:
             r = r.strip("/")
-            url = euu.url_join([self.dcc_mode.url, r, "?format=json"])
+            url = iuu.url_join([self.igvf_mode.url, r, "?format=json"])
             if database:
                 url += "&datastore=database"
             if frame:
                 url += "&frame={frame}".format(frame=frame)
-            self.debug_logger.debug(">>>>>>GET {rec_id} From DCC with URL {url}".format(
+            self.debug_logger.debug(">>>>>>GET {rec_id} From DACC with URL {url}".format(
                 rec_id=r, url=url))
             response = requests.get(url,
                                     auth=self.auth,
-                                    timeout=eu.TIMEOUT,
-                                    headers=euu.REQUEST_HEADERS_JSON,
+                                    timeout=iu.TIMEOUT,
+                                    headers=iuu.REQUEST_HEADERS_JSON,
                                     verify=False)
             if response.ok:
                 return response.json()
@@ -634,7 +621,7 @@ class Connection:
 
         if requests.codes.FORBIDDEN in status_codes:
             raise Exception(
-                "Access to ENCODE record {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
+                "Access to IGVF record {} is forbidden".format(status_codes[requests.codes.FORBIDDEN]))
         elif requests.codes.NOT_FOUND in status_codes:
             self.debug_logger.debug("NOT FOUND")
             if ignore404:
@@ -666,8 +653,8 @@ class Connection:
         if extension == 'gzip':
             mime_type = 'application/gzip'
         data = None
-        if euu.is_jpg_or_tiff(document):
-            orientation_stats = euu.orient_jpg(document)
+        if iuu.is_jpg_or_tiff(document):
+            orientation_stats = iuu.orient_jpg(document)
             if orientation_stats["transformed"]:
                 self.debug_logger.debug("Image {} orientation transformed from {} to {}.".format(download_filename, orientation_stats["from"], 1))
                 data = base64.b64encode(orientation_stats["stream"])
@@ -745,10 +732,10 @@ class Connection:
     def before_submit_alias(self, payload):
         """
         A pre-POST and pre-PATCH hook used to 
-          1) Clean alias names by removing disallowed characters indicated by the DCC schema for
+          1) Clean alias names by removing disallowed characters indicated by the DACC schema for
              the alias property. 
           2) Add the lab alias prefix to any aliases that are missing it. 
-             The `DCC_LAB` environment variable is consulted to fetch the lab name, and if not
+             The `IGVF_LAB` environment variable is consulted to fetch the lab name, and if not
              set then this will be a no-op.
 
         Args:
@@ -757,11 +744,11 @@ class Connection:
         Returns:
             `dict`: The potentially modified payload.
         """
-        if not eu.ALIAS_PROP_NAME in payload:
+        if not iu.ALIAS_PROP_NAME in payload:
             return payload
-        aliases = euu.clean_aliases(payload[eu.ALIAS_PROP_NAME])
+        aliases = iuu.clean_aliases(payload[iu.ALIAS_PROP_NAME])
         aliases = self.add_alias_prefix(aliases)
-        payload[eu.ALIAS_PROP_NAME] = sorted(set(aliases))
+        payload[iu.ALIAS_PROP_NAME] = sorted(set(aliases))
         return payload
 
     def before_submit_attachment(self, payload):
@@ -786,70 +773,6 @@ class Connection:
         """
         attachment_props = [
             "attachment",
-            # atac_alignment_enrichment_quality_metric, chip_alignment_enrichment_quality_metric, complexity_xcorr_quality_metric
-            "cross_correlation_plot",
-            "gc_bias_plot",
-            "jsd_plot",
-            "tss_enrichment_plot",
-            # atac_peak_enrichment_quality_metric
-            "peak_width_distribution_plot",
-            # atac_replication_quality_metric and chip_replication_quality_metric
-            "idr_dispersion_plot",
-            "idr_parameters",
-            # dnase_alignment_quality_metric
-            "insert_size_histogram",
-            "insert_size_metric",
-            "nuclear_preseq",
-            "nuclear_preseq_targets",
-            # dnase_footprinting_quality_metric
-            "dispersion_model",
-            # gembs_alignment_quality_metric
-            "insert_size_plot",
-            "mapq_plot",
-            # idr_quality_metric
-            "IDR_plot_true",
-            "IDR_plot_rep1_pr",
-            "IDR_plot_rep2_pr",
-            "IDR_plot_pool_pr",
-            "IDR_parameters_true",
-            "IDR_parameters_rep1_pr",
-            "IDR_parameters_rep2_pr",
-            "IDR_parameters_pool_pr",
-            # sc_atac_alignment_quality_metric
-            "mito_stats",
-            "samstats",
-            # sc_atac_analysis_quality_metric
-            "archr_doublet_summary_figure",
-            "archr_fragment_size_distribution",
-            "archr_tss_by_unique_frags",
-            "archr_doublet_summary_text",
-            "archr_pre_filter_metadata",
-            # sc_atac_library_complexity_quality_metric
-            "pbc_stats",
-            "picard_markdup_stats",
-            # sc_atac_multiplet_quality_metric
-            "barcodes_status",
-            "barcode_pairs_multiplets",
-            "barcode_pairs_expanded",
-            "multiplet_stats",
-            "multiplet_threshold_plot",
-            # sc_atac_read_quality_metric
-            "adapter_trimming_stats",
-            "barcode_matching_stats",
-            "barcode_revcomp_stats",
-            # scrna_seq_counts_summary_quality_metric
-            "total_counts_vs_pct_mitochondria",
-            "total_counts_vs_genes_by_count",
-            "counts_violin_plot",
-            # segway_quality_metric
-            "feature_aggregation_tab",
-            "length_distribution_tab",
-            "segment_sizes_tab",
-            "signal_distribution_tab",
-            "trackname_assay",
-            # star_solo_quality_metric
-            "barcode_rank_plot",
-            "sequencing_saturation_plot",
         ]
         path = "path"
 
@@ -875,8 +798,8 @@ class Connection:
             `dict`: The potentially modified payload.
 
         Raises:
-            encode_utils.utils.MD5SumError: Perculated through the function
-              `encode_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
+            igvf_utils.utils.MD5SumError: Perculated through the function
+              `igvf_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
         """
         profile_id = payload[self.PROFILE_KEY]
         if profile_id != self.profiles.FILE_PROFILE_ID:
@@ -890,13 +813,13 @@ class Connection:
             # Already set; nothing to do.
             pass
         else:
-            payload[self.profiles.MD5SUM_NAME_PROP_NAME] = euu.calculate_md5sum(file_name)
+            payload[self.profiles.MD5SUM_NAME_PROP_NAME] = iuu.calculate_md5sum(file_name)
         # Set file_size
         if (self.profiles.FILE_SIZE_PROP_NAME in payload) and (payload[self.profiles.FILE_SIZE_PROP_NAME]):
             # Already set; nothing to do.
             pass
         else:
-            payload[self.profiles.FILE_SIZE_PROP_NAME] = euu.calculate_file_size(file_name)
+            payload[self.profiles.FILE_SIZE_PROP_NAME] = iuu.calculate_file_size(file_name)
         return payload
 
     def before_post_fastq_file(self, payload):
@@ -976,12 +899,12 @@ class Connection:
         """POST a record to the Portal.
 
         Requires that you include in the payload the non-schematic key ``self.PROFILE_KEY`` to
-        designate the name of the ENCODE object profile that you are submitting to, or the
+        designate the name of the IGVF object profile that you are submitting to, or the
         actual `@id` property itself.
 
         If the `lab` property isn't present in the payload, then the default will be set to the value
-        of the `DCC_LAB` environment variable. Similarly, if the `award` property isn't present, then the
-        default will be set to the value of the `DCC_AWARD` environment variable.
+        of the `IGVF_LAB` environment variable. Similarly, if the `award` property isn't present, then the
+        default will be set to the value of the `IGVF_AWARD` environment variable.
 
         Before the POST is attempted, any pre-POST hooks are fist called; see the method
         ``self.before_submit_hooks``).  After a successfuly POST, any after-POST submit hooks are
@@ -989,11 +912,11 @@ class Connection:
 
         Args:
             payload: `dict`. The data to submit.
-            require_aliases: `bool`.  `True` means that the 'aliases' property is to be required in
+            require_aliases: `bool`. `True` means that the 'aliases' property is to be required in
                  `payload`. This is the default and it is highly recommended not to change this
                  because it'll be easy to create duplicates on the server if accidentally POSTING
-                 the same payload again.  For example, you can easily create the same biosample
-                 as many times as you want on the Portal when not providing an alias.  Furthermore,
+                 the same payload again. For example, you can easily create the same biosample
+                 as many times as you want on the Portal when not providing an alias. Furthermore,
                  submitting labs should include at least one alias per record being submitted
                  to the Portal for traceabilty purposes in the submitting lab.
             upload_file: `bool`. If `False`, when POSTing files the file data will not
@@ -1016,11 +939,11 @@ class Connection:
             status code on POST of the initial payload.
 
         Raises:
-            encode_utils.exceptions.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
-                defualt set by the environment variable `DCC_AWARD`.
-            encode_utils.exceptions.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
-                default set by the environment variable `DCC_LAB`.
-            encode_utils.exceptions.MissingAlias: The argument 'require_aliases' is set to True and
+            igvf_utils.exceptions.AwardPropertyMissing: The `award` property isn't present in the payload and there isn't a
+                default set by the environment variable `IGVF_AWARD`.
+            igvf_utils.exceptions.LabPropertyMissing: The `lab` property isn't present in the payload and there isn't a
+                default set by the environment variable `IGVF_LAB`.
+            igvf_utils.exceptions.MissingAlias: The argument 'require_aliases' is set to True and
                 the 'aliases' property is missing in the payload or is empty.
             requests.exceptions.HTTPError: The return status is not ok.
 
@@ -1034,21 +957,21 @@ class Connection:
         payload = json.loads(json.dumps(payload))
         profile = self.get_profile_from_payload(payload)
         payload[self.PROFILE_KEY] = profile.name
-        url = euu.url_join([self.dcc_mode.url, profile.name])
+        url = iuu.url_join([self.igvf_mode.url, profile.name])
         if self.ENCID_KEY in payload:
             # Shouldn't be here, unless maybe a PATCH was attempted and the record didn't exist, so
             # a POST was then attempted.
             payload.pop(self.ENCID_KEY)
         # Check if we need to add defaults for 'award' and 'lab' properties:
         if profile.has_award:  # No lab prop for these profiles either.
-            if eu.AWARD_PROP_NAME not in payload:
-                if not eu.AWARD:
+            if iu.AWARD_PROP_NAME not in payload:
+                if not iu.AWARD:
                     raise AwardPropertyMissing
-                payload.update(eu.AWARD)
-            if eu.LAB_PROP_NAME not in payload:
-                if not eu.LAB:
+                payload.update(iu.AWARD)
+            if iu.LAB_PROP_NAME not in payload:
+                if not iu.LAB:
                     raise LabPropertyMissing
-                payload.update(eu.LAB)
+                payload.update(iu.LAB)
 
         # Run 'before' hooks:
         payload = self.before_submit_hooks(payload, method=self.POST)
@@ -1064,7 +987,7 @@ class Connection:
             pass
 
         no_alias = False #Use this to check later if doing a GET
-        aliases = payload.get(eu.ALIAS_PROP_NAME)
+        aliases = payload.get(iu.ALIAS_PROP_NAME)
         if not aliases:
             if not profile.has_alias or not require_aliases:
                 aliases = ["N/A"]
@@ -1073,30 +996,30 @@ class Connection:
                 raise MissingAlias(
                     ("Missing property '{}' in payload {}. This is required by default for the profiles"
                      " that include this property, and can be disabled by setting the `require_aliases`"
-                     " argument to False in the call to this method, being `encode_utils.connection.Connection.post()`").format(eu.ALIAS_PROP_NAME,payload))
+                     " argument to False in the call to this method, being `igvf_utils.connection.Connection.post()`").format(iu.ALIAS_PROP_NAME,payload))
 
         # Validate the payload against the schema
         ### This doesn't work as locally I can't use jsonschema to validate a profile with
         ### custom objects specified in the value of a linkTo property.
-        #self.debug_logger.debug("Validating the payload against the schema")
-        #validation_error = euu.err_context(payload=payload, schema=self.profiles.get_profile_from_id(profile_id))
-        #if validation_error:
-        #    self.log_error("Invalid schema instance of the {} profile.".format(profile_id))
-        #    self.debug_logger.debug("Payload is: {}".format(euu.print_format_dict(payload)))
-        #    self.log_error(validation_error[0]) # The top-level validation message
-        #    if validation_error[1]: # The validation context can be empty
-        #        self.debug_logger.debug(euu.print_format_dict(validation_error[1]))
-        #    raise Exception(euu.print_format_dict(validation_error[0]))
+        self.debug_logger.debug("Validating the payload against the schema")
+        validation_error = iuu.err_context(payload=payload, schema=self.profiles.get_profile_from_id(profile.name).schema)
+        if validation_error:
+           self.log_error("Invalid schema instance of the {} profile.".format(profile.name))
+           self.debug_logger.debug("Payload is: {}".format(iuu.print_format_dict(payload)))
+           self.log_error(validation_error[0]) # The top-level validation message
+           if validation_error[1]: # The validation context can be empty
+               self.debug_logger.debug(iuu.print_format_dict(validation_error[1]))
+           raise Exception(iuu.print_format_dict(validation_error[0]))
 
         self.debug_logger.debug(
             (
-                "<<<<<< POST {} record {alias} To DCC with URL {url} and this payload:"
+                "<<<<<< POST {} record {alias} To IGVF database with URL {url} and this payload:"
                 "\n\n{payload}\n\n"
             ).format(
                 profile.name,
                 alias=aliases[0],
                 url=url,
-                payload=euu.print_format_dict(
+                payload=iuu.print_format_dict(
                     payload,
                     truncate_long_strings=truncate_long_strings_in_payload_log
                 )
@@ -1107,8 +1030,8 @@ class Connection:
             return {}
         response = requests.post(url,
                                  auth=self.auth,
-                                 timeout=eu.TIMEOUT,
-                                 headers=euu.REQUEST_HEADERS_JSON,
+                                 timeout=iu.TIMEOUT,
+                                 headers=iuu.REQUEST_HEADERS_JSON,
                                  json=payload,
                                  verify=False)
         #response_json = response.json()["@graph"][0]
@@ -1124,7 +1047,8 @@ class Connection:
             except KeyError:
                 # Some objects don't have an accession, i.e. replicates.
                 encid = response_json["uuid"]
-            self._log_post(aliases=aliases, dcc_id=encid)
+            self.debug_logger.debug(f"Object posted with identifier: {encid}")
+            self._log_post(aliases=aliases, dacc_id=encid)
             # Run 'after' hooks:
             self.after_submit_hooks(encid, profile.name, method=self.POST, upload_file=upload_file)
             if return_original_status_code is True:
@@ -1161,8 +1085,8 @@ class Connection:
         else:
             message = "Failed to POST {}".format(aliases[0])
             self.log_error(message)
-            self.debug_logger.debug("<<<<<< DCC POST RESPONSE: ")
-            self.debug_logger.debug(euu.print_format_dict(response_json))
+            self.debug_logger.debug("<<<<<< DACC POST RESPONSE: ")
+            self.debug_logger.debug(iuu.print_format_dict(response_json))
             response.raise_for_status()
 
     def patch(self, payload, raise_403=True, extend_array_values=True):
@@ -1198,9 +1122,9 @@ class Connection:
         # tuples become arrays, ...
         payload = json.loads(json.dumps(payload))
         self.debug_logger.debug("\nIN patch()")
-        encode_id = payload[self.ENCID_KEY]
+        igvf_id = payload[self.ENCID_KEY]
         # Ensure that the record exists on the Portal:
-        rec_json = self.get(rec_ids=encode_id, frame="edit", ignore404=True)
+        rec_json = self.get(rec_ids=igvf_id, frame="edit", ignore404=True)
         if not rec_json:
             return {}
 
@@ -1224,7 +1148,7 @@ class Connection:
                         profile_id = self.get_profile_from_payload(payload)
                         payload[key] = self.profiles.remove_duplicate_associations(val)
                     elif isinstance(val[0], dict):
-                        payload[key] = euu.remove_duplicate_objects(val)
+                        payload[key] = iuu.remove_duplicate_objects(val)
 
         # Run 'before' hooks:
         payload = self.before_submit_hooks(payload, method=self.PATCH)
@@ -1233,15 +1157,15 @@ class Connection:
             # Some client software may add this key in; won't hurt to remove it.
             payload.pop(self.PROFILE_KEY)
 
-        url = euu.url_join([self.dcc_mode.url, encode_id.lstrip("/")])
+        url = iuu.url_join([self.igvf_mode.url, igvf_id.lstrip("/")])
         self.debug_logger.debug(
-            ("<<<<<< PATCHING {encode_id} To DCC with URL"
+            ("<<<<<< PATCHING {igvf_id} To IGVF database with URL"
              " {url} and this payload:\n\n{payload}\n\n").format(
-                 encode_id=encode_id, url=url, payload=euu.print_format_dict(payload)))
+                 igvf_id=igvf_id, url=url, payload=iuu.print_format_dict(payload)))
 
         if self.check_dry_run():
             return {}
-        response = requests.patch(url, auth=self.auth, timeout=eu.TIMEOUT, headers=euu.REQUEST_HEADERS_JSON,
+        response = requests.patch(url, auth=self.auth, timeout=iu.TIMEOUT, headers=iuu.REQUEST_HEADERS_JSON,
                                   json=payload, verify=False)
         response_json = response.json()
 
@@ -1258,10 +1182,10 @@ class Connection:
             if not raise_403:
                 return rec_json
 
-        message = "Failed to PATCH {}".format(encode_id)
+        message = "Failed to PATCH {}".format(igvf_id)
         self.log_error(message)
-        self.debug_logger.debug("<<<<<< DCC PATCH RESPONSE: ")
-        self.debug_logger.debug(euu.print_format_dict(response_json))
+        self.debug_logger.debug("<<<<<< PATCH RESPONSE: ")
+        self.debug_logger.debug(iuu.print_format_dict(response_json))
         response.raise_for_status()
 
     def remove_props(self, rec_id, props=[]):
@@ -1304,15 +1228,19 @@ class Connection:
                 # Then it is safe to remove this property.
                 editable_json.pop(prop.name)
 
-        url = euu.url_join([self.dcc_mode.url, rec_id])
-        self.debug_logger.debug("Attempting to remove properties {} from record '{}' by sending a PUT request with payload {}.".format(props, rec_id, euu.print_format_dict(editable_json)))
+        url = iuu.url_join([self.igvf_mode.url, rec_id])
+        self.debug_logger.debug(
+            "Attempting to remove properties {} from record '{}' by "
+            "sending a PUT request with payload {}.".format(
+                props, rec_id, iuu.print_format_dict(editable_json))
+            )
         if self.check_dry_run():
             return
         response = requests.put(
             url,
             auth=self.auth,
-            timeout=eu.TIMEOUT,
-            headers=euu.REQUEST_HEADERS_JSON,
+            timeout=iu.TIMEOUT,
+            headers=iuu.REQUEST_HEADERS_JSON,
             json=editable_json,
             verify=False
         )
@@ -1378,12 +1306,12 @@ class Connection:
         # tuples become arrays, ...
         patch = json.loads(json.dumps(patch))
         self.debug_logger.debug("\nIN remove_and_patch()")
-        encode_id = patch[self.ENCID_KEY]
-        rec_json = self.get(rec_ids=encode_id, frame="object", ignore404=True)
+        igvf_id = patch[self.ENCID_KEY]
+        rec_json = self.get(rec_ids=igvf_id, frame="object", ignore404=True)
         if not rec_json:  # Ensure that the record exists on the Portal:
             return {}
         profile = self.profiles.get_profile_from_id(rec_json["@id"])
-        payload = self.get(rec_ids=encode_id, frame="edit", ignore404=False)
+        payload = self.get(rec_ids=igvf_id, frame="edit", ignore404=False)
         for prop_name in props:
             prop = profile.get_property_from_name(prop_name)
             if prop.is_required:
@@ -1412,7 +1340,7 @@ class Connection:
                 if isinstance(val[0], str):
                     payload[key] = self.profiles.remove_duplicate_associations(val)
                 elif isinstance(val[0], dict):
-                    payload[key] = euu.remove_duplicate_objects(val)
+                    payload[key] = iuu.remove_duplicate_objects(val)
             else:
                 payload[key] = patch[key]
 
@@ -1421,13 +1349,13 @@ class Connection:
         payload.pop(self.ENCID_KEY)
         payload.pop(self.PROFILE_KEY, None)
 
-        url = euu.url_join([self.dcc_mode.url, encode_id.lstrip("/")])
+        url = iuu.url_join([self.igvf_mode.url, igvf_id.lstrip("/")])
         self.debug_logger.debug(
-            "<<<<<< PUTTING {encode_id} To DCC with URL"
+            "<<<<<< PUTTING {igvf_id} To DACC with URL"
             " {url} and this payload:\n\n{payload}\n\n".format(
-                encode_id=encode_id,
+                igvf_id=igvf_id,
                 url=url,
-                payload=euu.print_format_dict(payload)
+                payload=iuu.print_format_dict(payload)
             )
         )
 
@@ -1436,8 +1364,8 @@ class Connection:
         response = requests.put(
             url,
             auth=self.auth,
-            timeout=eu.TIMEOUT,
-            headers=euu.REQUEST_HEADERS_JSON,
+            timeout=iu.TIMEOUT,
+            headers=iuu.REQUEST_HEADERS_JSON,
             json=payload,
             verify=False
         )
@@ -1456,54 +1384,12 @@ class Connection:
             if not raise_403:
                 return rec_json
 
-        message = "Failed to PUT {}".format(encode_id)
+        message = "Failed to PUT {}".format(igvf_id)
         self.log_error(message)
-        self.debug_logger.debug("<<<<<< DCC PUT RESPONSE: ")
-        self.debug_logger.debug(euu.print_format_dict(response_json))
+        self.debug_logger.debug("<<<<<< DACC PUT RESPONSE: ")
+        self.debug_logger.debug(iuu.print_format_dict(response_json))
         response.raise_for_status()
 
-    def send(self, payload, error_if_not_found=False, extend_array_values=True, raise_403=True):
-        """
-        .. deprecated:: 1.1.1
-           Will be removed in the next major release.
-
-        A wrapper over ``self.post()`` and ``self.patch()`` that determines which to call based on whether the
-        record exists on the Portal.  Especially useful when submitting a high-level object,
-        such as an experiment which contains many dependent objects, in which case you could have a mix
-        where some need to be POST'd and some PATCH'd.
-
-        Args:
-            payload: `dict`. The data to submit.
-            error_if_not_found: `bool`. If set to `True`, then a PATCH will be attempted and a
-                ``requests.exceptions.HTTPError`` will be raised if the record doesn't exist on the Portal.
-            extend_array_values: `bool`. Only matters when doing a PATCH, and Only affects keys with
-                array values. `True` (default) means to extend the corresponding value on the Portal
-                with what's specified in the payload. `False` means to replace the value on the Portal
-                with what's in the payload.
-            raise_403: `bool`. Only matters when doing a PATCH. `True` means to raise an
-                requests.exceptions.HTTPError if a 403 status (forbidden) is returned.
-                If set to `False` and there still is a 403 return status, then the object you were
-                trying to PATCH will be fetched from the Portal in JSON format as this function's
-                return value (as handled by ``self.patch()``).
-
-        Raises:
-              requests.exceptions.HTTPError: You want to do a PATCH (indicated by setting
-                  ``error_if_not_found=True``) but the record isn't found.
-        """
-        # Check wither record already exists on the portal
-        self.debug_logger.debug("WARNING: Connection.send() is deprecated since v1.1.1.")
-        lookup_ids = self.get_lookup_ids_from_payload(payload)
-        rec_json = self.get(rec_ids=lookup_ids, ignore404=not error_if_not_found)
-
-        if not rec_json:
-            return self.post(payload=payload)
-        else:
-            # PATCH
-            if self.ENCID_KEY not in payload:
-                encode_id = aliases[0]
-                payload[self.ENCID_KEY] = encode_id
-            return self.patch(
-                payload=payload, extend_array_values=extend_array_values, raise_403=raise_403)
 
     def get_fastqfiles_on_exp(self, exp_id):
         """Returns a list of all FASTQ file objects in the experiment.
@@ -1525,7 +1411,7 @@ class Connection:
 
     def get_fastqfile_replicate_hash(self, exp_id):
         """
-        Given a DCC experiment ID, gets its JSON representation from the Portal and looks in the
+        Given an IGVF experiment ID, gets its JSON representation from the Portal and looks in the
         `original` property to find FASTQ file objects and creates a `dict` organized by replicate
         numbers. Keying through the `dict` by replicate numbers, you can get to a particular file
         object's JSON serialization.
@@ -1633,11 +1519,11 @@ class Connection:
         self.debug_logger.debug("Attempting to generate new file upload credentials")
 
         response = requests.post(
-            euu.url_join([self.dcc_mode.url, "files", file_id, "@@upload"]),
+            iuu.url_join([self.igvf_mode.url, "files", file_id, "@@upload"]),
             auth=self.auth,
-            headers=euu.REQUEST_HEADERS_JSON,
+            headers=iuu.REQUEST_HEADERS_JSON,
             json = {},
-            timeout=eu.TIMEOUT)
+            timeout=iu.TIMEOUT)
         response_json = response.json()
         if response.ok:
             self.debug_logger.debug("Success: upload credentials for '{}' regenerated.".format(file_id))
@@ -1647,7 +1533,7 @@ class Connection:
             status_code = response.status_code
             err_msg = "Error {}: unable to re-issue upload credentials for '{}'".format(status_code, file_id)
             self.log_error(err_msg)
-            self.debug_logger.debug(euu.print_format_dict(response_json))
+            self.debug_logger.debug(iuu.print_format_dict(response_json))
             response.raise_for_status()
 
             # For ex: response would look like this for a 404.
@@ -1668,7 +1554,7 @@ class Connection:
             # You also get this when the file object no-longer has read access (was
             # archived by wranglers).
 
-        #Don't log the full response as it contains sensative security information.
+        # Don't log the full response as it contains sensitive security information.
 
     def gcp_transfer_urllist(self, file_ids, filename):
         """
@@ -1688,7 +1574,7 @@ class Connection:
         fout.write("TsvHttpData-1.0\n")
         for i in file_ids:
             url = self.s3_object_path(rec_id=i, url=True)
-            # One with DCC API keys can get the URL in a more straightforward manner by doing a GET on
+            # One with IGVF API keys can get the URL in a more straightforward manner by doing a GET on
             # the files @@upload endpoint. But this even requires AWS keys even when the file in 
             # question is released. For broader community support, the above workaround is in use.
             rec = self.get(i, ignore404=False)
@@ -1698,15 +1584,15 @@ class Connection:
 
     def gcp_transfer_from_aws(self, file_ids, gcp_bucket, gcp_project, description="", aws_creds=()):
         """
-        Copies one or more ENCODE files from AWS S3 storage to GCP storage by using the Google STS.
+        Copies one or more IGVF files from AWS S3 storage to GCP storage by using the Google STS.
         This is similar to the :meth:`gcp_transfer_urllist` method - the difference is that S3 object
         paths are copied directly instead of using public HTTPS URIs, and AWS keys are required here. 
 
-        See :func:`encode_utils.transfer_to_gcp.Transfer` for full documentation.
+        See :func:`igvf_utils.transfer_to_gcp.Transfer` for full documentation.
 
         Args:
-            file_ids: `list`. One or more ENCODE files to transfer. They can be any valid ENCODE File
-                object identifier. Don't mix ENCODE files from across buckets.
+            file_ids: `list`. One or more IGVF files to transfer. They can be any valid IGVF File
+                object identifier. Don't mix IGVF files from across buckets.
             gcp_bucket: `str`. The name of the GCP bucket.
             gcp_project: `str`. The GCP project that is associated with gcp_bucket. Can be given
                 in either integer form  or the user-friendly name form (i.e. sigma-night-206802)
@@ -1723,7 +1609,7 @@ class Connection:
         s3_paths = []
         for i in file_ids:
             s3_paths.append(self.s3_object_path(rec_id=i))
-        t = encode_utils.transfer_to_gcp.Transfer(gcp_project=gcp_project, aws_creds=aws_creds)
+        t = igvf_utils.transfer_to_gcp.Transfer(gcp_project=gcp_project, aws_creds=aws_creds)
         # Figure out the s3 bucket by looking at the first s3 object. All specified s3 files should
         # from the same bucket.
         s3_bucket = s3_paths[0].split("/")[2]
@@ -1772,8 +1658,8 @@ class Connection:
 
     def upload_file(self, file_id, file_path=None, set_md5sum=False):
         """
-        Uploads a file to the Portal for the indicated file record.  The file to upload can be
-        specified by setting the `file_path` parameter, or by using the value of the ENCODE file 
+        Uploads a file to the Portal for the indicated file record. The file to upload can be
+        specified by setting the `file_path` parameter, or by using the value of the IGVF file 
         profile's `submitted_file_name` property of the given file object represented by the 
         `file_id` parameter. The file to upload can be from any of the following sources:
 
@@ -1787,7 +1673,7 @@ class Connection:
         upload command.
 
         Args:
-            file_id: `str`. An identifier of a `file` record on the ENCODE Portal.
+            file_id: `str`. An identifier of a `file` record on the IGVF Portal.
             file_path: `str`. The local path to the file to upload, or an S3 object (i.e s3://mybucket/test.txt),
               or a Google Storage object (i.e. gs://mybucket/test.txt).
               If not set, defaults to `None` in which case the local file path will be extracted from the
@@ -1801,9 +1687,9 @@ class Connection:
               uploading a new file. 
 
         Raises:
-            encode_utils.exceptions.FileUploadFailed: The return code of the AWS upload command was non-zero.
+            igvf_utils.exceptions.FileUploadFailed: The return code of the AWS upload command was non-zero.
 
-        .. _`wiki documentation`: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration#aws-keys
+        .. _`wiki documentation`: https://github.com/IGVF-DACC/igvf_utils/wiki/Configuration#aws-keys
         """
         self.debug_logger.debug("\nIN upload_file()\n")
         #upload_credentials = self.get_upload_credentials(file_id) # Don't use this - they may have expired.
@@ -1819,15 +1705,15 @@ class Connection:
         if not file_rec_md5sum or set_md5sum:
             # md5sum calc. supported at present only for local files and aws (not GCP)
             self.debug_logger.debug("Calculating md5sum for {}".format(os.path.basename(file_path)))
-            md5sum = euu.calculate_md5sum(file_path)
-            file_size = euu.calculate_file_size(file_path)
+            md5sum = iuu.calculate_md5sum(file_path)
+            file_size = iuu.calculate_file_size(file_path)
             self.patch({self.ENCID_KEY: file_rec["@id"], 
                         self.profiles.MD5SUM_NAME_PROP_NAME: md5sum,
                         self.profiles.FILE_SIZE_PROP_NAME: file_size})
 
         cmd_args = "{file_path} {upload_url}".format(file_path=file_path, upload_url=aws_creds["UPLOAD_URL"])
         if file_path.startswith("gs://"):
-            gs_file = encode_utils.gc_storage.GSFile(name=file_path)
+            gs_file = igvf_utils.gc_storage.GSFile(name=file_path)
             s3 = boto3.client(
                 "s3",
                 aws_access_key_id=aws_creds["AWS_ACCESS_KEY_ID"],
@@ -1892,34 +1778,34 @@ class Connection:
         multiple different platforms present as normally all reads should come from the same platform.
 
         Args:
-            rec_id: `str`. DCC identifier for an experiment.
+            rec_id: `str`. DACC identifier for an experiment.
         Returns:
             `list`: The de-duplicated list of platforms seen on the experiment's FASTQ files.
         """
         fastq_files = self.get_fastqfiles_on_exp(rec_id)
         platforms = []
         for fastq_json in fastq_files:
-            platforms.extend(fastq_json["platform"][eu.ALIAS_PROP_NAME])
+            platforms.extend(fastq_json["platform"][iu.ALIAS_PROP_NAME])
         return list(set(platforms))
 
     def post_document(self, document, document_type, description):
         """POSTS a document to the Portal.
 
         The alias for the document will be the lab prefix plus the file name. The lab prefix is taken
-        as the value of the `DCC_LAB` environment variable, i.e. 'michael-snyder'.
+        as the value of the `IGVF_LAB` environment variable, i.e. 'michael-snyder'.
 
         Args:
             document_type: `str`. For possible values, see
-              https://www.encodeproject.org/profiles/document.json. It appears that one should use
+              https://igvf-ui-dev.demo.igvf.org/profiles/document. It appears that one should use
               "data QA" for analysis results documents.
             description: `str`. The description for the document.
             document: `str`. Local file path to the document to be submitted.
 
         Returns:
-            `str`: The DCC UUID of the new document.
+            `str`: The DACC UUID of the new document.
         """
         document_filename = os.path.basename(document)
-        document_alias = eu.LAB[eu.LAB_PROP_NAME] + ":" + document_filename
+        document_alias = iu.LAB[iu.LAB_PROP_NAME] + ":" + document_filename
         mime_type = mimetypes.guess_type(document_filename)[0]
         if not mime_type:
             raise Exception("Couldn't guess MIME type for {}.".format(document_filename))
@@ -1927,7 +1813,7 @@ class Connection:
         # Post information
         payload = {}
         payload[self.PROFILE_KEY] = "document"
-        payload[eu.ALIAS_PROP_NAME] = [document_alias]
+        payload[iu.ALIAS_PROP_NAME] = [document_alias]
         payload["document_type"] = document_type
         payload["description"] = description
 
@@ -1940,17 +1826,17 @@ class Connection:
 
     def download(self, rec_id, get_stream=False, directory=None):
         """
-        Downloads the contents of the specified file or document object from the ENCODE Portal to
+        Downloads the contents of the specified file or document object from the IGVF Portal to
         either the calling directory or the indicated download directory. The downloaded file will
         be named as it is on the Portal.
 
-        Alternativly, you can get a reference to the response object by setting the `get_stream`
+        Alternatively, you can get a reference to the response object by setting the `get_stream`
         parameter to True. Useful if you want to inspect the response, i.e. see if there was a 
         redirect and where to, or download the byte stream in a customized manner.
 
         Args:
 
-           rec_id: `str`. A DCC identifier for a file or document record on the Portal.
+           rec_id: `str`. An identifier for a file or document record on the Portal.
            directory: `str`. The full path to the directory in which to download the file. If not
                specified, then the file will be downloaded in the calling directory.
 
@@ -1963,8 +1849,6 @@ class Connection:
         rec_type = rec["@type"]
         if "Document" in rec_type:
             file_type = False
-            # There is a bug on the ENCODE Portal where setting the auth results in a 400 status
-            # since documents are using some other type of authorization protocol.
             auth = ()
         elif "File" in rec_type:
             file_type = True
@@ -1973,14 +1857,14 @@ class Connection:
             raise Exception("This method can only download records of type 'File' and 'Document'; '{}' is neither of these.".format(rec_id))
         # Formulate download URL:
         if file_type:
-            url = euu.url_join([self.dcc_mode.url, rec["href"].lstrip("/")])
+            url = iuu.url_join([self.igvf_mode.url, rec["href"].lstrip("/")])
         else:
-            url = euu.url_join([self.dcc_mode.url, "documents", rec["uuid"], rec["attachment"]["href"]])
+            url = iuu.url_join([self.igvf_mode.url, "documents", rec["uuid"], rec["attachment"]["href"]])
         r = requests.get(
             url,
             auth=auth,
             stream = True,
-            timeout=eu.TIMEOUT,
+            timeout=iu.TIMEOUT,
             verify=False)
         r.raise_for_status()
         content_length = r.headers.get("Content-Length")
@@ -2005,11 +1889,11 @@ class Connection:
 
     def s3_object_path(self, rec_id, url=False):
         """
-        Given an ENCODE File object's id (such as accession, uuid, alias), returns the full S3 object
+        Given an IGVF File object's id (such as accession, uuid, alias), returns the full S3 object
         URI, or HTTP/HTTPS URI if url=True. 
 
         Args:
-            rec_id: `str`. A DCC object identifier of the record to link the document to.
+            rec_id: `str`. An IGVF object identifier of the record to link the document to.
             url: `bool`. True means to return the HTTP/HTTPS URI of the file rather than the S3 URI.
                  Useful if this is a released file since you can download via the URL.
         """
@@ -2028,67 +1912,8 @@ class Connection:
         print(s3_uri)
         return s3_uri
 
-    def get_experiments_with_biosample(self, rec_id):
-        """
-        Returns all experiments that have a link to the given biosample record. Technically, there
-        should only be at most one experiment linked to a given biosample, but it's possible that additional
-        experiments can be, incorrectly, with audit flags going off. 
 
-        Args:
-            rec_id: `str`. An identifier for a biosample record on the Portal. 
-
-        Returns:
-            `list` of dicts, where is dict is the JSON serialization of an experiment record that is
-                linked to the provided biosample record. If no experiments are linked, then this will
-                be an empty list. 
-        """
-        query_string = "?searchTerm={}&type=Experiment".format(rec_id)
-        experiments = self.search(url=query_string)
-        return experiments
-
-    def get_biosample_type(self, classification, term_id=None, term_name=None):
-        """
-        Searches the biosample_types for the given classification (i.e. tissue, cell line) and
-        term_id or term_name. Both term_name and term_id need not be set - if both are than term_id
-        will take precedence. The combination of classification and term_id/term_name uniquely 
-        identifies a biosample_type. 
-
-        Args:
-            classification: `str`. A value for the 'classificaiton' property of the biosample_ontology
-                profile.
-            term_id: `str`. A value for the 'term_id' property of the biosample_ontology profile. 
-            term_name: `str`. A value for the 'term_name' property of the biosample_ontology profile.
-
-        Returns:
-            `dict`. Empty if not biosample_type found, otherwise the JSON representation of the record.
-
-        Raises:
-            `RecordNotFound`: No search results. 
-            `Exception`: More than one search result was returned. This should not happen and if 
-                it does then it's likely a bug on the server side. 
-        """
-        if term_id:
-            search_term = "term_id"
-            search_term_val = term_id
-        elif term_name:
-            search_term = "term_name"
-            search_term_val = term_name
-        else:
-            raise Exception("You must provide a value for one of the 'term_name' or 'term_id' parameters.")
-        
-        params = []
-        params.append(("type", "BiosampleType"))
-        params.append(("classification", classification))
-        params.append((search_term, search_term_val))
-        results = self.search(search_args=params)
-        if not results:
-            raise RecordNotFound("Could not find a BiosampleType.")
-        elif len(results) > 1:
-            raise Exception("BiosampleType search returned more than one result.")
-        return results[0]
-
-
-class DccMode:
+class IgvfMode:
     DEFAULT_SCHEME = "https"
 
     def __init__(self, host_or_url):
@@ -2123,12 +1948,12 @@ class DccMode:
         return url
 
 
-class DccModes:
+class IgvfModes:
     def __init__(self):
         self._modes = {}
 
     def add_mode(self, host_or_url, mode_name=None):
-        new_mode = DccMode(host_or_url)
+        new_mode = IgvfMode(host_or_url)
         name = mode_name if mode_name is not None else host_or_url
         self._modes[name] = new_mode
 

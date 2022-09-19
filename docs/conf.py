@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# ENCODE Utils documentation build configuration file, created by
+# IGVF Utils documentation build configuration file, created by
 # sphinx-quickstart on Thu Jan 18 20:14:44 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -59,7 +59,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'ENCODE Utils'
+project = 'IGVF Utils'
 copyright = '2018, Nathaniel Watson'
 author = 'Nathaniel Watson'
 
@@ -125,7 +125,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'ENCODEUtilsdoc'
+htmlhelp_basename = 'IGVFUtilsdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -152,7 +152,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'ENCODEUtils.tex', 'ENCODE Utils Documentation',
+    (master_doc, 'IGVFUtils.tex', 'IGVF Utils Documentation',
      'Nathaniel Watson', 'manual'),
 ]
 
@@ -162,7 +162,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'encodeutils', 'ENCODE Utils Documentation',
+    (master_doc, 'igvfutils', 'IGVF Utils Documentation',
      [author], 1)
 ]
 
@@ -173,8 +173,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'ENCODEUtils', 'ENCODE Utils Documentation',
-     author, 'ENCODEUtils', 'One line description of project.',
+    (master_doc, 'IGVFUtils', 'IGVF Utils Documentation',
+     author, 'IGVFUtils', 'One line description of project.',
      'Miscellaneous'),
 ]
 

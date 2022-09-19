@@ -19,20 +19,20 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-SCRIPTS_DIR = os.path.join("encode_utils", "scripts")
+SCRIPTS_DIR = os.path.join("igvf_utils", "scripts")
 scripts = glob.glob(os.path.join(SCRIPTS_DIR, "*.py"))
 scripts.remove(os.path.join(SCRIPTS_DIR, "__init__.py"))
-scripts.append(os.path.join("encode_utils", "MetaDataRegistration", "eu_register.py"))
+scripts.append(os.path.join("igvf_utils", "MetaDataRegistration", "iu_register.py"))
 
 setup(
-  author="Nathaniel Watson",
-  author_email="nathankw@stanford.edu",
+  author="Nathaniel Watson, Jennifer Jou",
+  author_email="nathankw@stanford.edu, jjou@stanford.edu",
   classifiers=[
       "Programming Language :: Python :: 3",
       "License :: OSI Approved :: MIT License",
       "Operating System :: OS Independent",
   ],
-  description="Client and tools for ENCODE data submitters.",
+  description="Client and tools for IGVF data submitters.",
   install_requires=[
         "awscli",
         "boto3",
@@ -53,13 +53,13 @@ setup(
   },
   long_description=long_description,
   long_description_content_type="text/markdown",
-  name="encode-utils",
+  name="igvf-utils",
   packages=find_packages(),
-  package_data={"encode_utils": [os.path.join("tests", "data", "*")]},
+  package_data={"igvf_utils": [os.path.join("tests", "data", "*")]},
   project_urls={
-      "Read the Docs": "https://encode-utils.readthedocs.io/en/latest",
+      "Read the Docs": "http://igvf-utils.readthedocs.io/",
   },
   scripts=scripts,
-  url="https://github.com/StanfordBioinformatics/encode_utils",  # home page
-  version="2.11.0",
+  url="https://github.com/IGVF-DACC/igvf_utils",  # home page
+  version="1.0.0",
 )

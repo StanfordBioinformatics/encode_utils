@@ -6,7 +6,7 @@
 # nathankw@stanford.edu
 ###
 
-"""An API and scripts for submitting datasetss to the ENCODE Portal.
+"""An API and scripts for submitting datasetss to the IGVF Portal.
 """
 
 import os
@@ -17,60 +17,60 @@ import sys
 # see to it that only upper-case vars get exported
 package_path = __path__[0]
 
-# Define constants for a few properties that are common to all ENCODE profiles:
+# Define constants for a few properties that are common to all IGVF profiles:
 
-#: The award property name that is common to all ENCODE Portal object profiles.
+#: The award property name that is common to all IGVF Portal object profiles.
 AWARD_PROP_NAME = "award"
 
-#: The aliases property name that is common to almost all ENCODE Portal object profiles.
+#: The aliases property name that is common to almost all IGVF Portal object profiles.
 #: Notably, the following profiles lack this property as of 2018-04-03:
 #: ['access_key_admin', 'publication', 'award', 'organism', 'page', 'image', 'user', 'lab']
 ALIAS_PROP_NAME = "aliases"
 
-#: The lab property name that is common to all ENCODE Portal object profiles.
+#: The lab property name that is common to all IGVF Portal object profiles.
 LAB_PROP_NAME = "lab"
 
-#: dict. Stores the lab property to the value of the environment variable `DCC_LAB` to serve as
+#: dict. Stores the lab property to the value of the environment variable `IGVF_LAB` to serve as
 #: the default lab when submitting an object to the Portal.
-#: ``encode_utils.connection.Connection.post()`` will use this default if this property doesn't
+#: ``igvf_utils.connection.Connection.post()`` will use this default if this property doesn't
 #: appear in the payload.
 LAB = {}
 try:
-    LAB = {LAB_PROP_NAME: os.environ["DCC_LAB"]}
+    LAB = {LAB_PROP_NAME: os.environ["IGVF_LAB"]}
 except KeyError:
     pass
 
 #: str. Stores the prefix to add to each record alias when doing a POST operation.
 #: Most profiles have an 'alias' key, which stores a list of alias names that are
-#: useful to the lab.  When POSTING objects to the Portal, these aliases must be prefixed
+#: useful to the lab. When POSTING objects to the Portal, these aliases must be prefixed
 #: with the lab name and end with a colon, and this configuration variable stores that
 #: prefix value.
 LAB_PREFIX = ""
 if LAB:
     LAB_PREFIX = LAB[LAB_PROP_NAME] + ":"
 
-#: dict. Stores the award property to the value of the environment variable `DCC_AWARD` to act as
+#: dict. Stores the award property to the value of the environment variable `IGVF_AWARD` to act as
 #: the default award when submiting an object to the Portal.
-#: ``encode_utils.connection.Connection.post()`` will use this default if this property doesn't
+#: ``igvf_utils.connection.Connection.post()`` will use this default if this property doesn't
 #: appear in the payload, and the profile at hand isn't a member of the list
-#: ``encode_utils.utils.Profile.AWARDLESS_PROFILES``.
+#: ``igvf_utils.utils.Profile.AWARDLESS_PROFILES``.
 AWARD = {}
 try:
-    AWARD = {AWARD_PROP_NAME: os.environ["DCC_AWARD"]}
+    AWARD = {AWARD_PROP_NAME: os.environ["IGVF_AWARD"]}
 except KeyError:
     pass
 
 #: The relative ENCODE Portal URL that points to all the profiles (schemas).
 PROFILES_URL = "profiles"
 
-DCC_DEV_MODE = "dev"
-DCC_PROD_MODE = "prod"
+IGVF_DEV_MODE = "dev"
+IGVF_PROD_MODE = "prod"
 
-#: A hash of known hosts one can connect to, where the key can be passed to the `dcc_mode` argument
+#: A hash of known hosts one can connect to, where the key can be passed to the `igvf_mode` argument
 #: when instantiating the `connection.Connection` class.
-DCC_MODES = {
-    DCC_DEV_MODE: {"url": "https://test.encodedcc.org"},
-    DCC_PROD_MODE: {"url": "https://www.encodeproject.org"}
+IGVF_MODES = {
+    IGVF_DEV_MODE: {"url": ""},
+    IGVF_PROD_MODE: {"url": "https://igvfd-dev.demo.igvf.org/"}
 }
 
 ENCODE_PROD_S3BUCKET="encode-files"
@@ -81,10 +81,10 @@ TIMEOUT = 60
 
 #: The name of the debug ``logging`` instance.
 DEBUG_LOGGER_NAME = "eu_debug"
-#: The name of the error ``logging`` instance created in ``encode_utils.connection.Connection()``,
+#: The name of the error ``logging`` instance created in ``igvf_utils.connection.Connection()``,
 #: and referenced elsewhere.
 ERROR_LOGGER_NAME = "eu_error"
-#: The name of the POST ``logging`` instance created in ``encode_utils.connection.Connection()``,
+#: The name of the POST ``logging`` instance created in ``igvf_utils.connection.Connection()``,
 #: and referenced elsewhere.
 POST_LOGGER_NAME = "eu_post"
 

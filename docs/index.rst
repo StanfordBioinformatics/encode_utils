@@ -1,18 +1,18 @@
-.. ENCODE Utils documentation master file, created by
+.. IGVF Utils documentation master file, created by
    sphinx-quickstart on Thu Jan 18 20:14:44 2018.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-ENCODE Utils package
+IGVF Utils package
 ========================================
 
 Installation_ and configuration_ instructions are provided on the project's `GitHub wiki`_.
 
-.. _installation: https://github.com/StanfordBioinformatics/encode_utils/wiki/Installation
+.. _installation: https://github.com/IGVF-DACC/igvf_utils/wiki/Installation
 
-.. _configuration: https://github.com/StanfordBioinformatics/encode_utils/wiki/Configuration
+.. _configuration: https://github.com/IGVF-DACC/igvf_utils/wiki/Configuration
 
-.. _GitHub wiki: https://github.com/StanfordBioinformatics/encode_utils/wiki
+.. _GitHub wiki: https://github.com/IGVF-DACC/igvf_utils/wiki
 
 
 Examples
@@ -32,17 +32,14 @@ Scripts
 .. toctree::
     :maxdepth: 1
    
-    registration <scripts/eu_register>
-    scripts/eu_add_controlled_by.rst
-    scripts/eu_check_not_posted.rst
-    scripts/eu_create_gcp_url_list.rst
-    scripts/eu_generate_upload_creds.rst
-    scripts/eu_get_aliases.rst
-    scripts/eu_get_accessions.rst
-    scripts/eu_get_replicate_fastq_encffs.rst
-    scripts/eu_get_replicate_numbers.rst
-    scripts/eu_report_fastq_content_errors.rst
-    scripts/eu_s3_to_gcp.rst
+    registration <scripts/iu_register>
+    scripts/iu_add_controlled_by.rst
+    scripts/iu_check_not_posted.rst
+    scripts/iu_create_gcp_url_list.rst
+    scripts/iu_generate_upload_creds.rst
+    scripts/iu_get_aliases.rst
+    scripts/iu_get_accessions.rst
+    scripts/iu_s3_to_gcp.rst
 
 Client API Modules
 ------------------
@@ -52,7 +49,7 @@ Client API Modules
 
    aws_storage
    connection
-   encode_utils
+   igvf_utils
    profiles 
    transfer_to_gcp 
    utils

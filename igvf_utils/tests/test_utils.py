@@ -8,7 +8,7 @@
 ###
 
 """
-Tests functions in the ``encode_utils.utils`` module. A few test data files are used from within the 'data' folder.
+Tests functions in the ``igvf_utils.utils`` module. A few test data files are used from within the 'data' folder.
 The contents of the files are explained here. When a test utilizes any of them, you can check here
 to read the documentation about the contents of that file.
 
@@ -31,15 +31,15 @@ import unittest
 
 import pytest
 
-import encode_utils.tests
-from encode_utils import utils
+import igvf_utils.tests
+from igvf_utils import utils
 
-DATA_DIR = encode_utils.tests.DATA_DIR
+DATA_DIR = igvf_utils.tests.DATA_DIR
 
 
 class TestUtils(unittest.TestCase):
     """
-    Tests functions in the ``encode_utils.utils`` module.
+    Tests functions in the ``igvf_utils.utils`` module.
     """
 
     def setUp(self):
@@ -74,71 +74,6 @@ class TestUtils(unittest.TestCase):
         """
         alias = r"michael-snyder:a/troublesome\alias"
         self.assertEqual(utils.clean_aliases(aliases=[alias]), ["michael-snyder:a_troublesome_alias"])
-
-    def test_does_lib_replicate_exist(self):
-        """
-        Test the function ``does_lib_replicate_exist()`` for correct result when we only care about
-        whether the library has any replicates, and not any particular one.
-        """
-        lib_accession = "ENCLB690UAL"  # has replicate for (1,1).
-        res = utils.does_lib_replicate_exist(replicates_json=self.replicates_json,
-                                             lib_accession=lib_accession)
-        self.assertEqual(res, ["37b3dabc-bbdc-4832-88a5-78c2a8369942"])
-
-    def test_2_does_lib_replicate_exist(self):
-        """
-        Test the function ``does_lib_replicate_exist()`` for the correct result when we restrict
-        the replicate search to only those with the specific `biological_replicate_number`.
-        """
-        lib_accession = "ENCLB690UAL"  # has replicate for (1,1).
-        brn = 1
-        res = utils.does_lib_replicate_exist(
-            replicates_json=self.replicates_json,
-            lib_accession=lib_accession,
-            biological_replicate_number=brn)
-
-        self.assertEqual(res, ["37b3dabc-bbdc-4832-88a5-78c2a8369942"])
-
-    def test_3_does_lib_replicate_exist(self):
-        """
-        Test the function ``does_lib_replicate_exist()`` for the empty result when we restrict
-        the replicates search to a `biological_replicate_number` that does not apply.
-        """
-        lib_accession = "ENCLB690UAL"  # has replicate for (1,1).
-        brn = 2
-        res = utils.does_lib_replicate_exist(
-            replicates_json=self.replicates_json,
-            lib_accession=lib_accession,
-            biological_replicate_number=brn)
-
-        self.assertEqual(res, [])
-
-    def test_4_does_lib_replicate_exist(self):
-        """
-        Test the function ``does_lib_replicate_exist()`` for the empty result when we restrict
-        the replicates search to a `biological_replicate_number` that does apply but a
-        `technical_replicate_number` that doesn't.
-        """
-        lib_accession = "ENCLB690UAL"  # has replicate for (1,1).
-        brn = 1
-        trn = 2
-        res = utils.does_lib_replicate_exist(
-            replicates_json=self.replicates_json,
-            lib_accession=lib_accession,
-            biological_replicate_number=brn,
-            technical_replicate_number=trn)
-
-        self.assertEqual(res, [])
-
-    def test_5_does_lib_replicate_exist(self):
-        """
-        Test the function ``does_lib_replicate_exist()`` for the empty result when the library
-        accession doesn't belong to any of the replicates.
-        """
-        lib_accession = "ENCLB000000"  # Doesn't exist.
-        res = utils.does_lib_replicate_exist(replicates_json=self.replicates_json,
-                                             lib_accession=lib_accession)
-        self.assertEqual(res, [])
 
     def test_strip_alias_prefix(self):
         """Tests the function ``strip_alias_prefix()`` for success.

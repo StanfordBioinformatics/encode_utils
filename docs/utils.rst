@@ -1,7 +1,7 @@
-encode\_utils\.utils
+igvf\_utils\.utils
 --------------------
 
-.. automodule:: encode_utils.utils
+.. automodule:: igvf_utils.utils
    :members:
    :private-members:
    :show-inheritance:

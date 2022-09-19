@@ -1,11 +1,11 @@
 class AwardPropertyMissing(Exception):
     """
     Raised when the `award` property isn't set in the payload when doing a POST, and a
-    default isn't set by the environment variable `DCC_AWARD` either.
+    default isn't set by the environment variable `IGVF_AWARD` either.
     """
     message = (
         "The property '{}' is missing from the payload and a default isn't set either. "
-        "To store a default, set the DCC_AWARD environment variable."
+        "To store a default, set the IGVF_AWARD environment variable."
     )
 
 
@@ -25,11 +25,11 @@ class MissingAlias(Exception):
 class LabPropertyMissing(Exception):
     """
     Raised when the `lab` property isn't set in the payload when doing a POST, and a
-    default isn't set by the environment variable `DCC_LAB` either.
+    default isn't set by the environment variable `IGVF_LAB` either.
     """
     message = (
         "The property '{}' is missing from the payload and a default isn't set either. "
-        "To store a default, set the DCC_LAB environment variable."
+        "To store a default, set the IGVF_LAB environment variable."
     )
 
 

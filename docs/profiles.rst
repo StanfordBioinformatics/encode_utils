@@ -1,6 +1,6 @@
-encode\_utils\.profiles
+igvf\_utils\.profiles
 -------------------------
 
-.. automodule:: encode_utils.profiles
+.. automodule:: igvf_utils.profiles
    :members:
    :show-inheritance:
