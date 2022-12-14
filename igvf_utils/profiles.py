@@ -324,13 +324,9 @@ class Profiles:
         profile_id = profile_id.replace("-", "_")
         profile_id = inflection.singularize(profile_id)
         # There are some notable cases where the profile ID doesn't match what is used
-        # in a record's @id attribute. For example, the profile antibody_lot has records
-        # whose @id property looks like '/antibodies/ENCAB719MQZ' instead of the
-        # expected '/antibody_lots/ENCAB719MQZ'. The block below fixes such exceptions:
-        if profile_id == "antibody":
-            profile_id = "antibody_lot"
-        if profile_id == "publication_datum":
-            profile_id = "publication_data"
+        # in a record's @id attribute. The block below fixes such exceptions:
+        if profile_id.endswith('datum'):
+            profile_id = profile_id.replace('datum', 'data')
 
         if profile_id not in self.profiles:
             raise UnknownProfile("Unknown profile ID '{}'.".format(at_id))
