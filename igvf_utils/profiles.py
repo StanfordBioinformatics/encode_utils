@@ -225,9 +225,9 @@ class Profiles:
     Args:
         igvf_url: str. The portal URL being submitted to.
     """
-    #: Constant storing the `file.json` profile's ID.
+    #: Constant storing the profile IDs of all subclasses of File.
     #: This is asserted for inclusion in ``Profile.PROFILES``.
-    FILE_PROFILE_ID = "file"
+    FILE_PROFILE_ID = ["sequence_data", "reference_data"]
 
     #: Constant storing a property name of the `file.json` profile.
     #: The stored name is asserted for inclusion in the set of `File` properties.

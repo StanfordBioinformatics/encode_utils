@@ -682,7 +682,7 @@ class Connection:
             rec_id: `str`. An identifier for the new File object on the Portal.
             profile_id: `str`. The ID of the profile that the record belongs to.
         """
-        if profile_id != self.profiles.FILE_PROFILE_ID:
+        if profile_id not in self.profiles.FILE_PROFILE_ID:
             return
         self.upload_file(file_id=rec_id)
 
@@ -802,7 +802,7 @@ class Connection:
               `igvf_utils.utils.calculate_md5sum` when it can't calculate the md5sum.
         """
         profile_id = payload[self.PROFILE_KEY]
-        if profile_id != self.profiles.FILE_PROFILE_ID:
+        if profile_id not in self.profiles.FILE_PROFILE_ID:
             return payload
         try:
             file_name = payload[self.profiles.SUBMITTED_FILE_PROP_NAME]
@@ -835,7 +835,7 @@ class Connection:
 
         """
         profile_id = payload[self.PROFILE_KEY]
-        if profile_id != self.profiles.FILE_PROFILE_ID:
+        if profile_id not in self.profiles.FILE_PROFILE_ID:
             return payload
 
         run_type = payload.get("run_type")
