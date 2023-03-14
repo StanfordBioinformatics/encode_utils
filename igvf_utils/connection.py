@@ -74,10 +74,10 @@ class Connection:
     #: the object being submitted.
     #: This is not a valid property of any IGVF object schema, and is used in the ``patch()``
     #: instance method to designate the record to update.
-    ENCID_KEY = "_enc_id"
+    IGVFID_KEY = "_igvf_id"
 
     #: Identifies the name of the key in the payload that stores the ID of the profile
-    #: to submit to. Like ``ENCID_KEY``, this is a non-schematic key that is used only internally.
+    #: to submit to. Like ``IGVFID_KEY``, this is a non-schematic key that is used only internally.
     PROFILE_KEY = "_profile"
 
     #: Constant
@@ -539,7 +539,7 @@ class Connection:
         the record on the Portal, i.e. to see if the record already exists. Identifiers are extracted
         from the following fields:
 
-        1. ``self.ENCID_KEY``,
+        1. ``self.IGVFID_KEY``,
         2. aliases,
         3. md5sum (in the case of a file object)
 
@@ -550,8 +550,8 @@ class Connection:
             `list`: The possible lookup identifiers.
         """
         lookup_ids = []
-        if self.ENCID_KEY in payload:
-            lookup_ids.append(payload[self.ENCID_KEY])
+        if self.IGVFID_KEY in payload:
+            lookup_ids.append(payload[self.IGVFID_KEY])
         if iu.ALIAS_PROP_NAME in payload:
             lookup_ids.extend(payload[iu.ALIAS_PROP_NAME])
         if "md5sum" in payload:
@@ -564,7 +564,7 @@ class Connection:
             raise RecordIdNotPresent(
                 ("The payload does not contain a recognized identifier for traceability. For example,"
                  " you need to set the 'aliases' key, or specify an IGVF assigned identifier in the"
-                 " non-schematic key {}.".format(self.ENCID_KEY)))
+                 " non-schematic key {}.".format(self.IGVFID_KEY)))
 
         return lookup_ids
 
@@ -949,7 +949,7 @@ class Connection:
 
         Side effects:
             self.PROFILE_KEY will be popped out of the payload if present, otherwise, the key "@id"
-            will be popped out. Furthermore, self.ENCID_KEY will be popped out if present in the payload.
+            will be popped out. Furthermore, self.IGVFID_KEY will be popped out if present in the payload.
         """
         self.debug_logger.debug("\nIN post().")
         # Make sure we have a payload that can be converted to valid JSON, and
@@ -958,10 +958,10 @@ class Connection:
         profile = self.get_profile_from_payload(payload)
         payload[self.PROFILE_KEY] = profile.name
         url = iuu.url_join([self.igvf_mode.url, profile.name])
-        if self.ENCID_KEY in payload:
+        if self.IGVFID_KEY in payload:
             # Shouldn't be here, unless maybe a PATCH was attempted and the record didn't exist, so
             # a POST was then attempted.
-            payload.pop(self.ENCID_KEY)
+            payload.pop(self.IGVFID_KEY)
         # Check if we need to add defaults for 'award' and 'lab' properties:
         if profile.has_award:  # No lab prop for these profiles either.
             if iu.AWARD_PROP_NAME not in payload:
@@ -1098,7 +1098,7 @@ class Connection:
 
         Args:
             payload: `dict`. containing the attribute key and value pairs to patch. Must contain the key
-                ``self.ENCID_KEY`` in order to indicate which record to PATCH.
+                ``self.IGVFID_KEY`` in order to indicate which record to PATCH.
             raise_403: `bool`. `True` means to raise a ``requests.exceptions.HTTPError`` if a 403 status
                 (forbidden) is returned.
                 If set to `False` and there still is a 403 return status, then the object you were
@@ -1113,7 +1113,7 @@ class Connection:
                     exist on the Portal. Will also be an empty dict if the dry-run feature is enabled.
 
         Raises:
-            KeyError: The payload doesn't have the key ``self.ENCID_KEY`` set AND there aren't
+            KeyError: The payload doesn't have the key ``self.IGVFID_KEY`` set AND there aren't
                 any aliases provided in the payload's 'aliases' key.
             requests.exceptions.HTTPError: if the return status is not ok (excluding a
                 403 status if 'raise_403' is False.
@@ -1122,7 +1122,7 @@ class Connection:
         # tuples become arrays, ...
         payload = json.loads(json.dumps(payload))
         self.debug_logger.debug("\nIN patch()")
-        igvf_id = payload[self.ENCID_KEY]
+        igvf_id = payload[self.IGVFID_KEY]
         # Ensure that the record exists on the Portal:
         rec_json = self.get(rec_ids=igvf_id, frame="edit", ignore404=True)
         if not rec_json:
@@ -1152,7 +1152,7 @@ class Connection:
 
         # Run 'before' hooks:
         payload = self.before_submit_hooks(payload, method=self.PATCH)
-        payload.pop(self.ENCID_KEY)
+        payload.pop(self.IGVFID_KEY)
         if self.PROFILE_KEY in payload:
             # Some client software may add this key in; won't hurt to remove it.
             payload.pop(self.PROFILE_KEY)
@@ -1268,7 +1268,7 @@ class Connection:
         Args:
             props: `list`. The properties to remove from the record.
             patch: `dict`. containing the attribute key and value pairs to
-                patch. Must contain the key ``self.ENCID_KEY`` in order to
+                patch. Must contain the key ``self.IGVFID_KEY`` in order to
                 indicate which record to PATCH.
             raise_403: `bool`. `True` means to raise a
                 ``requests.exceptions.HTTPError`` if a 403 status (forbidden)
@@ -1296,7 +1296,7 @@ class Connection:
                 'patch and not remove properties, use the patch() method of '
                 'the Connection class.'
             )
-        if set(patch.keys()) <= {self.ENCID_KEY, self.PROFILE_KEY}:
+        if set(patch.keys()) <= {self.IGVFID_KEY, self.PROFILE_KEY}:
             raise ValueError(
                 'Input patch has no valide properties to patch. If you only '
                 'need to patch and not remove properties, use the '
@@ -1306,7 +1306,7 @@ class Connection:
         # tuples become arrays, ...
         patch = json.loads(json.dumps(patch))
         self.debug_logger.debug("\nIN remove_and_patch()")
-        igvf_id = patch[self.ENCID_KEY]
+        igvf_id = patch[self.IGVFID_KEY]
         rec_json = self.get(rec_ids=igvf_id, frame="object", ignore404=True)
         if not rec_json:  # Ensure that the record exists on the Portal:
             return {}
@@ -1346,7 +1346,7 @@ class Connection:
 
         # Run 'before' hooks:
         payload = self.before_submit_hooks(payload, method=self.PATCH)
-        payload.pop(self.ENCID_KEY)
+        payload.pop(self.IGVFID_KEY)
         payload.pop(self.PROFILE_KEY, None)
 
         url = iuu.url_join([self.igvf_mode.url, igvf_id.lstrip("/")])
@@ -1707,7 +1707,7 @@ class Connection:
             self.debug_logger.debug("Calculating md5sum for {}".format(os.path.basename(file_path)))
             md5sum = iuu.calculate_md5sum(file_path)
             file_size = iuu.calculate_file_size(file_path)
-            self.patch({self.ENCID_KEY: file_rec["@id"], 
+            self.patch({self.IGVFID_KEY: file_rec["@id"],
                         self.profiles.MD5SUM_NAME_PROP_NAME: md5sum,
                         self.profiles.FILE_SIZE_PROP_NAME: file_size})
 

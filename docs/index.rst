@@ -31,7 +31,7 @@ Scripts
 
 .. toctree::
     :maxdepth: 1
-   
+
     registration <scripts/iu_register>
     scripts/iu_add_controlled_by.rst
     scripts/iu_check_not_posted.rst
