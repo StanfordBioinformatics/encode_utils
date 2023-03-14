@@ -90,7 +90,7 @@ PATCH Request
 
 Add a new alias to the Tissue record IGVFSM0000ABCD. Create a payload
 (`dict`) that indicates the record to PATCH and the new alias. The record to PATCH must be
-indicated by using the non-schematic key `Connection.IGVFID_KEY`, or `self.IGVFID_KEY` from the 
+indicated by using the non-schematic key `Connection.IGVFID_KEY`, or `self.IGVFID_KEY` from the
 perspective of a `Connection` instance, which will be removed from the payload prior to submission:
 
 ::

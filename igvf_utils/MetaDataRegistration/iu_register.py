@@ -82,7 +82,7 @@ def get_parser():
 
     parser.add_argument("-p", "--profile_id", required=True, help="""
     The ID of the profile to submit to, i.e. use 'document' for
-    https://igvfd-dev.demo.igvf.org/profiles/document.json. The profile will be pulled down for
+    https://sandbox.igvf.org/profiles/document.json. The profile will be pulled down for
     type-checking in order to type-cast any values in the input file to the proper type (i.e. some
     values need to be submitted as integers, not strings).""")
 
