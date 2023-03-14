@@ -63,9 +63,9 @@ of logs, with the host name included in the log file names.
 GET Request
 -----------
 
-Retrieve the JSON serialization for the record with accession IGVFSM935WYN::
+Retrieve the JSON serialization for the record with accession IGVFSM9352WYNZ::
 
-  conn.get("IGVFSM935WYN")
+  conn.get("IGVFSM9352WYNZ")
 
 Search
 ------
@@ -88,15 +88,15 @@ be an array of record results, where each result is given in its JSON representa
 PATCH Request
 -------------
 
-Add a new alias to the Tissue record IGVFSM000ABC. Create a payload
+Add a new alias to the Tissue record IGVFSM0000ABCD. Create a payload
 (`dict`) that indicates the record to PATCH and the new alias. The record to PATCH must be
-indicated by using the non-schematic key `Connection.ENCID_KEY`, or `self.ENCID_KEY` from the 
+indicated by using the non-schematic key `Connection.IGVFID_KEY`, or `self.IGVFID_KEY` from the 
 perspective of a `Connection` instance, which will be removed from the payload prior to submission:
 
 ::
 
   payload = {
-      conn.ENCID_KEY: "IGVFSM000ABC",
+      conn.ENCID_KEY: "IGVFSM0000ABCD",
       "aliases": ["new-alias"]
     }
     
@@ -167,7 +167,7 @@ in the Portal, or programmatically via a PATCH operation since this property, wh
 empty. This is where the PUT HTTP method comes in handy. Let's look at an example::
 
   conn = Connection("dev")
-  conn.remove_props(rec_id="ENCBS133ZSU",props=["pooled_from"])
+  conn.remove_props(rec_id="IGVFSM8899STAN",props=["pooled_from"])
 
 It's as simple as that. It should be mentioned that the ``remove_props()`` method will do some validation
 of its own to ensure that you aren't trying to delete something that you really shouldn't delete,

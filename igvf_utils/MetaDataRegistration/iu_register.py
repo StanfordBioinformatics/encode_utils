@@ -9,7 +9,7 @@
 
 """
 Given a tab-delimited or JSON input file containing one or more records belonging to one of the profiles
-listed on the IGVF Portal (such as https://igvfd-dev.demo.igvf.org/profiles/document.json),
+listed on the IGVF Portal (such as https://sandbox.igvf.org/profiles/document.json),
 either POSTS or PATCHES the records. The default is to POST each record; to PATCH instead, see
 the ``--patch`` option.
 
