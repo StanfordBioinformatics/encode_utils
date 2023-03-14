@@ -143,7 +143,7 @@ def get_parser():
 
     group.add_argument("--rm-patch", action="store_true", help="""
     Presence of this option indicates to remove a property, as specified by the -r argument,
-    from an existing DCC record, and then PATCH it with the payload specified in -i.""")
+    from an existing DACC record, and then PATCH it with the payload specified in -i.""")
 
     return parser
 
