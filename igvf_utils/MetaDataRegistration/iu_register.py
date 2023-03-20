@@ -122,7 +122,7 @@ def get_parser():
 
     Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set
     as fields in the input file, or can be left out, in which case the default values for these
-    attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.
+    attributes will be pulled from the environment variables IGVF_AWARD and IGVF_LAB, respectively.
     """)
 
     parser.add_argument("-w", "--overwrite-array-values", action="store_true", help="""

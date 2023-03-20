@@ -13,4 +13,4 @@ igvf_login_parser.add_argument(
     "-m",
     "--igvf-mode",
     help="""
-    The IGVF Portal site ('prod' or 'dev', or an explicit host name, i.e. 'demo.igvf.org') to connect to.""")
+    The IGVF Portal site ('prod' or 'sandbox', or an explicit host name, i.e. '*.demo.igvf.org') to connect to.""")

@@ -96,7 +96,7 @@ class Connection:
         # used as part of the file name.
 
         #: An indication of which Portal instance to use. Set to 'prod' for the production Portal,
-        #: and 'dev' for the development Portal. Alternatively, you can set an explicit host, such as
+        #: and 'sandbox' for the sandbox Portal. Alternatively, you can set an explicit host, such as
         #: demo.igvf.org. Leaving the default of None means to use the value of the `IGVF_MODE`
         #: environment variable.
         self.igvf_modes = IgvfModes()
@@ -209,7 +209,7 @@ class Connection:
         cleaned_igvf_mode = igvf_mode
         for c in bad_characters:
             cleaned_igvf_mode = cleaned_igvf_mode.replace(c, '')
-        filename = "log_eu_" + cleaned_igvf_mode + "_" + tag + ".txt"
+        filename = "log_iu_" + cleaned_igvf_mode + "_" + tag + ".txt"
         filename = os.path.join(LOG_DIR, filename)
         return filename
 
