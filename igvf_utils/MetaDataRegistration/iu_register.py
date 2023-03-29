@@ -9,7 +9,7 @@
 
 """
 Given a tab-delimited or JSON input file containing one or more records belonging to one of the profiles
-listed on the IGVF Portal (such as https://igvfd-dev.demo.igvf.org/profiles/document.json),
+listed on the IGVF Portal (such as https://sandbox.igvf.org/profiles/document.json),
 either POSTS or PATCHES the records. The default is to POST each record; to PATCH instead, see
 the ``--patch`` option.
 
@@ -82,7 +82,7 @@ def get_parser():
 
     parser.add_argument("-p", "--profile_id", required=True, help="""
     The ID of the profile to submit to, i.e. use 'document' for
-    https://igvfd-dev.demo.igvf.org/profiles/document.json. The profile will be pulled down for
+    https://sandbox.igvf.org/profiles/document.json. The profile will be pulled down for
     type-checking in order to type-cast any values in the input file to the proper type (i.e. some
     values need to be submitted as integers, not strings).""")
 
@@ -122,7 +122,7 @@ def get_parser():
 
     Some profiles (most) require specification of the 'award' and 'lab' attributes. These may be set
     as fields in the input file, or can be left out, in which case the default values for these
-    attributes will be pulled from the environment variables DCC_AWARD and DCC_LAB, respectively.
+    attributes will be pulled from the environment variables IGVF_AWARD and IGVF_LAB, respectively.
     """)
 
     parser.add_argument("-w", "--overwrite-array-values", action="store_true", help="""
@@ -143,7 +143,7 @@ def get_parser():
 
     group.add_argument("--rm-patch", action="store_true", help="""
     Presence of this option indicates to remove a property, as specified by the -r argument,
-    from an existing DCC record, and then PATCH it with the payload specified in -i.""")
+    from an existing DACC record, and then PATCH it with the payload specified in -i.""")
 
     return parser
 

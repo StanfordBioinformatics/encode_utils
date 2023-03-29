@@ -31,15 +31,13 @@ Scripts
 
 .. toctree::
     :maxdepth: 1
-   
+
     registration <scripts/iu_register>
-    scripts/iu_add_controlled_by.rst
     scripts/iu_check_not_posted.rst
     scripts/iu_create_gcp_url_list.rst
     scripts/iu_generate_upload_creds.rst
     scripts/iu_get_aliases.rst
     scripts/iu_get_accessions.rst
-    scripts/iu_s3_to_gcp.rst
 
 Client API Modules
 ------------------
@@ -51,7 +49,6 @@ Client API Modules
    connection
    igvf_utils
    profiles 
-   transfer_to_gcp 
    utils
 
 Unit Tests
