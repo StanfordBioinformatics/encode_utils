@@ -96,7 +96,7 @@ perspective of a `Connection` instance, which will be removed from the payload p
 ::
 
   payload = {
-      conn.ENCID_KEY: "IGVFSM0000ABCD",
+      conn.IGVFID_KEY: "IGVFSM0000ABCD",
       "aliases": ["new-alias"]
     }
     

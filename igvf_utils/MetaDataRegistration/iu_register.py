@@ -189,7 +189,7 @@ def main():
                     "Can't patch payload {} since there isn't a '{}' field indicating an identifier for the record to be PATCHED.".format(
                         iuu.print_format_dict(payload), RECORD_ID_FIELD))
             payload.pop(RECORD_ID_FIELD)
-            payload.update({conn.ENCID_KEY: record_id})
+            payload.update({conn.IGVFID_KEY: record_id})
             conn.remove_and_patch(props=props_to_remove, patch=payload, extend_array_values=not overwrite_array_values)
         elif patch:
             record_id = payload.get(RECORD_ID_FIELD, False)
@@ -198,7 +198,7 @@ def main():
                     "Can't patch payload {} since there isn't a '{}' field indicating an identifier for the record to be PATCHED.".format(
                         iuu.print_format_dict(payload), RECORD_ID_FIELD))
             payload.pop(RECORD_ID_FIELD)
-            payload.update({conn.ENCID_KEY: record_id})
+            payload.update({conn.IGVFID_KEY: record_id})
             conn.patch(payload=payload, extend_array_values=not overwrite_array_values)
 
 
