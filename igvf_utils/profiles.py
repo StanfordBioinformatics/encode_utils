@@ -227,16 +227,21 @@ class Profiles:
     """
     #: Constant storing the profile IDs of all subclasses of File.
     #: This is asserted for inclusion in ``Profile.PROFILES``.
-    FILE_PROFILE_ID = ["sequence_data", "reference_data"]
+    FILE_PROFILE_ID = [
+        "alignment_file",
+        "reference_file",
+        "sequence_file",
+        "signal_file"
+    ]
 
-    #: Constant storing a property name of the `file.json` profile.
+    #: Constant storing a property name of the File subclasses.
     #: The stored name is asserted for inclusion in the set of `File` properties.
     SUBMITTED_FILE_PROP_NAME = "submitted_file_name"
 
-    #: Constant storing a property name of the `file.json` profile.
+    #: Constant storing a property name of the File subclasses.
     #: The stored name is asserted for inclusion in the set of `File` properties.
     MD5SUM_NAME_PROP_NAME = "md5sum"
-    #: Constant sotring a property name of the `file.json` profile.
+    #: Constant storing a property name of the File subclasses.
     FILE_SIZE_PROP_NAME = "file_size"
 
     def __init__(self, igvf_url):
